@@ -207,6 +207,10 @@ function SignedIn({ user }: { user: User }): React.JSX.Element {
     }
   };
 
+  const handleCamera = ()=>{
+    return <CameraDetector></CameraDetector>
+  }
+
   return (
     <View style={styles.content}>
       <Text style={styles.title}>You are signed in</Text>
@@ -214,6 +218,17 @@ function SignedIn({ user }: { user: User }): React.JSX.Element {
 
       <TouchableOpacity
         onPress={handleSignOut}
+        style={styles.button}
+        disabled={signingOut}
+      >
+        {signingOut ? (
+          <ActivityIndicator color="#ffffff" />
+        ) : (
+          <Text style={styles.buttonText}>Log Out</Text>
+        )}
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={handleCamera}
         style={styles.button}
         disabled={signingOut}
       >
