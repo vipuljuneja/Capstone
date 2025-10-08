@@ -25,6 +25,9 @@ import {
 } from 'firebase/auth';
 import AvatarGenerate from './src/components/AvatarGenerate';
 import TTSBall from './src/components/TTSBallAnimation'
+
+import CameraDetector from './src/pages/CameraDetector';
+
 import { auth } from './src/firebase';
   const Stack = createNativeStackNavigator();
 
@@ -54,6 +57,7 @@ function App(): React.JSX.Element {
         ) : (
           <AuthForm />
         )}
+        {/* {<CameraDetector />} */}
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -105,10 +109,7 @@ function AuthForm(): React.JSX.Element {
       const fallbackMessage = isSignUp
         ? 'Unable to sign up. Please try again later.'
         : 'Unable to sign in. Please try again later.';
-      const message =
-        err instanceof Error
-          ? err.message
-          : fallbackMessage;
+      const message = err instanceof Error ? err.message : fallbackMessage;
       setError(message);
     } finally {
       setSubmitting(false);
@@ -122,8 +123,8 @@ function AuthForm(): React.JSX.Element {
   const ctaText = submitting
     ? undefined
     : isSignUp
-      ? 'Create Account'
-      : 'Sign In';
+    ? 'Create Account'
+    : 'Sign In';
 
   return (
     <KeyboardAvoidingView

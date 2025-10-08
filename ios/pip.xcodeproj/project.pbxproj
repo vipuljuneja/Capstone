@@ -9,8 +9,12 @@
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		469044B1F6CBB1B1EC58A5D4 /* libPods-pip.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 093D223D5EF479312B5B9202 /* libPods-pip.a */; };
+		3BBEDC252E95DDE400B0CDA2 /* FaceLandmarkModule.m in Sources */ = {isa = PBXBuildFile; fileRef = 3BBEDC242E95DDE400B0CDA2 /* FaceLandmarkModule.m */; };
+		3BBEDC272E95DDFB00B0CDA2 /* FaceLandmarkModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BBEDC262E95DDFB00B0CDA2 /* FaceLandmarkModule.swift */; };
+		3BBEDC292E95DE0900B0CDA2 /* face_landmarker.task in Resources */ = {isa = PBXBuildFile; fileRef = 3BBEDC282E95DE0900B0CDA2 /* face_landmarker.task */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		8B152E5D5F2303248BE35CAB /* libPods-pip.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 6A442EAA4188DCEE2A574719 /* libPods-pip.a */; };
 		E573F4FB3E160E04031F7920 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
@@ -24,6 +28,15 @@
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = pip/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = pip/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		D770BDEC04086FDB9328C48D /* Pods-pip.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-pip.release.xcconfig"; path = "Target Support Files/Pods-pip/Pods-pip.release.xcconfig"; sourceTree = "<group>"; };
+		247858D6E2FC489358EA34A8 /* Pods-pip.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-pip.debug.xcconfig"; path = "Target Support Files/Pods-pip/Pods-pip.debug.xcconfig"; sourceTree = "<group>"; };
+		3BBEDC1F2E95D72100B0CDA2 /* pip-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "pip-Bridging-Header.h"; sourceTree = "<group>"; };
+		3BBEDC242E95DDE400B0CDA2 /* FaceLandmarkModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FaceLandmarkModule.m; sourceTree = "<group>"; };
+		3BBEDC262E95DDFB00B0CDA2 /* FaceLandmarkModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceLandmarkModule.swift; sourceTree = "<group>"; };
+		3BBEDC282E95DE0900B0CDA2 /* face_landmarker.task */ = {isa = PBXFileReference; lastKnownFileType = file; path = face_landmarker.task; sourceTree = "<group>"; };
+		6A442EAA4188DCEE2A574719 /* libPods-pip.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-pip.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = pip/AppDelegate.swift; sourceTree = "<group>"; };
+		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = pip/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		D0A60D5C39026A78CD1522E9 /* Pods-pip.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-pip.release.xcconfig"; path = "Target Support Files/Pods-pip/Pods-pip.release.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -33,6 +46,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				469044B1F6CBB1B1EC58A5D4 /* libPods-pip.a in Frameworks */,
+				8B152E5D5F2303248BE35CAB /* libPods-pip.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -42,11 +56,15 @@
 		13B07FAE1A68108700A75B9A /* pip */ = {
 			isa = PBXGroup;
 			children = (
+				3BBEDC282E95DE0900B0CDA2 /* face_landmarker.task */,
+				3BBEDC262E95DDFB00B0CDA2 /* FaceLandmarkModule.swift */,
+				3BBEDC242E95DDE400B0CDA2 /* FaceLandmarkModule.m */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
+				3BBEDC1F2E95D72100B0CDA2 /* pip-Bridging-Header.h */,
 			);
 			name = pip;
 			sourceTree = "<group>";
@@ -56,6 +74,7 @@
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				093D223D5EF479312B5B9202 /* libPods-pip.a */,
+				6A442EAA4188DCEE2A574719 /* libPods-pip.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -94,6 +113,8 @@
 			children = (
 				25638C13D9277365473957C5 /* Pods-pip.debug.xcconfig */,
 				D770BDEC04086FDB9328C48D /* Pods-pip.release.xcconfig */,
+				247858D6E2FC489358EA34A8 /* Pods-pip.debug.xcconfig */,
+				D0A60D5C39026A78CD1522E9 /* Pods-pip.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -106,12 +127,15 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "pip" */;
 			buildPhases = (
 				3B2A6AC18A8CC12BBC5CC2E0 /* [CP] Check Pods Manifest.lock */,
+				C47507D560094125EBD354D2 /* [CP] Check Pods Manifest.lock */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				BF62DAB35756995E930783E5 /* [CP] Embed Pods Frameworks */,
 				83DA045E47E62A337C5464EE /* [CP] Copy Pods Resources */,
+				8C36EE9C0040D81E797462FB /* [CP] Embed Pods Frameworks */,
+				FAC4E50D7CD5944E9F8FAE36 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -131,7 +155,7 @@
 				LastUpgradeCheck = 1210;
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
-						LastSwiftMigration = 1120;
+						LastSwiftMigration = 1640;
 					};
 				};
 			};
@@ -158,6 +182,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3BBEDC292E95DE0900B0CDA2 /* face_landmarker.task in Resources */,
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				E573F4FB3E160E04031F7920 /* PrivacyInfo.xcprivacy in Resources */,
@@ -184,6 +209,24 @@
 			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
 		};
 		3B2A6AC18A8CC12BBC5CC2E0 /* [CP] Check Pods Manifest.lock */ = {
+		8C36EE9C0040D81E797462FB /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-pip/Pods-pip-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-pip/Pods-pip-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-pip/Pods-pip-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		C47507D560094125EBD354D2 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -206,6 +249,7 @@
 			showEnvVarsInLog = 0;
 		};
 		83DA045E47E62A337C5464EE /* [CP] Copy Pods Resources */ = {
+		FAC4E50D7CD5944E9F8FAE36 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -246,6 +290,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3BBEDC272E95DDFB00B0CDA2 /* FaceLandmarkModule.swift in Sources */,
+				3BBEDC252E95DDE400B0CDA2 /* FaceLandmarkModule.m in Sources */,
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -256,11 +302,13 @@
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 25638C13D9277365473957C5 /* Pods-pip.debug.xcconfig */;
+			baseConfigurationReference = 247858D6E2FC489358EA34A8 /* Pods-pip.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 23K8MLJAB4;
+				DEVELOPMENT_TEAM = N6W5VDS2JQ;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = pip/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -274,8 +322,9 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.sukhbir.--PRODUCT-NAME-rfc1034identifier-";
 				PRODUCT_NAME = pip;
+				SWIFT_OBJC_BRIDGING_HEADER = "pip-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -285,11 +334,13 @@
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D770BDEC04086FDB9328C48D /* Pods-pip.release.xcconfig */;
+			baseConfigurationReference = D0A60D5C39026A78CD1522E9 /* Pods-pip.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 23K8MLJAB4;
+				DEVELOPMENT_TEAM = N6W5VDS2JQ;
 				INFOPLIST_FILE = pip/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -302,8 +353,9 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.sukhbir.--PRODUCT-NAME-rfc1034identifier-";
 				PRODUCT_NAME = pip;
+				SWIFT_OBJC_BRIDGING_HEADER = "pip-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
