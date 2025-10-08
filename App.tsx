@@ -235,7 +235,7 @@ function SignedIn({ user }: { user: User }): React.JSX.Element {
         {signingOut ? (
           <ActivityIndicator color="#ffffff" />
         ) : (
-          <Text style={styles.buttonText}>Log Out</Text>
+          <Text style={styles.buttonText}>Camera</Text>
         )}
       </TouchableOpacity>
     </View>
