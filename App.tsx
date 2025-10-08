@@ -38,7 +38,7 @@ function App(): React.JSX.Element {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-        {/* {initializing ? (
+        {initializing ? (
           <View style={styles.centered}>
             <ActivityIndicator size="large" />
           </View>
@@ -46,8 +46,8 @@ function App(): React.JSX.Element {
           <SignedIn user={user} />
         ) : (
           <AuthForm />
-        )} */}
-        {<CameraDetector />}
+        )}
+        {/* {<CameraDetector />} */}
       </SafeAreaView>
     </SafeAreaProvider>
   );
