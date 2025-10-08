@@ -18,6 +18,8 @@ import {
   signOut,
 } from 'firebase/auth';
 
+import CameraDetector from './src/pages/CameraDetector';
+
 import { auth } from './src/firebase';
 
 function App(): React.JSX.Element {
@@ -36,7 +38,7 @@ function App(): React.JSX.Element {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-        {initializing ? (
+        {/* {initializing ? (
           <View style={styles.centered}>
             <ActivityIndicator size="large" />
           </View>
@@ -44,7 +46,8 @@ function App(): React.JSX.Element {
           <SignedIn user={user} />
         ) : (
           <AuthForm />
-        )}
+        )} */}
+        {<CameraDetector />}
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -96,10 +99,7 @@ function AuthForm(): React.JSX.Element {
       const fallbackMessage = isSignUp
         ? 'Unable to sign up. Please try again later.'
         : 'Unable to sign in. Please try again later.';
-      const message =
-        err instanceof Error
-          ? err.message
-          : fallbackMessage;
+      const message = err instanceof Error ? err.message : fallbackMessage;
       setError(message);
     } finally {
       setSubmitting(false);
@@ -113,8 +113,8 @@ function AuthForm(): React.JSX.Element {
   const ctaText = submitting
     ? undefined
     : isSignUp
-      ? 'Create Account'
-      : 'Sign In';
+    ? 'Create Account'
+    : 'Sign In';
 
   return (
     <KeyboardAvoidingView
