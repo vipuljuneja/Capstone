@@ -274,7 +274,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = N6W5VDS2JQ;
+				DEVELOPMENT_TEAM = 9PLQ22HR9R;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = pip/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -288,7 +288,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.sukhbir.--PRODUCT-NAME-rfc1034identifier-";
+				PRODUCT_BUNDLE_IDENTIFIER = org.reactjs.native.pip;
 				PRODUCT_NAME = pip;
 				SWIFT_OBJC_BRIDGING_HEADER = "pip-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -304,7 +304,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = N6W5VDS2JQ;
+				DEVELOPMENT_TEAM = 9PLQ22HR9R;
 				INFOPLIST_FILE = pip/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -317,7 +317,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.sukhbir.--PRODUCT-NAME-rfc1034identifier-";
+				PRODUCT_BUNDLE_IDENTIFIER = org.reactjs.native.pip;
 				PRODUCT_NAME = pip;
 				SWIFT_OBJC_BRIDGING_HEADER = "pip-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;

@@ -201,11 +201,9 @@ function SignedIn({ user }: { user: User }): React.JSX.Element {
     const [screen, setScreen] = useState('home');
 
 
+  const [showCamera, setShowCamera] = useState(false);
   const handleSignOut = async () => {
-    if (signingOut) {
-      return;
-    }
-
+    if (signingOut) return;
     setSigningOut(true);
     try {
       await signOut(auth);
@@ -213,9 +211,16 @@ function SignedIn({ user }: { user: User }): React.JSX.Element {
       setSigningOut(false);
     }
   };
-
-  const handleCamera = ()=>{
-    return <CameraDetector></CameraDetector>
+  if (showCamera) {
+    // Optional: pass a simple close handler from CameraDetector if you want a back button there.
+    return (
+      <View style={styles.flex}>
+        <CameraDetector />
+        <TouchableOpacity style={[styles.button, { margin: 16 }]} onPress={() => setShowCamera(false)}>
+          <Text style={styles.buttonText}>Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
 
    
@@ -262,29 +267,12 @@ if (screen === 'levels') {
   return (
     <View style={styles.content}>
       <Text style={styles.title}>You are signed in</Text>
-      <Text style={styles.subtitle}>{user.email}</Text>
-
-      <TouchableOpacity
-        onPress={handleSignOut}
-        style={styles.button}
-        disabled={signingOut}
-      >
-        {signingOut ? (
-          <ActivityIndicator color="#ffffff" />
-        ) : (
-          <Text style={styles.buttonText}>Log Out</Text>
-        )}
+      <Text style={styles.subtitle}>{user.email ?? 'Signed in'}</Text>
+      <TouchableOpacity onPress={handleSignOut} style={styles.button} disabled={signingOut}>
+        {signingOut ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Log Out</Text>}
       </TouchableOpacity>
-      <TouchableOpacity
-        onPress={handleCamera}
-        style={styles.button}
-        disabled={signingOut}
-      >
-        {signingOut ? (
-          <ActivityIndicator color="#ffffff" />
-        ) : (
-          <Text style={styles.buttonText}>Camera</Text>
-        )}
+      <TouchableOpacity onPress={() => setShowCamera(true)} style={styles.button} disabled={signingOut}>
+        <Text style={styles.buttonText}>Camera</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={() => setScreen('levels')} style={styles.button}>
         <Text style={styles.buttonText}>Go to Levels</Text>
