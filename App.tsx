@@ -17,6 +17,11 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
+import LevelsScreen from "./src/pages/LevelsScreen";
+import Level1 from "./src/screens/Level1";
+import Level2 from "./src/screens/Level2";
+import Level3 from "./src/screens/Level3";
+
 
 import CameraDetector from './src/pages/CameraDetector';
 
@@ -193,6 +198,8 @@ function AuthForm(): React.JSX.Element {
 
 function SignedIn({ user }: { user: User }): React.JSX.Element {
   const [signingOut, setSigningOut] = useState(false);
+    const [screen, setScreen] = useState('home');
+
 
   const handleSignOut = async () => {
     if (signingOut) {
@@ -211,6 +218,47 @@ function SignedIn({ user }: { user: User }): React.JSX.Element {
     return <CameraDetector></CameraDetector>
   }
 
+   
+if (screen === 'levels') {
+    return (
+      <View style={styles.flex}>
+        <LevelsScreen onSelectLevel={(lvl:any) => setScreen(lvl)} />
+        <TouchableOpacity style={[styles.button, { margin: 16 }]} onPress={() => setScreen('home')}>
+          <Text style={styles.buttonText}>Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  if (screen === 'level1') {
+    return (
+      <View style={styles.flex}>
+        <Level1 />
+        <TouchableOpacity style={[styles.button, { margin: 16 }]} onPress={() => setScreen('levels')}>
+          <Text style={styles.buttonText}>Back to Levels</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  if (screen === 'level2') {
+    return (
+      <View style={styles.flex}>
+        <Level2 />
+        <TouchableOpacity style={[styles.button, { margin: 16 }]} onPress={() => setScreen('levels')}>
+          <Text style={styles.buttonText}>Back to Levels</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  if (screen === 'level3') {
+    return (
+      <View style={styles.flex}>
+        <Level3 />
+        <TouchableOpacity style={[styles.button, { margin: 16 }]} onPress={() => setScreen('levels')}>
+          <Text style={styles.buttonText}>Back to Levels</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
   return (
     <View style={styles.content}>
       <Text style={styles.title}>You are signed in</Text>
@@ -238,7 +286,12 @@ function SignedIn({ user }: { user: User }): React.JSX.Element {
           <Text style={styles.buttonText}>Camera</Text>
         )}
       </TouchableOpacity>
+      <TouchableOpacity onPress={() => setScreen('levels')} style={styles.button}>
+        <Text style={styles.buttonText}>Go to Levels</Text>
+      </TouchableOpacity>
+      
     </View>
+    
   );
 }
 
