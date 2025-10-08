@@ -9,6 +9,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import Tts from 'react-native-tts';
+import LevelsScreen from './src/components/LevelsScreen'
+
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import {
   User,
@@ -17,8 +23,10 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
-
+import AvatarGenerate from './src/components/AvatarGenerate';
+import TTSBall from './src/components/TTSBallAnimation'
 import { auth } from './src/firebase';
+  const Stack = createNativeStackNavigator();
 
 function App(): React.JSX.Element {
   const [user, setUser] = useState<User | null>(null);
@@ -32,6 +40,7 @@ function App(): React.JSX.Element {
 
     return unsubscribe;
   }, []);
+  
 
   return (
     <SafeAreaProvider>
@@ -191,13 +200,69 @@ function AuthForm(): React.JSX.Element {
   );
 }
 
+function Screen({children}) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        
+        justifyContent: "center",
+        paddingHorizontal: 0,
+        width: "100%",          
+        alignItems: "stretch",
+        
+      }}
+    >
+     
+        
+      {children}
+    </View>
+  );
+}
+
+function Level1() {
+  return (
+    <Screen>
+      <TTSBall />
+    </Screen>
+  );
+}
+
+function Level2() {
+  return (
+    <Screen>
+      <AvatarGenerate />
+    </Screen>
+  );
+}
+
+function Level3() {
+  return (
+    <Screen>
+      <AvatarGenerate />
+    </Screen>
+  );
+}
+
+
 function SignedIn({ user }: { user: User }): React.JSX.Element {
   const [signingOut, setSigningOut] = useState(false);
-
+  const [showAvatar, setShowAvatar] = useState(false);
+  const [showTTSBall, setShowTTSBall] = useState(false);
+// if (showAvatar) {
+//     return <LevelsScreen />;
+//   }
+//   if (showTTSBall) {
+  
+   
+//   return <TTSBall />;
+//   }
   const handleSignOut = async () => {
     if (signingOut) {
       return;
     }
+
+    
 
     setSigningOut(true);
     try {
@@ -207,24 +272,77 @@ function SignedIn({ user }: { user: User }): React.JSX.Element {
     }
   };
 
-  return (
-    <View style={styles.content}>
-      <Text style={styles.title}>You are signed in</Text>
-      <Text style={styles.subtitle}>{user.email}</Text>
+  // return (
+  //   <View style={styles.content}>
+  //     <Text style={styles.title}>You are signed in</Text>
+  //     <Text style={styles.subtitle}>{user.email}</Text>
 
-      <TouchableOpacity
-        onPress={handleSignOut}
-        style={styles.button}
-        disabled={signingOut}
+
+  //     <TouchableOpacity
+  //       onPress={handleSignOut}
+  //       style={styles.button}
+  //       disabled={signingOut}
+  //     >
+  //       {signingOut ? (
+  //         <ActivityIndicator color="#ffffff" />
+  //       ) : (
+  //         <Text style={styles.buttonText}>Log Out</Text>
+  //       )}
+  //     </TouchableOpacity>
+  //     <TouchableOpacity
+  //       onPress={() => setShowAvatar(true)} 
+  //       style={styles.button}
+        
+  //     >
+  //       {signingOut ? (
+  //         <ActivityIndicator color="#ffffff" />
+  //       ) : (
+  //         <Text style={styles.buttonText}>Go to app</Text>
+  //       )}
+  //     </TouchableOpacity>
+  //     {/* <TouchableOpacity
+  //       onPress={() => setShowTTSBall(true)} 
+  //       style={styles.button}
+        
+  //     >
+  //       {signingOut ? (
+  //         <ActivityIndicator color="#ffffff" />
+  //       ) : (
+  //         <Text style={styles.buttonText}>Go to app</Text>
+  //       )}
+  //     </TouchableOpacity> */}
+  //   </View>
+  // );
+
+  return (
+    <NavigationContainer>
+      <Stack.Navigator
+        initialRouteName="Levels"
+        screenOptions={{
+          headerStyle: { backgroundColor: "#0f172a" },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "600" },
+          headerRight: () => (
+            <TouchableOpacity onPress={handleSignOut}>
+              <Text style={{ color: "#3b82f6", fontWeight: "700", marginRight: 12 }}>
+                Logout
+              </Text>
+            </TouchableOpacity>
+          ),
+        }}
       >
-        {signingOut ? (
-          <ActivityIndicator color="#ffffff" />
-        ) : (
-          <Text style={styles.buttonText}>Log Out</Text>
-        )}
-      </TouchableOpacity>
-    </View>
+        <Stack.Screen
+          name="Levels"
+          component={LevelsScreen}
+          options={{ title: "Select Level" }}
+        />
+        <Stack.Screen name="Level1" component={Level1} options={{ title: "Level 1" }} />
+        <Stack.Screen name="Level2" component={Level2} options={{ title: "Level 2" }} />
+        <Stack.Screen name="Level3" component={Level3} options={{ title: "Level 3" }} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
+
 }
 
 const styles = StyleSheet.create({
