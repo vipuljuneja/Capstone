@@ -1,0 +1,183 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Length 3271 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+50 742 Td
+(Base URL: http://localhost:3000/api) Tj
+T*
+() Tj
+T*
+(1. Create User \(POST /users\) ? body: authUid, email, name, profile) Tj
+T*
+(2. Get User \(GET /users/:authUid\) ? returns user by authUid) Tj
+T*
+(3. Update User Profile \(PUT /users/:authUid\) ? body: name, profile) Tj
+T*
+(4. Update User Streak \(PUT /users/:authUid/streak\) ? no body) Tj
+T*
+(5. Add Achievement to User \(POST /users/:authUid/achievements\) ? body: achievementKey) Tj
+T*
+(6. Delete User \(DELETE /users/:authUid\) ? cascades related data) Tj
+T*
+() Tj
+T*
+(7. Create Assessment Template \(POST /assessment-templates\) ? body: title, scale, items) Tj
+T*
+(8. Get All Templates \(GET /assessment-templates\)) Tj
+T*
+(9. Get Template by ID \(GET /assessment-templates/:id\)) Tj
+T*
+(10. Update Template \(PUT /assessment-templates/:id\)) Tj
+T*
+(11. Delete Template \(DELETE /assessment-templates/:id\)) Tj
+T*
+() Tj
+T*
+(12. Submit Assessment Response \(POST /assessment-responses\) ? body: userId, templateId, responses, derived, notes) Tj
+T*
+(13. Get User Assessment Responses \(GET /assessment-responses/user/:userId\)) Tj
+T*
+(14. Get Latest Assessment Response \(GET /assessment-responses/user/:userId/latest\)) Tj
+T*
+() Tj
+T*
+(15. Create Scenario \(POST /scenarios\) ? body: title, description, levels, status) Tj
+T*
+(16. Get All Scenarios \(GET /scenarios?status=optional\)) Tj
+T*
+(17. Get Published Scenarios \(GET /scenarios/published\)) Tj
+T*
+(18. Get Scenario by ID \(GET /scenarios/:id\)) Tj
+T*
+(19. Update Scenario \(PUT /scenarios/:id\)) Tj
+T*
+(20. Delete Scenario \(DELETE /scenarios/:id\)) Tj
+T*
+() Tj
+T*
+(21. Create Level Prompt \(POST /level-prompts\) ? body: scenarioId, level, introScript, questionSet, rubric, ai prompts) Tj
+T*
+(22. Get Level Prompt \(GET /level-prompts/scenario/:scenarioId/level/:level\)) Tj
+T*
+(23. Get All Level Prompts \(GET /level-prompts/scenario/:scenarioId\)) Tj
+T*
+(24. Update Level Prompt \(PUT /level-prompts/:id\)) Tj
+T*
+(25. Delete Level Prompt \(DELETE /level-prompts/:id\)) Tj
+T*
+() Tj
+T*
+(26. Create Media Job \(POST /media-jobs\) ? body: scenarioId, level, questionOrder, provider, jobId, source) Tj
+T*
+(27. Get Media Job by ID \(GET /media-jobs/:id\)) Tj
+T*
+(28. Get Media Job by Job ID \(GET /media-jobs/job/:jobId\)) Tj
+T*
+(29. Update Media Job Status \(PUT /media-jobs/job/:jobId/status\)) Tj
+T*
+(30. Get Media Jobs by Status \(GET /media-jobs/status/:status\)) Tj
+T*
+(31. Get Media Jobs for Scenario \(GET /media-jobs/scenario/:scenarioId\)) Tj
+T*
+() Tj
+T*
+(32. Start Practice Session \(POST /practice-sessions\) ? body: userId, scenarioId, level) Tj
+T*
+(33. Add Step to Session \(POST /practice-sessions/:sessionId/steps\) ? body: step details) Tj
+T*
+(34. Complete Session \(PUT /practice-sessions/:sessionId/complete\) ? body: aggregate, feedback, achievementsUnlocked) Tj
+T*
+(35. Abandon Session \(PUT /practice-sessions/:sessionId/abandon\)) Tj
+T*
+(36. Get User Sessions \(GET /practice-sessions/user/:userId?status&limit\)) Tj
+T*
+(37. Get Session by ID \(GET /practice-sessions/:sessionId\)) Tj
+T*
+(38. Delete Session \(DELETE /practice-sessions/:sessionId\)) Tj
+T*
+() Tj
+T*
+(39. Initialize Progress \(POST /progress\) ? body: userId, scenarioId) Tj
+T*
+(40. Get User Progress \(GET /progress/user/:userId\)) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+6 0 obj
+<< /Length 1269 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+50 742 Td
+(41. Get Progress for Scenario \(GET /progress/user/:userId/scenario/:scenarioId\)) Tj
+T*
+(42. Unlock Level \(PUT /progress/user/:userId/scenario/:scenarioId/unlock\) ? body: level) Tj
+T*
+() Tj
+T*
+(43. Create Encouragement Note \(POST /encouragement-notes\) ? body: userId, date, title, body, tags, linkedSessionId) Tj
+T*
+(44. Get User Notes \(GET /encouragement-notes/user/:userId?tags&date\)) Tj
+T*
+(45. Get Note by ID \(GET /encouragement-notes/:id\)) Tj
+T*
+(46. Update Note \(PUT /encouragement-notes/:id\)) Tj
+T*
+(47. Delete Note \(DELETE /encouragement-notes/:id\)) Tj
+T*
+() Tj
+T*
+(48. Create Achievement \(POST /achievements\) ? body: key, title, description, icon, category) Tj
+T*
+(49. Get All Achievements \(GET /achievements?category=optional\)) Tj
+T*
+(50. Get Achievement by ID \(GET /achievements/:id\)) Tj
+T*
+(51. Get Achievement by Key \(GET /achievements/key/:key\)) Tj
+T*
+(52. Update Achievement \(PUT /achievements/:id\)) Tj
+T*
+(53. Delete Achievement \(DELETE /achievements/:id\)) Tj
+T*
+() Tj
+T*
+(All endpoints expect `Content-Type: application/json`. Use `npm run dev` to start the server before testing. Tools like Postman or curl can hit http://localhost:3000/api/... with the payloads described above.) Tj
+T*
+() Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 6 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000121 00000 n 
+0000000191 00000 n 
+0000003513 00000 n 
+0000003639 00000 n 
+0000004959 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+5085
+%%EOF

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import AudioRecorder from './src/pages/AudioRecorder';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -198,10 +199,9 @@ function AuthForm(): React.JSX.Element {
 
 function SignedIn({ user }: { user: User }): React.JSX.Element {
   const [signingOut, setSigningOut] = useState(false);
-    const [screen, setScreen] = useState('home');
-
-
+  const [screen, setScreen] = useState('home');
   const [showCamera, setShowCamera] = useState(false);
+
   const handleSignOut = async () => {
     if (signingOut) return;
     setSigningOut(true);
@@ -211,8 +211,16 @@ function SignedIn({ user }: { user: User }): React.JSX.Element {
       setSigningOut(false);
     }
   };
+
+  useEffect(() => {
+  const getToken = async () => {
+    const token = await user.getIdToken();
+    console.log('🔑 Firebase Token:', token);
+  };
+  getToken();
+}, [user]);
+
   if (showCamera) {
-    // Optional: pass a simple close handler from CameraDetector if you want a back button there.
     return (
       <View style={styles.flex}>
         <CameraDetector />
@@ -223,8 +231,18 @@ function SignedIn({ user }: { user: User }): React.JSX.Element {
     );
   }
 
-   
-if (screen === 'levels') {
+  if (screen === 'audio') {
+    return (
+      <View style={styles.flex}>
+        <AudioRecorder />
+        <TouchableOpacity style={[styles.button, { margin: 16 }]} onPress={() => setScreen('home')}>
+          <Text style={styles.buttonText}>Back to Home</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (screen === 'levels') {
     return (
       <View style={styles.flex}>
         <LevelsScreen onSelectLevel={(lvl:any) => setScreen(lvl)} />
@@ -234,6 +252,7 @@ if (screen === 'levels') {
       </View>
     );
   }
+
   if (screen === 'level1') {
     return (
       <View style={styles.flex}>
@@ -244,6 +263,7 @@ if (screen === 'levels') {
       </View>
     );
   }
+
   if (screen === 'level2') {
     return (
       <View style={styles.flex}>
@@ -254,6 +274,7 @@ if (screen === 'levels') {
       </View>
     );
   }
+
   if (screen === 'level3') {
     return (
       <View style={styles.flex}>
@@ -264,22 +285,28 @@ if (screen === 'levels') {
       </View>
     );
   }
+
   return (
     <View style={styles.content}>
       <Text style={styles.title}>You are signed in</Text>
       <Text style={styles.subtitle}>{user.email ?? 'Signed in'}</Text>
-      <TouchableOpacity onPress={handleSignOut} style={styles.button} disabled={signingOut}>
-        {signingOut ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Log Out</Text>}
+      
+      <TouchableOpacity onPress={() => setScreen('audio')} style={styles.button}>
+        <Text style={styles.buttonText}>🎙 Speech Analyzer</Text>
       </TouchableOpacity>
+      
       <TouchableOpacity onPress={() => setShowCamera(true)} style={styles.button} disabled={signingOut}>
         <Text style={styles.buttonText}>Camera</Text>
       </TouchableOpacity>
+      
       <TouchableOpacity onPress={() => setScreen('levels')} style={styles.button}>
         <Text style={styles.buttonText}>Go to Levels</Text>
       </TouchableOpacity>
       
+      <TouchableOpacity onPress={handleSignOut} style={styles.button} disabled={signingOut}>
+        {signingOut ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Log Out</Text>}
+      </TouchableOpacity>
     </View>
-    
   );
 }
 
