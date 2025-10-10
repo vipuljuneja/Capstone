@@ -20,6 +20,7 @@ import {
   IWaveformRef,
 } from '@simform_solutions/react-native-audio-waveform';
 import { PermissionsAndroid, Platform } from 'react-native';
+import AudioWaveform from '../../Components/Audio/AudioWaveform';
 
 const { width, height } = Dimensions.get('window');
 
@@ -85,59 +86,45 @@ const Levels = () => {
       return;
     }
 
-    // Start Camera
-    if (cameraRef.current) {
-      cameraRef.current.startRecording();
-    }
-
-    // Start VoiceORB
-    if (voiceOrbRef.current && voiceOrbRef.current.start) {
-      voiceOrbRef.current.start();
-    }
-
-    // Start Waveform Recording
-    // if (waveformRef.current) {
-    //   const path =
-    //     Platform.OS === 'ios'
-    //       ? `audio_${Date.now()}.m4a`
-    //       : `audio_${Date.now()}.mp3`;
-
-    //   setAudioPath(path);
-
-    //   await waveformRef.current.startRecord({
-    //     path: path,
-    //     encoder: Platform.OS === 'ios' ? 'aac' : 'mp3',
-    //     sampleRate: 44100,
-    //     channels: 2,
-    //     bitRate: 128000,
-    //   });
-    // }
-
     setIsRecording(true);
+
+    // Wait for render
+    setTimeout(async () => {
+      if (waveformRef.current) {
+        await waveformRef.current.start();
+      }
+
+      if (cameraRef.current) {
+        cameraRef.current.startRecording();
+      }
+
+      if (voiceOrbRef.current && voiceOrbRef.current.start) {
+        voiceOrbRef.current.start();
+      }
+    }, 200);
   };
 
   const handleStop = async () => {
-    // Stop Camera
+    try {
+      if (waveformRef.current) {
+        await waveformRef.current.stop();
+      }
+    } catch (error) {
+      console.error('Waveform stop error:', error);
+    }
+
     if (cameraRef.current) {
       cameraRef.current.stopRecording();
     }
 
-    // Stop VoiceORB
     if (voiceOrbRef.current && voiceOrbRef.current.stop) {
       voiceOrbRef.current.stop();
     }
 
-    // Stop Waveform Recording
-    // if (waveformRef.current) {
-    //   try {
-    //     const result = await waveformRef.current.stopRecord();
-    //     console.log('Recording stopped. File saved at:', result);
-    //   } catch (error) {
-    //     console.error('Error stopping recording:', error);
-    //   }
-    // }
-
-    setIsRecording(false);
+    // Delay state change slightly
+    setTimeout(() => {
+      setIsRecording(false);
+    }, 100);
   };
 
   const handleUpload = () => {
@@ -188,25 +175,25 @@ const Levels = () => {
 
       {/* Bottom Section */}
       <View style={styles.bottomSection}>
-        {!isRecording ? (
-          <>
-            <TouchableOpacity style={styles.recordButton} onPress={handleStart}>
-              <Text style={styles.recordButtonText}>mic</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <TouchableOpacity style={styles.stopButton} onPress={handleStop}>
-              <Text style={styles.stopButtonText}>⬛</Text>
-            </TouchableOpacity>
+        <TouchableOpacity
+          style={isRecording ? styles.stopButton : styles.recordButton}
+          onPress={isRecording ? handleStop : handleStart}
+        >
+          <Text style={styles.recordButtonText}>
+            {isRecording ? '⬛' : '🎤'}
+          </Text>
+        </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.uploadButton}
-              onPress={handleUpload}
-            >
-              <Text style={styles.uploadButtonText}>↑</Text>
-            </TouchableOpacity>
-          </>
+        <View
+          style={isRecording ? styles.waveformVisible : styles.waveformHidden}
+        >
+          <AudioWaveform ref={waveformRef} />
+        </View>
+
+        {isRecording && (
+          <TouchableOpacity style={styles.uploadButton} onPress={handleUpload}>
+            <Text style={styles.uploadButtonText}>↑</Text>
+          </TouchableOpacity>
         )}
       </View>
     </View>
@@ -403,6 +390,26 @@ const styles = StyleSheet.create({
     borderWidth: '2px',
     borderRadius: '4px',
     paddingHorizontal: '8px',
+  },
+  waveformVisible: {
+    flex: 1,
+  },
+  waveformHidden: {
+    width: 0,
+    height: 0,
+    overflow: 'hidden',
+    opacity: 0,
+  },
+  waveformVisible: {
+    flex: 1,
+    height: 60,
+  },
+  waveformHidden: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    opacity: 0,
+    left: -9999,
   },
 });
 
