@@ -101,6 +101,11 @@ const Levels = () => {
       if (voiceOrbRef.current && voiceOrbRef.current.start) {
         voiceOrbRef.current.start();
       }
+
+      // Add this: Start AudioRecorder
+      if (audioRecorderRef.current) {
+        audioRecorderRef.current.startRecording();
+      }
     }, 200);
   };
 
@@ -119,6 +124,11 @@ const Levels = () => {
 
     if (voiceOrbRef.current && voiceOrbRef.current.stop) {
       voiceOrbRef.current.stop();
+    }
+
+    // Add this: Stop AudioRecorder
+    if (audioRecorderRef.current) {
+      audioRecorderRef.current.stopRecording();
     }
 
     // Delay state change slightly
@@ -175,6 +185,7 @@ const Levels = () => {
 
       {/* Bottom Section */}
       <View style={styles.bottomSection}>
+        <AudioRecorder ref={audioRecorderRef} />
         <TouchableOpacity
           style={isRecording ? styles.stopButton : styles.recordButton}
           onPress={isRecording ? handleStop : handleStart}
