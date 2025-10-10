@@ -1,24 +1,25 @@
-import React, { useRef, useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  SafeAreaView,
-  NativeModules,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import React, {
+  useRef,
+  useEffect,
+  useState,
+  forwardRef,
+  useImperativeHandle,
+} from 'react';
+import { View, Text, StyleSheet, NativeModules } from 'react-native';
 import {
   Camera,
   useCameraDevice,
   useCameraPermission,
 } from 'react-native-vision-camera';
 
-import { extractFrameMetrics } from '../utils/facialAnalysis';
-import { generateInsights } from '../utils/insightGenerator';
+import { extractFrameMetrics } from '../../utils/facialAnalysis';
+import { generateInsights } from '../../utils/insightGenerator';
 
 const { FaceLandmarkModule } = NativeModules;
 
-const CameraDetector = () => {
+import Toast from 'react-native-toast-message';
+
+const CameraDetector = forwardRef((props, ref) => {
   const camera = useRef(null);
   const device = useCameraDevice('front');
   const { hasPermission, requestPermission } = useCameraPermission();
@@ -43,7 +44,7 @@ const CameraDetector = () => {
         if (camera.current && !isProcessing) {
           captureAndProcess();
         }
-      }, 2000);
+      }, 1000);
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -64,10 +65,22 @@ const CameraDetector = () => {
       const photo = await camera.current.takePhoto();
       const result = await FaceLandmarkModule.processImage(photo.path);
 
-      // Extract metrics from frame
+      console.log('results----', result);
+
+      if (result.faceCount === 0) {
+        Toast.show({
+          type: 'info',
+          text1: '👻 Where did you go?',
+          text2: 'Keep your beautiful face in the center! 📸',
+          position: 'bottom',
+          visibilityTime: 2000,
+        });
+
+        return;
+      }
+
       const frameMetrics = extractFrameMetrics(result);
 
-      // Add to captured frames array
       setCapturedFrames(prevFrames => [...prevFrames, frameMetrics]);
       setFrameCount(prev => prev + 1);
 
@@ -90,7 +103,6 @@ const CameraDetector = () => {
     console.log('⏹️  Stopping session...');
     setIsCapturing(false);
 
-    // Generate and display insights
     if (capturedFrames.length > 0) {
       console.log('\n' + '='.repeat(80));
       console.log('📊 FACIAL EXPRESSION CONFIDENCE ANALYSIS');
@@ -114,7 +126,6 @@ const CameraDetector = () => {
   };
 
   const displayInsights = insights => {
-    // Summary
     console.log('📋 SUMMARY');
     console.log('-'.repeat(80));
     console.log(
@@ -236,6 +247,14 @@ const CameraDetector = () => {
     console.log('='.repeat(80));
   };
 
+  // Expose start and stop methods to parent component
+  useImperativeHandle(ref, () => ({
+    startRecording: handleStart,
+    stopRecording: handleStop,
+    isRecording: isCapturing,
+    frameCount: frameCount,
+  }));
+
   if (!hasPermission || !device) {
     return (
       <View style={styles.centerContainer}>
@@ -245,7 +264,7 @@ const CameraDetector = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Camera
         ref={camera}
         style={styles.camera}
@@ -254,66 +273,19 @@ const CameraDetector = () => {
         photo={true}
       />
 
-      <View style={styles.overlay}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Confidence Analyzer</Text>
-          <Text style={styles.subtitle}>
-            {isCapturing
-              ? `Recording... ${frameCount} frames`
-              : 'Ready to analyze'}
-          </Text>
+      {isCapturing && (
+        <View style={styles.recordingIndicator}>
+          <Text style={styles.recordingText}>🔴 {frameCount} frames</Text>
         </View>
-
-        <View style={styles.bottomContainer}>
-          <Text style={styles.statusText}>
-            {isProcessing
-              ? '📸 Processing...'
-              : isCapturing
-              ? '🔴 Recording'
-              : '⚪ Stopped'}
-          </Text>
-
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                styles.button,
-                styles.startButton,
-                isCapturing && styles.buttonDisabled,
-              ]}
-              onPress={handleStart}
-              disabled={isCapturing}
-            >
-              <Text style={styles.buttonText}>▶ Start</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.button,
-                styles.stopButton,
-                !isCapturing && styles.buttonDisabled,
-              ]}
-              onPress={handleStop}
-              disabled={!isCapturing}
-            >
-              <Text style={styles.buttonText}>⏹ Stop</Text>
-            </TouchableOpacity>
-          </View>
-
-          {frameCount > 0 && (
-            <Text style={styles.hintText}>
-              💡 Capture at least 10 frames for better analysis
-            </Text>
-          )}
-        </View>
-      </View>
-    </SafeAreaView>
+      )}
+    </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#000',
+    width: '100%',
+    height: '100%',
   },
   camera: {
     flex: 1,
@@ -326,88 +298,21 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#fff',
-    fontSize: 16,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'space-between',
-  },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  title: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: 'bold',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  subtitle: {
-    color: '#fff',
-    fontSize: 16,
-    marginTop: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
-  bottomContainer: {
-    paddingBottom: 50,
-    alignItems: 'center',
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginBottom: 20,
-    overflow: 'hidden',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    gap: 20,
-  },
-  button: {
-    paddingHorizontal: 40,
-    paddingVertical: 16,
-    borderRadius: 12,
-    minWidth: 120,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  startButton: {
-    backgroundColor: '#4CAF50',
-  },
-  stopButton: {
-    backgroundColor: '#f44336',
-  },
-  buttonDisabled: {
-    backgroundColor: '#666',
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  hintText: {
-    color: '#fff',
     fontSize: 14,
-    marginTop: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+  },
+  recordingIndicator: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 12,
-    overflow: 'hidden',
+  },
+  recordingText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 

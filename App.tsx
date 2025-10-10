@@ -18,15 +18,16 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
-import LevelsScreen from "./src/pages/LevelsScreen";
-import Level1 from "./src/screens/Level1";
-import Level2 from "./src/screens/Level2";
-import Level3 from "./src/screens/Level3";
+import LevelsScreen from './src/pages/LevelsScreen';
+import Level1 from './src/screens/Level1';
+import Level2 from './src/screens/Level2';
+import Level3 from './src/screens/Level3';
 
-
-import CameraDetector from './src/pages/CameraDetector';
+import CameraDetector from './src/Components/Facial/CameraDetector';
+import Levels from './src/pages/Levels/Levels';
 
 import { auth } from './src/firebase';
+import Toast from 'react-native-toast-message';
 
 function App(): React.JSX.Element {
   const [user, setUser] = useState<User | null>(null);
@@ -44,7 +45,7 @@ function App(): React.JSX.Element {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-        {initializing ? (
+        {/* {initializing ? (
           <View style={styles.centered}>
             <ActivityIndicator size="large" />
           </View>
@@ -52,8 +53,11 @@ function App(): React.JSX.Element {
           <SignedIn user={user} />
         ) : (
           <AuthForm />
-        )}
+        )} */}
         {/* {<CameraDetector />} */}
+        {/* <AudioRecorder /> */}
+        <Levels />
+        <Toast />
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -213,18 +217,21 @@ function SignedIn({ user }: { user: User }): React.JSX.Element {
   };
 
   useEffect(() => {
-  const getToken = async () => {
-    const token = await user.getIdToken();
-    console.log('🔑 Firebase Token:', token);
-  };
-  getToken();
-}, [user]);
+    const getToken = async () => {
+      const token = await user.getIdToken();
+      console.log('🔑 Firebase Token:', token);
+    };
+    getToken();
+  }, [user]);
 
   if (showCamera) {
     return (
       <View style={styles.flex}>
         <CameraDetector />
-        <TouchableOpacity style={[styles.button, { margin: 16 }]} onPress={() => setShowCamera(false)}>
+        <TouchableOpacity
+          style={[styles.button, { margin: 16 }]}
+          onPress={() => setShowCamera(false)}
+        >
           <Text style={styles.buttonText}>Back</Text>
         </TouchableOpacity>
       </View>
@@ -235,7 +242,10 @@ function SignedIn({ user }: { user: User }): React.JSX.Element {
     return (
       <View style={styles.flex}>
         <AudioRecorder />
-        <TouchableOpacity style={[styles.button, { margin: 16 }]} onPress={() => setScreen('home')}>
+        <TouchableOpacity
+          style={[styles.button, { margin: 16 }]}
+          onPress={() => setScreen('home')}
+        >
           <Text style={styles.buttonText}>Back to Home</Text>
         </TouchableOpacity>
       </View>
@@ -245,8 +255,11 @@ function SignedIn({ user }: { user: User }): React.JSX.Element {
   if (screen === 'levels') {
     return (
       <View style={styles.flex}>
-        <LevelsScreen onSelectLevel={(lvl:any) => setScreen(lvl)} />
-        <TouchableOpacity style={[styles.button, { margin: 16 }]} onPress={() => setScreen('home')}>
+        <LevelsScreen onSelectLevel={(lvl: any) => setScreen(lvl)} />
+        <TouchableOpacity
+          style={[styles.button, { margin: 16 }]}
+          onPress={() => setScreen('home')}
+        >
           <Text style={styles.buttonText}>Back</Text>
         </TouchableOpacity>
       </View>
@@ -257,7 +270,10 @@ function SignedIn({ user }: { user: User }): React.JSX.Element {
     return (
       <View style={styles.flex}>
         <Level1 />
-        <TouchableOpacity style={[styles.button, { margin: 16 }]} onPress={() => setScreen('levels')}>
+        <TouchableOpacity
+          style={[styles.button, { margin: 16 }]}
+          onPress={() => setScreen('levels')}
+        >
           <Text style={styles.buttonText}>Back to Levels</Text>
         </TouchableOpacity>
       </View>
@@ -268,7 +284,10 @@ function SignedIn({ user }: { user: User }): React.JSX.Element {
     return (
       <View style={styles.flex}>
         <Level2 />
-        <TouchableOpacity style={[styles.button, { margin: 16 }]} onPress={() => setScreen('levels')}>
+        <TouchableOpacity
+          style={[styles.button, { margin: 16 }]}
+          onPress={() => setScreen('levels')}
+        >
           <Text style={styles.buttonText}>Back to Levels</Text>
         </TouchableOpacity>
       </View>
@@ -279,7 +298,10 @@ function SignedIn({ user }: { user: User }): React.JSX.Element {
     return (
       <View style={styles.flex}>
         <Level3 />
-        <TouchableOpacity style={[styles.button, { margin: 16 }]} onPress={() => setScreen('levels')}>
+        <TouchableOpacity
+          style={[styles.button, { margin: 16 }]}
+          onPress={() => setScreen('levels')}
+        >
           <Text style={styles.buttonText}>Back to Levels</Text>
         </TouchableOpacity>
       </View>
@@ -290,21 +312,39 @@ function SignedIn({ user }: { user: User }): React.JSX.Element {
     <View style={styles.content}>
       <Text style={styles.title}>You are signed in</Text>
       <Text style={styles.subtitle}>{user.email ?? 'Signed in'}</Text>
-      
-      <TouchableOpacity onPress={() => setScreen('audio')} style={styles.button}>
+
+      <TouchableOpacity
+        onPress={() => setScreen('audio')}
+        style={styles.button}
+      >
         <Text style={styles.buttonText}>🎙 Speech Analyzer</Text>
       </TouchableOpacity>
-      
-      <TouchableOpacity onPress={() => setShowCamera(true)} style={styles.button} disabled={signingOut}>
+
+      <TouchableOpacity
+        onPress={() => setShowCamera(true)}
+        style={styles.button}
+        disabled={signingOut}
+      >
         <Text style={styles.buttonText}>Camera</Text>
       </TouchableOpacity>
-      
-      <TouchableOpacity onPress={() => setScreen('levels')} style={styles.button}>
+
+      <TouchableOpacity
+        onPress={() => setScreen('levels')}
+        style={styles.button}
+      >
         <Text style={styles.buttonText}>Go to Levels</Text>
       </TouchableOpacity>
-      
-      <TouchableOpacity onPress={handleSignOut} style={styles.button} disabled={signingOut}>
-        {signingOut ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Log Out</Text>}
+
+      <TouchableOpacity
+        onPress={handleSignOut}
+        style={styles.button}
+        disabled={signingOut}
+      >
+        {signingOut ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Text style={styles.buttonText}>Log Out</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
