@@ -19,6 +19,7 @@ import {
 import RNFetchBlob from 'react-native-blob-util';
 import Sound from 'react-native-sound';
 import { TTS_API_KEY } from '@env';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const DEEPGRAM_API_KEY = TTS_API_KEY;
 const DG_MODEL = 'aura-2-thalia-en';
@@ -26,16 +27,35 @@ const DG_MODEL = 'aura-2-thalia-en';
 const VoiceOrb = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => ({
     start: () => {
-      // Start speaking from current index
       speakIndex(idx);
     },
     stop: () => {
-      // Stop speaking and reset
       cleanupSound();
       stopPulse();
       setSpeaking(false);
       setLoading(false);
     },
+    replay: () => {
+      speakIndex(idx);
+    },
+    next: () => {
+      if (loading || speaking) return;
+      const n = Math.min(LINES.length - 1, idx + 1);
+      setIdx(n);
+      speakIndex(n);
+    },
+    prev: () => {
+      if (loading || speaking) return;
+      const n = Math.max(0, idx - 1);
+      setIdx(n);
+      speakIndex(n);
+    },
+    getState: () => ({
+      speaking,
+      loading,
+      idx,
+      totalLines: LINES.length,
+    }),
   }));
 
   const LINES = useMemo(
@@ -176,8 +196,6 @@ const VoiceOrb = forwardRef((props, ref) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Voice Orb</Text>
-
       <Pressable
         onPress={replay}
         disabled={loading}
@@ -194,56 +212,33 @@ const VoiceOrb = forwardRef((props, ref) => {
           ]}
         />
         <Text style={styles.caption}>
-          {speaking
+          {/* {speaking
             ? 'Speaking…'
             : loading
             ? 'Generating…'
-            : 'Tap the orb to play'}
+            : 'Tap the orb to play'} */}
         </Text>
       </Pressable>
 
       <Text style={styles.line}>"{LINES[idx]}"</Text>
-      <Text style={styles.step}>
+      {/* <Text style={styles.step}>
         {idx + 1} / {LINES.length}
-      </Text>
-
-      <View style={styles.row}>
-        <TouchableOpacity
-          onPress={prev}
-          disabled={speaking || loading || idx === 0}
-          style={[
-            styles.btn,
-            (speaking || loading || idx === 0) && styles.btnDisabled,
-          ]}
-        >
-          <Text style={styles.btnText}>Previous</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={next}
-          disabled={speaking || loading || idx === LINES.length - 1}
-          style={[
-            styles.btn,
-            (speaking || loading || idx === LINES.length - 1) &&
-              styles.btnDisabled,
-          ]}
-        >
-          <Text style={styles.btnText}>Next</Text>
-        </TouchableOpacity>
-      </View>
+      </Text> */}
     </View>
   );
 });
 
-const BALL = 140;
+const BALL = 220;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B1220',
-    alignItems: 'center',
+    backgroundColor: 'white',
+    // alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
     height: '100%',
-    paddingTop: '30%',
+    // padding: '16',
+    // paddingTop: '30%',
   },
   title: { color: '#E6ECFF', fontSize: 20, fontWeight: '700' },
   ball: {
@@ -257,19 +252,7 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   caption: { color: '#C9D6FF', marginTop: 10, fontSize: 14 },
-  line: { color: '#9DB4FF', fontSize: 16, textAlign: 'center', marginTop: 8 },
-  step: { color: '#8AA2FF', fontSize: 12 },
-  row: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  btn: {
-    paddingHorizontal: 16,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: '#3a7afe',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnDisabled: { opacity: 0.5 },
-  btnText: { color: '#fff', fontWeight: '600' },
+  line: { color: '#9DB4FF', fontSize: 24, textAlign: 'center', marginTop: 32 },
 });
 
 export default VoiceOrb;

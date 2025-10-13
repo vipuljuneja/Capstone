@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   PanResponder,
   Animated,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import CameraDetector from '../../Components/Facial/CameraDetector';
 import VoiceORB from '../../Components/Avatar/VoiceORB';
@@ -39,6 +40,38 @@ const Levels = () => {
   const voiceOrbRef = useRef(null);
   const audioRecorderRef = useRef(null);
   const waveformRef = useRef(null);
+
+  const [orbState, setOrbState] = useState({
+    speaking: false,
+    loading: false,
+    idx: 0,
+    totalLines: 5,
+  });
+
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     if (voiceOrbRef.current) {
+  //       setOrbState(voiceOrbRef.current.getState());
+  //     }
+  //   }, 100);
+  //   return () => clearInterval(interval);
+  // }, []);
+
+  const handleStateChange = useCallback(newState => {
+    setOrbState(newState);
+  }, []);
+
+  const handlePrev = useCallback(() => {
+    voiceOrbRef.current?.prev();
+  }, []);
+
+  const handleNext = useCallback(() => {
+    voiceOrbRef.current?.next();
+  }, []);
+
+  const handleRepeat = useCallback(() => {
+    voiceOrbRef.current?.replay();
+  }, []);
 
   const requestAudioPermission = async () => {
     if (Platform.OS === 'android') {
@@ -140,8 +173,6 @@ const Levels = () => {
   const handleUpload = () => {
     if (audioPath) {
       console.log('Uploading audio file:', audioPath);
-      // Add your upload logic here
-      // You can access the file at the audioPath
     }
   };
 
@@ -160,7 +191,7 @@ const Levels = () => {
       {/* Middle Section For Avatar */}
       <View style={styles.middleSection}>
         <View style={styles.avatarPlaceholder}>
-          <VoiceORB ref={voiceOrbRef} />
+          <VoiceORB ref={voiceOrbRef} onStateChange={handleStateChange} />
           {/* <AvatarGenerate /> */}
           {/* <AudioRecorder ref={audioRecorderRef} onAudioLevel={setAudioLevel} /> */}
         </View>
@@ -183,29 +214,77 @@ const Levels = () => {
         </Animated.View>
       </View>
 
+      {/* Buttons Section */}
+
+      <View
+        style={isRecording ? styles.waveformVisible : styles.waveformHidden}
+      >
+        <AudioWaveform ref={waveformRef} />
+      </View>
+
       {/* Bottom Section */}
-      <View style={styles.bottomSection}>
+      <View
+        style={
+          !isRecording ? styles.bottomSectionBefore : styles.bottomSectionAfter
+        }
+      >
         <AudioRecorder ref={audioRecorderRef} />
+        <TouchableOpacity
+          onPress={handlePrev}
+          disabled={orbState.speaking || orbState.loading || orbState.idx === 0}
+          style={
+            !isRecording
+              ? 'none'
+              : [
+                  styles.btn,
+                  (orbState.speaking ||
+                    orbState.loading ||
+                    orbState.idx === 0) &&
+                    styles.btnDisabled,
+                ]
+          }
+        >
+          <Icon name="arrow-left-circle" size={30} color="white" />
+        </TouchableOpacity>
         <TouchableOpacity
           style={isRecording ? styles.stopButton : styles.recordButton}
           onPress={isRecording ? handleStop : handleStart}
         >
           <Text style={styles.recordButtonText}>
-            {isRecording ? '⬛' : '🎤'}
+            {isRecording ? (
+              <Icon name="stop-circle-outline" size={30} color="white" />
+            ) : (
+              <Icon name="microphone" size={30} color="white" />
+            )}
           </Text>
         </TouchableOpacity>
-
-        <View
-          style={isRecording ? styles.waveformVisible : styles.waveformHidden}
+        <TouchableOpacity
+          onPress={handleNext}
+          disabled={
+            orbState.speaking ||
+            orbState.loading ||
+            orbState.idx === orbState.totalLines - 1
+          }
+          style={
+            !isRecording
+              ? 'none'
+              : [
+                  styles.btn,
+                  (orbState.speaking ||
+                    orbState.loading ||
+                    orbState.idx === orbState.totalLines - 1) &&
+                    styles.btnDisabled,
+                ]
+          }
         >
-          <AudioWaveform ref={waveformRef} />
-        </View>
+          <Icon name="arrow-right-circle" size={30} color="white" />
+        </TouchableOpacity>
 
-        {isRecording && (
-          <TouchableOpacity style={styles.uploadButton} onPress={handleUpload}>
-            <Text style={styles.uploadButtonText}>↑</Text>
+        {/* {isRecording && (
+          <TouchableOpacity style={styles.uploadButton} onPress={handleRepeat}>
+            <Icon name="rotate-right" size={30} color="white" />
           </TouchableOpacity>
-        )}
+        )} */}
       </View>
     </View>
   );
@@ -275,7 +354,15 @@ const styles = StyleSheet.create({
     elevation: 5,
     overflow: 'hidden',
   },
-  bottomSection: {
+  bottomSectionBefore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 30,
+    backgroundColor: 'white',
+    gap: 20,
+  },
+  bottomSectionAfter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -284,9 +371,9 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   recordButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#666',
     justifyContent: 'center',
     alignItems: 'center',
@@ -295,7 +382,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ff4444',
   },
   recordButtonText: {
-    fontSize: 32,
+    fontSize: 24,
     color: 'white',
   },
   waveform: {
@@ -328,9 +415,9 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   stopButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     backgroundColor: '#666',
     justifyContent: 'center',
     alignItems: 'center',
@@ -375,7 +462,7 @@ const styles = StyleSheet.create({
   waveformContainer: {
     flex: 1,
     height: 60,
-    backgroundColor: '#666',
+    backgroundColor: 'white',
     borderRadius: 30,
     overflow: 'hidden',
     justifyContent: 'center',
@@ -401,9 +488,7 @@ const styles = StyleSheet.create({
     borderWidth: '2px',
     borderRadius: '4px',
     paddingHorizontal: '8px',
-  },
-  waveformVisible: {
-    flex: 1,
+    backgroundColor: 'white',
   },
   waveformHidden: {
     width: 0,
@@ -412,16 +497,33 @@ const styles = StyleSheet.create({
     opacity: 0,
   },
   waveformVisible: {
-    flex: 1,
     height: 60,
+    backgroundColor: 'white',
   },
-  waveformHidden: {
-    position: 'absolute',
-    width: 0,
-    height: 0,
-    opacity: 0,
-    left: -9999,
+  row: {
+    backgroundColor: 'white',
+    flexDirection: 'row',
+    // gap: 12,
+    display: 'flex',
+    justifyContent: 'space-between',
+    bottom: 0,
+    right: 0,
+    left: 0,
+    width: '100%',
+    paddingHorizontal: '10%',
+    // position: 'absolute',
   },
+  btn: {
+    paddingHorizontal: 16,
+    height: 70,
+    width: 70,
+    borderRadius: 35,
+    backgroundColor: '#3a7afe',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  btnDisabled: { opacity: 0.5 },
+  btnText: { color: '#fff', fontWeight: '600' },
 });
 
 export default Levels;
