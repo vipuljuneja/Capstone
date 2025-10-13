@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   waveformContainer: {
     width: '100%',
     height: 50,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'white',
     borderRadius: 10,
   },
   buttonContainer: {
