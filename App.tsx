@@ -19,6 +19,7 @@ import {
   signOut,
 } from 'firebase/auth';
 import LevelsScreen from './src/pages/LevelsScreen';
+import NotebookScreen from './src/pages/NotebookScreen'
 import Level1 from './src/screens/Level1';
 import Level2 from './src/screens/Level2';
 import Level3 from './src/screens/Level3';
@@ -28,6 +29,7 @@ import Levels from './src/pages/Levels/Levels';
 
 import { auth } from './src/firebase';
 import Toast from 'react-native-toast-message';
+import Onboarding from './src/pages/Onboarding';
 
 function App(): React.JSX.Element {
   const [user, setUser] = useState<User | null>(null);
@@ -58,6 +60,8 @@ function App(): React.JSX.Element {
         {/* <AudioRecorder /> */}
         <Levels />
         <Toast />
+        {/* <Onboarding></Onboarding> */}
+        {/* <NotebookScreen></NotebookScreen> */}
       </SafeAreaView>
     </SafeAreaProvider>
   );
