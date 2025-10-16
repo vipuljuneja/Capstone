@@ -48,6 +48,14 @@ const Levels = () => {
     totalLines: 5,
   });
 
+  // Initialize session when component mounts
+  useEffect(() => {
+    if (audioRecorderRef.current) {
+      audioRecorderRef.current.startSession();
+      console.log('📝 Session initialized');
+    }
+  }, []);
+
   // useEffect(() => {
   //   const interval = setInterval(() => {
   //     if (voiceOrbRef.current) {
@@ -135,7 +143,7 @@ const Levels = () => {
         voiceOrbRef.current.start();
       }
 
-      // Add this: Start AudioRecorder
+      // Start AudioRecorder
       if (audioRecorderRef.current) {
         audioRecorderRef.current.startRecording();
       }
@@ -159,7 +167,7 @@ const Levels = () => {
       voiceOrbRef.current.stop();
     }
 
-    // Add this: Stop AudioRecorder
+    // Stop AudioRecorder
     if (audioRecorderRef.current) {
       audioRecorderRef.current.stopRecording();
     }
@@ -168,6 +176,22 @@ const Levels = () => {
     setTimeout(() => {
       setIsRecording(false);
     }, 100);
+  };
+
+  // NEW FUNCTION - Finish session and get all data
+
+  // Sukhbir this is the function you need to call when user clicks "Finish" or you can you use it when the session ends.
+  const handleFinishSession = () => {
+    if (audioRecorderRef.current) {
+      const allData = audioRecorderRef.current.endSession();
+      console.log('✅ SESSION FINISHED - All Data:', allData);
+      
+      // Here you can:
+      // - Send to your backend API
+      // - Save to local storage
+      // - Navigate to results screen
+      // - etc.
+    }
   };
 
   const handleUpload = () => {
@@ -182,6 +206,15 @@ const Levels = () => {
       <View style={styles.topSection}>
         <TouchableOpacity style={styles.backButton}>
           <Text style={styles.backButtonText}>←</Text>
+        </TouchableOpacity>
+        
+        {/* FINISH SESSION BUTTON */}
+        <TouchableOpacity 
+          style={styles.finishButton}
+          onPress={handleFinishSession}
+        >
+          <Icon name="check-circle" size={24} color="#4CAF50" />
+          <Text style={styles.finishButtonText}>Finish</Text>
         </TouchableOpacity>
         {/* <View style={styles.progressBar}>
           <View style={styles.progressFill} />
@@ -311,6 +344,22 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 24,
     color: '#333',
+  },
+  // NEW STYLES FOR FINISH BUTTON
+  finishButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+    marginLeft: 'auto',
+  },
+  finishButtonText: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: '600',
   },
   progressBar: {
     flex: 1,
