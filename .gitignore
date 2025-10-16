@@ -79,3 +79,11 @@ yarn-error.log
 
 
 capstone-e6504-firebase-adminsdk-fbsvc-b9cad394b3.json
+
+
+**/*.xcworkspace/xcuserdata/
+**/*.xcodeproj/**/xcuserdata/
+**/*.xcuserstate
+*.mobileprovision
+*.cer
+*.p12
