@@ -1,0 +1,3 @@
+curl -X PUT http://localhost:3000/api/practice-sessions/68ef23f9efe7a8cc984fe627/abandon
+
+curl -X GET http://localhost:3000/api/practice-sessions/68ef23f9efe7a8cc984fe627

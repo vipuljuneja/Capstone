@@ -19,6 +19,10 @@ const AudioRecorder = forwardRef((props, ref) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingPath, setRecordingPath] = useState(null);
 
+  // SESSION MANAGEMENT - Store all recordings in one session
+  const [sessionData, setSessionData] = useState([]);
+  const [recordingCount, setRecordingCount] = useState(0);
+
   // Animation values for wave bars
   // const [waves] = useState(() => [
   //   new Animated.Value(0.3),
@@ -72,8 +76,16 @@ const AudioRecorder = forwardRef((props, ref) => {
   //   }
   // }, [isRecording, waves]);
 
+  // NEW FUNCTION - Start a new session (call this once at the beginning)
+  const startSession = () => {
+    console.log('🎬 SESSION STARTED');
+    setSessionData([]);
+    setRecordingCount(0);
+  };
+
   const startRecording = async () => {
-    console.log('=== START RECORDING ===');
+    console.log(`=== START RECORDING #${recordingCount + 1} ===`);
+    
     try {
       try {
         await audioRecorder.stopRecorder();
@@ -112,7 +124,7 @@ const AudioRecorder = forwardRef((props, ref) => {
     }
   };
 
-  const transcribeAudio = async audioPath => {
+  const transcribeAudio = async (audioPath) => {
     console.log('=== TRANSCRIBING ===');
     try {
       const cleanPath = audioPath.replace('file://', '');
@@ -215,6 +227,8 @@ const AudioRecorder = forwardRef((props, ref) => {
       console.log('═══════════════════════════════════════════\n');
 
       const report = {
+        recordingNumber: recordingCount + 1,
+        timestamp: new Date().toISOString(),
         wpm: calculatedWpm,
         totalWords: words.length,
         fillerWordCount: fillers.length,
@@ -232,6 +246,17 @@ const AudioRecorder = forwardRef((props, ref) => {
       console.log(JSON.stringify(report, null, 2));
       console.log('\n');
 
+      // SAVE TO SESSION DATA
+      setSessionData(prev => [...prev, report]);
+      setRecordingCount(prev => prev + 1);
+
+      console.log(`✅ Recording #${recordingCount + 1} saved to session\n`);
+
+      // Call parent callback if provided
+      if (props.onRecordingComplete) {
+        props.onRecordingComplete(report);
+      }
+
       await RNFS.fs.unlink(cleanPath);
       console.log('✓ Audio file deleted\n');
     } catch (error) {
@@ -245,11 +270,55 @@ const AudioRecorder = forwardRef((props, ref) => {
     }
   };
 
+  // NEW FUNCTION - End session and get all recordings data
+  const endSession = () => {
+    console.log('\n\n╔═══════════════════════════════════════════╗');
+    console.log('║        SESSION COMPLETE - ALL DATA        ║');
+    console.log('╚═══════════════════════════════════════════╝\n');
+
+    const sessionSummary = {
+      totalRecordings: sessionData.length,
+      sessionDate: new Date().toISOString(),
+      recordings: sessionData,
+      averageWpm: sessionData.length > 0 
+        ? Math.round(sessionData.reduce((sum, r) => sum + r.wpm, 0) / sessionData.length)
+        : 0,
+      totalFillerWords: sessionData.reduce((sum, r) => sum + r.fillerWordCount, 0),
+      totalPauses: sessionData.reduce((sum, r) => sum + r.pauseCount, 0),
+      totalDuration: sessionData.reduce((sum, r) => sum + parseFloat(r.duration), 0).toFixed(2),
+    };
+
+    console.log('📊 COMPLETE SESSION JSON:');
+    console.log(JSON.stringify(sessionSummary, null, 2));
+    console.log('\n');
+
+    // Call parent callback if provided
+    if (props.onSessionComplete) {
+      props.onSessionComplete(sessionSummary);
+    }
+
+    return sessionSummary;
+  };
+
+  // NEW FUNCTION - Get current session data anytime
+  const getSessionData = () => {
+    return {
+      recordingCount: recordingCount,
+      totalRecordings: sessionData.length,
+      data: sessionData,
+    };
+  };
+
   useImperativeHandle(ref, () => ({
+    startSession,
     startRecording,
     stopRecording,
+    endSession,
+    getSessionData,
     isRecording,
     recordingPath,
+    recordingCount,
+    sessionData,
   }));
 
   return null;
