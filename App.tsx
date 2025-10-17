@@ -22,12 +22,14 @@ import LevelsScreen from './src/pages/LevelsScreen';
 import Level1 from './src/screens/Level1';
 import Level2 from './src/screens/Level2';
 import Level3 from './src/screens/Level3';
+import DailyArticleMain from './src/screens/DailyArticleMain';
 
 import CameraDetector from './src/Components/Facial/CameraDetector';
 import Levels from './src/pages/Levels/Levels';
 
 import { auth } from './src/firebase';
 import Toast from 'react-native-toast-message';
+import { DailyArticle } from './backend/src/models';
 
 function App(): React.JSX.Element {
   const [user, setUser] = useState<User | null>(null);
@@ -56,7 +58,8 @@ function App(): React.JSX.Element {
         )} */}
         {/* {<CameraDetector />} */}
         {/* <AudioRecorder /> */}
-        <Levels />
+        {/* <Levels /> */}
+        <DailyArticleMain />
         <Toast />
       </SafeAreaView>
     </SafeAreaProvider>

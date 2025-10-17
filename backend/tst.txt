@@ -1,0 +1,10 @@
+
+curl -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=AIzaSyCH97bfXGSf2lbhzikvlNRPYupki1Nj5EE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contents": [{
+      "parts": [{
+        "text": "Write a short motivational message about confidence."
+      }]
+    }]
+  }'

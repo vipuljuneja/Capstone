@@ -202,4 +202,16 @@ router.put('/achievements/:id', controllers.updateAchievement);
 // DELETE /api/achievements/:id - Delete achievement
 router.delete('/achievements/:id', controllers.deleteAchievement);
 
+
+// DAILY ARTICLE ROUTES
+router.get('/articles/today', controllers.getTodayArticle);
+router.get('/articles/last-7-days', controllers.getLast7DaysArticles);
+router.get('/articles/:id', controllers.getArticleById);
+router.post('/articles/generate', controllers.generateTodayArticleManually);
+
+// BOOKMARK ROUTES
+router.post('/bookmarks', controllers.bookmarkArticle);
+router.delete('/bookmarks', controllers.removeBookmark);
+router.get('/bookmarks/user/:userId', controllers.getUserBookmarkedArticles);
+
 export default router;
