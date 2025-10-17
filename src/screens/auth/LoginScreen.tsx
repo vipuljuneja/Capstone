@@ -24,7 +24,9 @@ export default function LoginScreen({ onSwitchToSignup }: LoginScreenProps) {
   const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async () => {
-    if (!email.trim() || !password) return;
+    if (!email.trim() || !password) {
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -32,9 +34,11 @@ export default function LoginScreen({ onSwitchToSignup }: LoginScreenProps) {
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
       console.log('✅ Login successful');
-    } catch (err: any) {
-      console.error('❌ Login error:', err.message);
-      setError(err.message || 'Failed to sign in');
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to sign in. Please try again.';
+      console.error('❌ Login error:', message, err);
+      setError(message);
     } finally {
       setLoading(false);
     }

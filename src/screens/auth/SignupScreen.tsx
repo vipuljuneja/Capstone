@@ -11,7 +11,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, deleteUser, User } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { createUserInBackend } from '../../services/api';
 
@@ -35,42 +35,53 @@ export default function SignupScreen({ onSwitchToLogin }: SignupScreenProps) {
     password === confirmPassword;
 
   const handleSignup = async () => {
-    if (!canSubmit || loading) return;
+    if (!canSubmit || loading) {
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
+    let firebaseUser: User | null = null;
+    let profileCreated = false;
+
     try {
-      // Step 1: Create Firebase user
-      console.log('📝 Creating Firebase user...');
+      const trimmedEmail = email.trim();
+      const trimmedName = name.trim();
+
       const userCredential = await createUserWithEmailAndPassword(
         auth,
-        email.trim(),
+        trimmedEmail,
         password
       );
-      console.log('✅ Firebase user created:', userCredential.user.uid);
 
-      // Step 2: Create user in MongoDB backend
-      console.log('📝 Creating user in MongoDB...');
+      firebaseUser = userCredential.user;
+
       await createUserInBackend({
-        authUid: userCredential.user.uid,
-        email: email.trim(),
-        name: name.trim(),
+        authUid: firebaseUser.uid,
+        email: trimmedEmail,
+        name: trimmedName,
       });
-      console.log('✅ User created in MongoDB successfully!');
 
+      profileCreated = true;
       Alert.alert('Success', 'Account created successfully!');
-    } catch (err: any) {
+    } catch (err) {
       console.error('❌ Signup error:', err);
-      const message = err.message || 'Failed to create account';
+
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Failed to create account. Please try again.';
+
       setError(message);
-      
-      // If backend fails but Firebase succeeds, inform user
-      if (err.response) {
-        Alert.alert(
-          'Account Created',
-          'Your account was created but there was an issue saving your profile. Please contact support.'
-        );
+
+      if (firebaseUser && !profileCreated) {
+        try {
+          await deleteUser(firebaseUser);
+          console.warn('Rolled back Firebase user after profile failure.');
+        } catch (deleteErr) {
+          console.error('❌ Failed to delete Firebase user:', deleteErr);
+        }
       }
     } finally {
       setLoading(false);

@@ -1,14 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-  Pressable
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Pressable } from 'react-native';
 import { getLast7DaysArticles, toggleBookmark as toggleBookmarkApi } from '../services/api';
+import ArticleHeader from '../Components/Articles/ArticleHeader';
 
 const ArticleCard = ({ article, onPress, onBookmark }) => {
   const formatDate = (dateString) => {
@@ -121,14 +114,10 @@ export default function Last7DaysArticles({ userId, onNavigate, onSelectArticle 
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => onNavigate && onNavigate('back')}>
-          <Text style={styles.backButton}>←</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>LAST 7 DAYS</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <ArticleHeader
+        title="LAST 7 DAYS"
+        onBack={() => onNavigate && onNavigate('back')}
+      />
 
       {/* Articles List */}
       <FlatList
@@ -157,25 +146,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff'
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb'
-  },
-  backButton: {
-    fontSize: 24,
-    color: '#1f2937'
-  },
-  headerTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1f2937',
-    letterSpacing: 1
   },
   loadingContainer: {
     flex: 1,

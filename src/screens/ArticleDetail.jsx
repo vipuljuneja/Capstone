@@ -1,32 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  Pressable
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { getArticleById, toggleBookmark } from '../services/api';
-
-const BlobCharacter = ({ color }) => (
-  <View style={[styles.blobContainer, { backgroundColor: color }]}>
-    <View style={styles.blob}>
-      <View style={styles.blobFace}>
-        <View style={styles.blobEyes}>
-          <View style={styles.blobEye} />
-          <View style={styles.blobEye} />
-        </View>
-        <View style={styles.blobMouth} />
-      </View>
-      <View style={styles.blobHand} />
-      <View style={styles.blobLegs}>
-        <View style={styles.blobLeg} />
-        <View style={styles.blobLeg} />
-      </View>
-    </View>
-  </View>
-);
+import ArticleHeader from '../Components/Articles/ArticleHeader';
+import BlobCharacter from '../Components/Articles/BlobCharacter';
+import ArticleMeta from '../Components/Articles/ArticleMeta';
+import ArticleKeywords from '../Components/Articles/ArticleKeywords';
 
 export default function ArticleDetail({ userId, articleId, onNavigate }) {
   const [article, setArticle] = useState(null);
@@ -88,46 +66,38 @@ export default function ArticleDetail({ userId, articleId, onNavigate }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => onNavigate && onNavigate('back')}>
-          <Text style={styles.backButton}>←</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>READ</Text>
-        <Pressable onPress={handleToggleBookmark}>
-          <Text style={styles.bookmarkIcon}>
-            {isBookmarked ? '🔖' : '📑'}
-          </Text>
-        </Pressable>
-      </View>
+      <ArticleHeader
+        title="READ"
+        onBack={() => onNavigate && onNavigate('back')}
+        onToggleBookmark={handleToggleBookmark}
+        isBookmarked={isBookmarked}
+        showBookmark
+      />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Character Illustration */}
-        <BlobCharacter 
-          color={article.illustrationData?.backgroundColor || '#e0f2e9'} 
+      <ScrollView
+        style={styles.scrollArea}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <BlobCharacter
+          color={article.illustrationData?.backgroundColor || '#e0f2e9'}
+          style={styles.heroIllustration}
         />
 
-        {/* Title */}
-        <Text style={styles.title}>{article.title}</Text>
+        <View style={styles.articleHeaderSection}>
+          <Text style={styles.title}>{article.title}</Text>
+          <ArticleMeta
+            author="Cameron Carter"
+            dateText={formatDate()}
+            readTime={article.readTime}
+            align="left"
+            style={styles.meta}
+          />
+        </View>
 
-        {/* Meta Information */}
-        <Text style={styles.meta}>
-          Cameron Carter | {formatDate()} | Read time: {article.readTime} min
-        </Text>
-
-        {/* Content */}
         <Text style={styles.articleContent}>{article.content}</Text>
 
-        {/* Keywords */}
-        {article.keywords && article.keywords.length > 0 && (
-          <View style={styles.keywordsContainer}>
-            {article.keywords.map((keyword, index) => (
-              <View key={index} style={styles.keyword}>
-                <Text style={styles.keywordText}>{keyword}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+        <ArticleKeywords keywords={article.keywords} />
       </ScrollView>
     </View>
   );
@@ -138,31 +108,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff'
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb'
-  },
-  backButton: {
-    fontSize: 24,
-    color: '#1f2937'
-  },
-  headerTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1f2937',
-    letterSpacing: 1
-  },
-  bookmarkIcon: {
-    fontSize: 24
-  },
   content: {
-    flex: 1,
-    paddingHorizontal: 20
+    paddingHorizontal: 20,
+    paddingBottom: 32
+  },
+  scrollArea: {
+    flex: 1
   },
   loadingContainer: {
     flex: 1,
@@ -180,64 +131,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6b7280'
   },
-  blobContainer: {
-    width: '100%',
-    height: 200,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+  heroIllustration: {
     marginTop: 24,
     marginBottom: 20
   },
-  blob: {
-    alignItems: 'center'
-  },
-  blobFace: {
-    width: 80,
-    height: 80,
-    backgroundColor: '#a78bfa',
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  blobEyes: {
-    flexDirection: 'row',
-    gap: 16
-  },
-  blobEye: {
-    width: 8,
-    height: 8,
-    backgroundColor: '#1f2937',
-    borderRadius: 4
-  },
-  blobMouth: {
-    width: 20,
-    height: 10,
-    backgroundColor: '#c084fc',
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10,
-    marginTop: 8
-  },
-  blobHand: {
-    width: 30,
-    height: 40,
-    backgroundColor: '#a78bfa',
-    borderRadius: 15,
-    position: 'absolute',
-    right: -20,
-    top: 30,
-    transform: [{ rotate: '20deg' }]
-  },
-  blobLegs: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8
-  },
-  blobLeg: {
-    width: 24,
-    height: 32,
-    backgroundColor: '#a78bfa',
-    borderRadius: 12
+  articleHeaderSection: {
+    marginBottom: 24
   },
   title: {
     fontSize: 24,
@@ -246,31 +145,12 @@ const styles = StyleSheet.create({
     marginBottom: 12
   },
   meta: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginBottom: 24
+    marginBottom: 0
   },
   articleContent: {
     fontSize: 16,
     lineHeight: 26,
     color: '#374151',
     marginBottom: 24
-  },
-  keywordsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 32
-  },
-  keyword: {
-    backgroundColor: '#f3f4f6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16
-  },
-  keywordText: {
-    fontSize: 12,
-    color: '#6b7280',
-    fontWeight: '500'
   }
 });

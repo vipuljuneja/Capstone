@@ -19,7 +19,7 @@ import {
   signOut,
 } from 'firebase/auth';
 import LevelsScreen from './src/pages/LevelsScreen';
-import NotebookScreen from './src/pages/NotebookScreen'
+import NotebookScreen from './src/pages/NotebookScreen';
 import Level1 from './src/screens/Level1';
 import Level2 from './src/screens/Level2';
 import Level3 from './src/screens/Level3';
@@ -29,6 +29,7 @@ import CameraDetector from './src/Components/Facial/CameraDetector';
 import Levels from './src/pages/Levels/Levels';
 
 import { auth } from './src/firebase';
+import { AuthProvider } from './src/contexts/AuthContext';
 import Toast from 'react-native-toast-message';
 import { DailyArticle } from './backend/src/models';
 import Onboarding from './src/pages/Onboarding';
@@ -47,9 +48,10 @@ function App(): React.JSX.Element {
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
-        {/* {initializing ? (
+    <AuthProvider>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.container}>
+          {/* {initializing ? (
           <View style={styles.centered}>
             <ActivityIndicator size="large" />
           </View>
@@ -58,15 +60,16 @@ function App(): React.JSX.Element {
         ) : (
           <AuthForm />
         )} */}
-        {/* {<CameraDetector />} */}
-        {/* <AudioRecorder /> */}
-        {/* <Levels /> */}
-        <DailyArticleMain />
-        <Toast />
-        {/* <Onboarding></Onboarding> */}
-        {/* <NotebookScreen></NotebookScreen> */}
-      </SafeAreaView>
-    </SafeAreaProvider>
+          {/* {<CameraDetector />} */}
+          {/* <AudioRecorder /> */}
+          {/* <Levels /> */}
+          <DailyArticleMain />
+          <Toast />
+          {/* <Onboarding></Onboarding> */}
+          {/* <NotebookScreen></NotebookScreen> */}
+        </SafeAreaView>
+      </SafeAreaProvider>
+    </AuthProvider>
   );
 }
 
@@ -130,8 +133,8 @@ function AuthForm(): React.JSX.Element {
   const ctaText = submitting
     ? undefined
     : isSignUp
-    ? 'Create Account'
-    : 'Sign In';
+      ? 'Create Account'
+      : 'Sign In';
 
   return (
     <KeyboardAvoidingView
@@ -399,31 +402,32 @@ const styles = StyleSheet.create({
     color: '#ff6b6b',
   },
   button: {
-    height: 52,
+    backgroundColor: '#FF8C42',
+    paddingVertical: 14,
     borderRadius: 8,
-    backgroundColor: '#3a7afe',
     alignItems: 'center',
     justifyContent: 'center',
   },
   buttonDisabled: {
-    opacity: 0.6,
+    backgroundColor: '#333333',
   },
   buttonText: {
     color: '#ffffff',
-    fontWeight: '600',
     fontSize: 16,
+    fontWeight: '600',
   },
   toggleRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   toggleText: {
     color: '#cccccc',
+    fontSize: 14,
   },
   toggleLink: {
-    color: '#3a7afe',
+    color: '#FF8C42',
     fontWeight: '600',
   },
 });
