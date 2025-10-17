@@ -19,7 +19,7 @@ const { FaceLandmarkModule } = NativeModules;
 
 import Toast from 'react-native-toast-message';
 
-const CameraDetector = forwardRef((props, ref) => {
+const CameraDetector = forwardRef(({ onAnalysisComplete }, ref) => {
   const camera = useRef(null);
   const device = useCameraDevice('front');
   const { hasPermission, requestPermission } = useCameraPermission();
@@ -113,6 +113,12 @@ const CameraDetector = forwardRef((props, ref) => {
       // Display results in a formatted way
       displayInsights(insights);
 
+      // **NEW: Pass insights to parent component via callback**
+      if (onAnalysisComplete) {
+        console.log('📤 Passing facial analysis data to parent...');
+        onAnalysisComplete(insights);
+      }
+
       // Also log raw data if needed
       console.log('\n' + '='.repeat(80));
       console.log('📁 RAW DATA (for debugging)');
@@ -122,6 +128,14 @@ const CameraDetector = forwardRef((props, ref) => {
       console.log(
         '⚠️  No frames captured. Start the session and wait for at least one capture.',
       );
+
+      // **NEW: Pass empty/error state to parent**
+      if (onAnalysisComplete) {
+        onAnalysisComplete({
+          error: true,
+          message: 'No frames captured',
+        });
+      }
     }
   };
 

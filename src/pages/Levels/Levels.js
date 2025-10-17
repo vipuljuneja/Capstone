@@ -8,6 +8,7 @@ import {
   PanResponder,
   Animated,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import CameraDetector from '../../Components/Facial/CameraDetector';
@@ -15,7 +16,6 @@ import VoiceORB from '../../Components/Avatar/VoiceORB';
 import AvatarGenerate from '../../Components/Avatar/AvatarGenerate';
 import AudioRecorder from '../../Components/Audio/AudioRecorder';
 
-//Waveform
 import {
   Waveform,
   IWaveformRef,
@@ -28,14 +28,23 @@ const { width, height } = Dimensions.get('window');
 const Levels = () => {
   const [pan] = useState(new Animated.ValueXY({ x: 20, y: 20 }));
   const [levelCount, setLevelCount] = useState(3);
+  const navigation = useNavigation();
 
-  //For Components
   const [isRecording, setIsRecording] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
 
   const [recorderState, setRecorderState] = useState(false);
 
-  //Component Refs
+  const [transcriptionResults, setTranscriptionResults] = useState([]);
+
+  const [facialAnalysisResults, setFacialAnalysisResults] = useState([]);
+
+  const transcriptionResultsRef = useRef([]);
+
+  const facialAnalysisResultsRef = useRef([]);
+
+  const transcriptionPromiseRef = useRef(null);
+
   const cameraRef = useRef(null);
   const voiceOrbRef = useRef(null);
   const audioRecorderRef = useRef(null);
@@ -48,34 +57,132 @@ const Levels = () => {
     totalLines: 5,
   });
 
-  // Initialize session when component mounts
-  useEffect(() => {
-    if (audioRecorderRef.current) {
-      audioRecorderRef.current.startSession();
-      console.log('📝 Session initialized');
+  const handleStateChange = useCallback(newState => {
+    setOrbState(newState);
+  }, []);
+
+  const handleTranscriptionComplete = useCallback(report => {
+    console.log('📥 Received transcription result in Levels:', report);
+
+    setTranscriptionResults(prevResults => {
+      const newResults = [...prevResults, report];
+      transcriptionResultsRef.current = newResults;
+      return newResults;
+    });
+
+    if (transcriptionPromiseRef.current) {
+      transcriptionPromiseRef.current.resolve(report);
+      transcriptionPromiseRef.current = null;
     }
   }, []);
 
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     if (voiceOrbRef.current) {
-  //       setOrbState(voiceOrbRef.current.getState());
-  //     }
-  //   }, 100);
-  //   return () => clearInterval(interval);
-  // }, []);
+  const handleFacialAnalysisComplete = useCallback(insights => {
+    console.log('📥 Received facial analysis result in Levels:', insights);
 
-  const handleStateChange = useCallback(newState => {
-    setOrbState(newState);
+    setFacialAnalysisResults(prevResults => {
+      const newResults = [...prevResults, insights];
+      facialAnalysisResultsRef.current = newResults;
+      return newResults;
+    });
   }, []);
 
   const handlePrev = useCallback(() => {
     voiceOrbRef.current?.prev();
   }, []);
 
-  const handleNext = useCallback(() => {
-    voiceOrbRef.current?.next();
+  const handleStop = useCallback(async () => {
+    console.log('🛑 Stopping recording...');
+
+    try {
+      if (waveformRef.current) {
+        await waveformRef.current.stop();
+      }
+    } catch (error) {
+      console.error('Waveform stop error:', error);
+    }
+
+    if (cameraRef.current) {
+      cameraRef.current.stopRecording();
+    }
+
+    if (voiceOrbRef.current && voiceOrbRef.current.stop) {
+      voiceOrbRef.current.stop();
+    }
+
+    const transcriptionPromise = new Promise((resolve, reject) => {
+      transcriptionPromiseRef.current = { resolve, reject };
+
+      setTimeout(() => {
+        if (transcriptionPromiseRef.current) {
+          console.warn('⚠️  Transcription timeout, proceeding anyway');
+          transcriptionPromiseRef.current.resolve(null);
+          transcriptionPromiseRef.current = null;
+        }
+      }, 10000);
+    });
+
+    if (audioRecorderRef.current) {
+      audioRecorderRef.current.stopRecording();
+    }
+
+    console.log('⏳ Waiting for transcription to complete...');
+
+    await transcriptionPromise;
+
+    console.log('✅ Transcription completed!');
+
+    setTimeout(() => {
+      setIsRecording(false);
+    }, 100);
   }, []);
+
+  const handleNext = useCallback(() => {
+    const currentState = voiceOrbRef.current?.getState();
+
+    if (!currentState) {
+      console.warn('VoiceORB state not available');
+      return;
+    }
+
+    console.log('Current state:', currentState);
+
+    if (currentState.idx === currentState.totalLines - 1) {
+      const navigateToResults = async () => {
+        console.log('🎯 Last question reached, preparing to navigate...');
+
+        if (isRecording) {
+          await handleStop();
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        const transcriptionToPass = transcriptionResultsRef.current;
+        const facialAnalysisToPass = facialAnalysisResultsRef.current;
+
+        console.log('📤 Navigating to Results with data:');
+        console.log('   Transcription results:', transcriptionToPass.length);
+        console.log('   Facial analysis results:', facialAnalysisToPass.length);
+
+        if (navigation && typeof navigation.navigate === 'function') {
+          try {
+            navigation.navigate('Results', {
+              totalQuestions: currentState.totalLines,
+              transcriptionResults: transcriptionToPass,
+              facialAnalysisResults: facialAnalysisToPass,
+            });
+          } catch (error) {
+            console.error('Navigation error:', error);
+          }
+        } else {
+          console.error('Navigation not available');
+        }
+      };
+
+      navigateToResults();
+    } else {
+      voiceOrbRef.current?.next();
+    }
+  }, [navigation, isRecording, handleStop]);
 
   const handleRepeat = useCallback(() => {
     voiceOrbRef.current?.replay();
@@ -129,7 +236,6 @@ const Levels = () => {
 
     setIsRecording(true);
 
-    // Wait for render
     setTimeout(async () => {
       if (waveformRef.current) {
         await waveformRef.current.start();
@@ -143,97 +249,38 @@ const Levels = () => {
         voiceOrbRef.current.start();
       }
 
-      // Start AudioRecorder
       if (audioRecorderRef.current) {
         audioRecorderRef.current.startRecording();
       }
     }, 200);
   };
 
-  const handleStop = async () => {
-    try {
-      if (waveformRef.current) {
-        await waveformRef.current.stop();
-      }
-    } catch (error) {
-      console.error('Waveform stop error:', error);
-    }
+  const isLastQuestion = orbState.idx === orbState.totalLines - 1;
 
-    if (cameraRef.current) {
-      cameraRef.current.stopRecording();
-    }
-
-    if (voiceOrbRef.current && voiceOrbRef.current.stop) {
-      voiceOrbRef.current.stop();
-    }
-
-    // Stop AudioRecorder
-    if (audioRecorderRef.current) {
-      audioRecorderRef.current.stopRecording();
-    }
-
-    // Delay state change slightly
-    setTimeout(() => {
-      setIsRecording(false);
-    }, 100);
-  };
-
-  // NEW FUNCTION - Finish session and get all data
-
-  // Sukhbir this is the function you need to call when user clicks "Finish" or you can you use it when the session ends.
-  const handleFinishSession = () => {
-    if (audioRecorderRef.current) {
-      const allData = audioRecorderRef.current.endSession();
-      console.log('✅ SESSION FINISHED - All Data:', allData);
-      
-      // Here you can:
-      // - Send to your backend API
-      // - Save to local storage
-      // - Navigate to results screen
-      // - etc.
-    }
-  };
-
-  const handleUpload = () => {
-    if (audioPath) {
-      console.log('Uploading audio file:', audioPath);
-    }
-  };
+  useEffect(() => {
+    console.log(
+      '🔄 Transcription results updated:',
+      transcriptionResults.length,
+    );
+    console.log(
+      '🔄 Facial analysis results updated:',
+      facialAnalysisResults.length,
+    );
+  }, [transcriptionResults, facialAnalysisResults]);
 
   return (
     <View style={styles.container}>
-      {/* Top Section */}
       <View style={styles.topSection}>
         <TouchableOpacity style={styles.backButton}>
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
-        
-        {/* FINISH SESSION BUTTON */}
-        <TouchableOpacity 
-          style={styles.finishButton}
-          onPress={handleFinishSession}
-        >
-          <Icon name="check-circle" size={24} color="#4CAF50" />
-          <Text style={styles.finishButtonText}>Finish</Text>
-        </TouchableOpacity>
-        {/* <View style={styles.progressBar}>
-          <View style={styles.progressFill} />
-        </View> */}
       </View>
 
-      {/* Middle Section For Avatar */}
       <View style={styles.middleSection}>
         <View style={styles.avatarPlaceholder}>
           <VoiceORB ref={voiceOrbRef} onStateChange={handleStateChange} />
-          {/* <AvatarGenerate /> */}
-          {/* <AudioRecorder ref={audioRecorderRef} onAudioLevel={setAudioLevel} /> */}
         </View>
 
-        {/* <View style={{ position: 'absolute', width: 0, height: 0, opacity: 0 }}>
-          <AudioRecorder ref={audioRecorderRef} onAudioLevel={setAudioLevel} />
-        </View> */}
-
-        {/* Draggable Camera Component */}
         <Animated.View
           style={[
             styles.cameraComponent,
@@ -243,11 +290,12 @@ const Levels = () => {
           ]}
           {...panResponder.panHandlers}
         >
-          <CameraDetector ref={cameraRef} />
+          <CameraDetector
+            ref={cameraRef}
+            onAnalysisComplete={handleFacialAnalysisComplete}
+          />
         </Animated.View>
       </View>
-
-      {/* Buttons Section */}
 
       <View
         style={isRecording ? styles.waveformVisible : styles.waveformHidden}
@@ -255,19 +303,22 @@ const Levels = () => {
         <AudioWaveform ref={waveformRef} />
       </View>
 
-      {/* Bottom Section */}
       <View
         style={
           !isRecording ? styles.bottomSectionBefore : styles.bottomSectionAfter
         }
       >
-        <AudioRecorder ref={audioRecorderRef} />
+        <AudioRecorder
+          ref={audioRecorderRef}
+          onTranscriptionComplete={handleTranscriptionComplete}
+        />
+
         <TouchableOpacity
           onPress={handlePrev}
           disabled={orbState.speaking || orbState.loading || orbState.idx === 0}
           style={
             !isRecording
-              ? 'none'
+              ? styles.hidden
               : [
                   styles.btn,
                   (orbState.speaking ||
@@ -293,31 +344,22 @@ const Levels = () => {
         </TouchableOpacity>
         <TouchableOpacity
           onPress={handleNext}
-          disabled={
-            orbState.speaking ||
-            orbState.loading ||
-            orbState.idx === orbState.totalLines - 1
-          }
+          disabled={orbState.speaking || orbState.loading}
           style={
             !isRecording
-              ? 'none'
+              ? styles.hidden
               : [
                   styles.btn,
-                  (orbState.speaking ||
-                    orbState.loading ||
-                    orbState.idx === orbState.totalLines - 1) &&
-                    styles.btnDisabled,
+                  (orbState.speaking || orbState.loading) && styles.btnDisabled,
                 ]
           }
         >
-          <Icon name="arrow-right-circle" size={30} color="white" />
+          <Icon
+            name={isLastQuestion ? 'check-circle' : 'arrow-right-circle'}
+            size={30}
+            color="white"
+          />
         </TouchableOpacity>
-
-        {/* {isRecording && (
-          <TouchableOpacity style={styles.uploadButton} onPress={handleRepeat}>
-            <Icon name="rotate-right" size={30} color="white" />
-          </TouchableOpacity>
-        )} */}
       </View>
     </View>
   );
@@ -420,18 +462,19 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   recordButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#666',
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#333',
     justifyContent: 'center',
     alignItems: 'center',
+    alignSelf: 'center',
   },
   recordingButton: {
     backgroundColor: '#ff4444',
   },
   recordButtonText: {
-    fontSize: 24,
+    fontSize: 32,
     color: 'white',
   },
   waveform: {
@@ -464,9 +507,9 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   stopButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: '#666',
     justifyContent: 'center',
     alignItems: 'center',
@@ -483,31 +526,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     gap: 20,
   },
-  recordButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'center',
-  },
-  recordButtonText: {
-    fontSize: 32,
-    color: 'white',
-  },
-  stopButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#666',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  stopButtonText: {
-    fontSize: 24,
-    color: 'white',
-  },
   waveformContainer: {
     flex: 1,
     height: 60,
@@ -519,18 +537,6 @@ const styles = StyleSheet.create({
   liveWaveform: {
     width: '100%',
     height: 60,
-  },
-  uploadButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  uploadButtonText: {
-    fontSize: 24,
-    color: 'white',
   },
   liveWaveformView: {
     flex: 1,
@@ -552,7 +558,6 @@ const styles = StyleSheet.create({
   row: {
     backgroundColor: 'white',
     flexDirection: 'row',
-    // gap: 12,
     display: 'flex',
     justifyContent: 'space-between',
     bottom: 0,
@@ -560,7 +565,6 @@ const styles = StyleSheet.create({
     left: 0,
     width: '100%',
     paddingHorizontal: '10%',
-    // position: 'absolute',
   },
   btn: {
     paddingHorizontal: 16,
@@ -573,6 +577,9 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { opacity: 0.5 },
   btnText: { color: '#fff', fontWeight: '600' },
+  hidden: {
+    display: 'none',
+  },
 });
 
 export default Levels;

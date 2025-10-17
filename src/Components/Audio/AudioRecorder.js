@@ -4,38 +4,14 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from 'react';
-// import {
-//   View,
-//   Text,
-//   TouchableOpacity,
-//   StyleSheet,
-//   Animated,
-// } from 'react-native';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import { STT_API_KEY } from '@env';
 
-const AudioRecorder = forwardRef((props, ref) => {
+const AudioRecorder = forwardRef(({ onTranscriptionComplete }, ref) => {
   const [audioRecorder] = useState(() => new AudioRecorderPlayer());
   const [isRecording, setIsRecording] = useState(false);
   const [recordingPath, setRecordingPath] = useState(null);
-
-  // SESSION MANAGEMENT - Store all recordings in one session
-  const [sessionData, setSessionData] = useState([]);
-  const [recordingCount, setRecordingCount] = useState(0);
-
-  // Animation values for wave bars
-  // const [waves] = useState(() => [
-  //   new Animated.Value(0.3),
-  //   new Animated.Value(0.5),
-  //   new Animated.Value(0.7),
-  //   new Animated.Value(0.4),
-  //   new Animated.Value(0.6),
-  //   new Animated.Value(0.8),
-  //   new Animated.Value(0.5),
-  //   new Animated.Value(0.3),
-  //   new Animated.Value(0.6),
-  //   new Animated.Value(0.4),
-  // ]);
+  const [audioResult, setAudioResult] = useState(null);
 
   useEffect(() => {
     return () => {
@@ -48,44 +24,9 @@ const AudioRecorder = forwardRef((props, ref) => {
     };
   }, [audioRecorder]);
 
-  // Animate waves when recording
-  // useEffect(() => {
-  //   if (isRecording) {
-  //     const animations = waves.map((wave, index) => {
-  //       return Animated.loop(
-  //         Animated.sequence([
-  //           Animated.timing(wave, {
-  //             toValue: Math.random() * 0.8 + 0.2,
-  //             duration: 300 + Math.random() * 200,
-  //             useNativeDriver: false,
-  //           }),
-  //           Animated.timing(wave, {
-  //             toValue: Math.random() * 0.8 + 0.2,
-  //             duration: 300 + Math.random() * 200,
-  //             useNativeDriver: false,
-  //           }),
-  //         ])
-  //       );
-  //     });
-
-  //     animations.forEach(anim => anim.start());
-
-  //     return () => {
-  //       animations.forEach(anim => anim.stop());
-  //     };
-  //   }
-  // }, [isRecording, waves]);
-
-  // NEW FUNCTION - Start a new session (call this once at the beginning)
-  const startSession = () => {
-    console.log('🎬 SESSION STARTED');
-    setSessionData([]);
-    setRecordingCount(0);
-  };
-
   const startRecording = async () => {
     console.log(`=== START RECORDING #${recordingCount + 1} ===`);
-    
+
     try {
       try {
         await audioRecorder.stopRecorder();
@@ -124,7 +65,7 @@ const AudioRecorder = forwardRef((props, ref) => {
     }
   };
 
-  const transcribeAudio = async (audioPath) => {
+  const transcribeAudio = async audioPath => {
     console.log('=== TRANSCRIBING ===');
     try {
       const cleanPath = audioPath.replace('file://', '');
@@ -242,25 +183,30 @@ const AudioRecorder = forwardRef((props, ref) => {
         transcript: transcriptText,
       };
 
+      setAudioResult(report);
+
       console.log('📋 JSON REPORT:');
       console.log(JSON.stringify(report, null, 2));
       console.log('\n');
 
-      // SAVE TO SESSION DATA
-      setSessionData(prev => [...prev, report]);
-      setRecordingCount(prev => prev + 1);
-
-      console.log(`✅ Recording #${recordingCount + 1} saved to session\n`);
-
-      // Call parent callback if provided
-      if (props.onRecordingComplete) {
-        props.onRecordingComplete(report);
+      // **NEW: Call the callback function to pass data to parent**
+      if (onTranscriptionComplete) {
+        console.log('Trascription complete, passing data to parent...', report);
+        onTranscriptionComplete(report);
       }
 
       await RNFS.fs.unlink(cleanPath);
       console.log('✓ Audio file deleted\n');
     } catch (error) {
       console.error('!!! TRANSCRIPTION ERROR:', error.message);
+
+      // **NEW: Pass error to parent if callback exists**
+      if (onTranscriptionComplete) {
+        onTranscriptionComplete({
+          error: true,
+          message: error.message,
+        });
+      }
 
       try {
         const cleanPath = audioPath.replace('file://', '');
@@ -280,12 +226,21 @@ const AudioRecorder = forwardRef((props, ref) => {
       totalRecordings: sessionData.length,
       sessionDate: new Date().toISOString(),
       recordings: sessionData,
-      averageWpm: sessionData.length > 0 
-        ? Math.round(sessionData.reduce((sum, r) => sum + r.wpm, 0) / sessionData.length)
-        : 0,
-      totalFillerWords: sessionData.reduce((sum, r) => sum + r.fillerWordCount, 0),
+      averageWpm:
+        sessionData.length > 0
+          ? Math.round(
+              sessionData.reduce((sum, r) => sum + r.wpm, 0) /
+                sessionData.length,
+            )
+          : 0,
+      totalFillerWords: sessionData.reduce(
+        (sum, r) => sum + r.fillerWordCount,
+        0,
+      ),
       totalPauses: sessionData.reduce((sum, r) => sum + r.pauseCount, 0),
-      totalDuration: sessionData.reduce((sum, r) => sum + parseFloat(r.duration), 0).toFixed(2),
+      totalDuration: sessionData
+        .reduce((sum, r) => sum + parseFloat(r.duration), 0)
+        .toFixed(2),
     };
 
     console.log('📊 COMPLETE SESSION JSON:');
@@ -317,178 +272,10 @@ const AudioRecorder = forwardRef((props, ref) => {
     getSessionData,
     isRecording,
     recordingPath,
-    recordingCount,
-    sessionData,
+    audioResult,
   }));
 
   return null;
-
-  // return (
-  //   <View style={styles.container}>
-  //     <Text style={styles.title}>Speech Analyzer</Text>
-  //     <Text style={styles.subtitle}>Results in Console</Text>
-
-  //     <View style={styles.recordingArea}>
-  //       {!isRecording ? (
-  //         // RECORD BUTTON (when not recording)
-  //         <TouchableOpacity
-  //           style={styles.recordButton}
-  //           onPress={startRecording}
-  //         >
-  //           <View style={styles.recordButtonInner}>
-  //             <Text style={styles.recordIcon}>🎙</Text>
-  //             <Text style={styles.recordButtonText}>RECORD</Text>
-  //           </View>
-  //         </TouchableOpacity>
-  //       ) : (
-  //         // WAVE + STOP BUTTON (when recording)
-  //         <View style={styles.recordingContainer}>
-  //           {/* Audio Wave */}
-  //           <View style={styles.waveContainer}>
-  //             {waves.map((wave, index) => (
-  //               <Animated.View
-  //                 key={index}
-  //                 style={[
-  //                   styles.waveBar,
-  //                   {
-  //                     height: wave.interpolate({
-  //                       inputRange: [0, 1],
-  //                       outputRange: ['20%', '100%'],
-  //                     }),
-  //                   },
-  //                 ]}
-  //               />
-  //             ))}
-  //           </View>
-
-  //           {/* Stop Button */}
-  //           <TouchableOpacity style={styles.stopButton} onPress={stopRecording}>
-  //             <View style={styles.stopIcon} />
-  //             <Text style={styles.stopButtonText}>STOP</Text>
-  //           </TouchableOpacity>
-  //         </View>
-  //       )}
-  //     </View>
-
-  //     <View style={styles.infoBox}>
-  //       <Text style={styles.infoText}>• Press RECORD to start</Text>
-  //       <Text style={styles.infoText}>• Speak clearly into mic</Text>
-  //       <Text style={styles.infoText}>• Press STOP when done</Text>
-  //       <Text style={styles.infoText}>• Check console for results</Text>
-  //     </View>
-  //   </View>
-  // );
 });
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: '#101010',
-//     padding: 20,
-//     justifyContent: 'center',
-//   },
-//   title: {
-//     fontSize: 32,
-//     fontWeight: '700',
-//     color: '#ffffff',
-//     marginBottom: 8,
-//     textAlign: 'center',
-//   },
-//   subtitle: {
-//     fontSize: 16,
-//     color: '#888888',
-//     marginBottom: 60,
-//     textAlign: 'center',
-//   },
-//   recordingArea: {
-//     height: 200,
-//     marginBottom: 60,
-//   },
-//   recordButton: {
-//     flex: 1,
-//     backgroundColor: '#3a7afe',
-//     borderRadius: 20,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     shadowColor: '#3a7afe',
-//     shadowOffset: { width: 0, height: 8 },
-//     shadowOpacity: 0.4,
-//     shadowRadius: 16,
-//     elevation: 12,
-//   },
-//   recordButtonInner: {
-//     alignItems: 'center',
-//   },
-//   recordIcon: {
-//     fontSize: 48,
-//     marginBottom: 12,
-//   },
-//   recordButtonText: {
-//     color: '#ffffff',
-//     fontSize: 24,
-//     fontWeight: '700',
-//     letterSpacing: 2,
-//   },
-//   recordingContainer: {
-//     flex: 1,
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     gap: 20,
-//   },
-//   waveContainer: {
-//     flex: 1,
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     justifyContent: 'space-around',
-//     height: '100%',
-//     backgroundColor: '#1a1a1a',
-//     borderRadius: 20,
-//     paddingHorizontal: 20,
-//   },
-//   waveBar: {
-//     width: 6,
-//     backgroundColor: '#3a7afe',
-//     borderRadius: 3,
-//     minHeight: 20,
-//   },
-//   stopButton: {
-//     width: 100,
-//     height: '100%',
-//     backgroundColor: '#ff4444',
-//     borderRadius: 20,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     shadowColor: '#ff4444',
-//     shadowOffset: { width: 0, height: 8 },
-//     shadowOpacity: 0.4,
-//     shadowRadius: 16,
-//     elevation: 12,
-//   },
-//   stopIcon: {
-//     width: 32,
-//     height: 32,
-//     backgroundColor: '#ffffff',
-//     borderRadius: 6,
-//     marginBottom: 8,
-//   },
-//   stopButtonText: {
-//     color: '#ffffff',
-//     fontSize: 16,
-//     fontWeight: '700',
-//     letterSpacing: 1,
-//   },
-//   infoBox: {
-//     padding: 24,
-//     backgroundColor: '#1a1a1a',
-//     borderRadius: 12,
-//     borderLeftWidth: 4,
-//     borderLeftColor: '#3a7afe',
-//   },
-//   infoText: {
-//     color: '#cccccc',
-//     fontSize: 14,
-//     marginBottom: 8,
-//   },
-// });
 
 export default AudioRecorder;
