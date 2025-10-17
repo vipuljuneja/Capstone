@@ -7,6 +7,7 @@ import connectDB from './config/database';
 import apiRoutes from './routes/routes';
 
 dotenv.config();
+console.log('🔍 GEMINI_API_KEY loaded:', process.env.GEMINI_API_KEY ? 'YES ✅' : 'NO ❌');
 
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
@@ -82,6 +83,9 @@ const startServer = async () => {
   }
 };
 
-startServer();
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
 
+export { app, startServer };
 export default app;

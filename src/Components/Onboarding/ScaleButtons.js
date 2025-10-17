@@ -1,83 +1,45 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 
+const OPTIONS = [
+  { value: 1, label: "Not at all" },
+  { value: 2, label: "Slightly" },
+  { value: 3, label: "Moderately" },
+  { value: 4, label: "Frequently" },
+];
+
 export default function ScaleButtons({ value, onChange }) {
-  const items = [
-    { n: 1, label: "Less" },
-    { n: 2, label: "Mild" },
-    { n: 3, label: "Moderate" },
-    { n: 4, label: "High" },
-    { n: 5, label: "Very high" },
-  ];
-
   return (
-    <View style={styles.row}>
-      {items.map(({ n, label }) => {
-        const selected = value === n;
+    <View style={S.wrap}>
+      {OPTIONS.map(opt => {
+        const selected = value === opt.value;
         return (
-          <View key={n} style={styles.col}>
-            <Text style={styles.number}>{n}</Text>
-
-            <Pressable
-              onPress={() => onChange(n)}
-              style={[styles.circle, selected && styles.circleSelected]}
-              hitSlop={8}
-            >
-              {selected && <View style={styles.dot} />}
-            </Pressable>
-
-            <Text style={styles.caption} numberOfLines={1}>
-              {label}
-            </Text>
-          </View>
+          <Pressable
+            key={opt.value}
+            onPress={() => onChange(opt.value)}
+            style={[S.item, selected && S.selected]}
+            android_ripple={{ color: "#e5e7eb" }}
+          >
+            <Text style={[S.label, selected && S.labelSelected]}>{opt.label}</Text>
+          </Pressable>
         );
       })}
     </View>
   );
 }
 
-const SIZE = 36;
-const DOT = 16;
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    paddingHorizontal: 8,
-    marginTop: 6,
-  },
-  col: {
-    flex: 1,                 
-    alignItems: "center",    
-  },
-  number: {
-    fontSize: 15,
-    color: "#1e1e1e",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  circle: {
-    width: SIZE,
-    height: SIZE,
-    borderRadius: SIZE / 2,
-    borderWidth: 2,
-    borderColor: "#5a5a5a",
+const S = StyleSheet.create({
+  wrap: { gap: 14 },
+  item: {
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    backgroundColor: "#fff",
+    paddingVertical: 14,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#fff",
   },
-  circleSelected: { borderColor: "#4f46e5" },
-  dot: {
-    width: DOT,
-    height: DOT,
-    borderRadius: DOT / 2,
-    backgroundColor: "#4f46e5",
-  },
-  caption: {
-    marginTop: 6,
-    fontSize: 13,
-    color: "#555",
-    textAlign: "center",
-  },
+  selected: { borderColor: "#4f46e5", backgroundColor: "#eef2ff" },
+  label: { fontSize: 15, color: "#111827" },
+  labelSelected: { color: "#1f2937", fontWeight: "600" },
 });

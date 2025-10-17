@@ -25,7 +25,8 @@ const AudioRecorder = forwardRef(({ onTranscriptionComplete }, ref) => {
   }, [audioRecorder]);
 
   const startRecording = async () => {
-    console.log('=== START RECORDING ===');
+    console.log(`=== START RECORDING #${recordingCount + 1} ===`);
+
     try {
       try {
         await audioRecorder.stopRecorder();
@@ -167,6 +168,8 @@ const AudioRecorder = forwardRef(({ onTranscriptionComplete }, ref) => {
       console.log('═══════════════════════════════════════════\n');
 
       const report = {
+        recordingNumber: recordingCount + 1,
+        timestamp: new Date().toISOString(),
         wpm: calculatedWpm,
         totalWords: words.length,
         fillerWordCount: fillers.length,
@@ -213,9 +216,60 @@ const AudioRecorder = forwardRef(({ onTranscriptionComplete }, ref) => {
     }
   };
 
+  // NEW FUNCTION - End session and get all recordings data
+  const endSession = () => {
+    console.log('\n\n╔═══════════════════════════════════════════╗');
+    console.log('║        SESSION COMPLETE - ALL DATA        ║');
+    console.log('╚═══════════════════════════════════════════╝\n');
+
+    const sessionSummary = {
+      totalRecordings: sessionData.length,
+      sessionDate: new Date().toISOString(),
+      recordings: sessionData,
+      averageWpm:
+        sessionData.length > 0
+          ? Math.round(
+              sessionData.reduce((sum, r) => sum + r.wpm, 0) /
+                sessionData.length,
+            )
+          : 0,
+      totalFillerWords: sessionData.reduce(
+        (sum, r) => sum + r.fillerWordCount,
+        0,
+      ),
+      totalPauses: sessionData.reduce((sum, r) => sum + r.pauseCount, 0),
+      totalDuration: sessionData
+        .reduce((sum, r) => sum + parseFloat(r.duration), 0)
+        .toFixed(2),
+    };
+
+    console.log('📊 COMPLETE SESSION JSON:');
+    console.log(JSON.stringify(sessionSummary, null, 2));
+    console.log('\n');
+
+    // Call parent callback if provided
+    if (props.onSessionComplete) {
+      props.onSessionComplete(sessionSummary);
+    }
+
+    return sessionSummary;
+  };
+
+  // NEW FUNCTION - Get current session data anytime
+  const getSessionData = () => {
+    return {
+      recordingCount: recordingCount,
+      totalRecordings: sessionData.length,
+      data: sessionData,
+    };
+  };
+
   useImperativeHandle(ref, () => ({
+    startSession,
     startRecording,
     stopRecording,
+    endSession,
+    getSessionData,
     isRecording,
     recordingPath,
     audioResult,

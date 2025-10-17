@@ -387,6 +387,22 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#333',
   },
+  // NEW STYLES FOR FINISH BUTTON
+  finishButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+    marginLeft: 'auto',
+  },
+  finishButtonText: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   progressBar: {
     flex: 1,
     height: 8,
