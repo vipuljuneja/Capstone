@@ -1,4 +1,4 @@
-import axios from 'axios';
+import OpenAI from 'openai';
 
 interface GeneratedArticle {
   title: string;
@@ -19,74 +19,63 @@ const TOPICS = [
 ];
 
 export const generateDailyArticle = async (): Promise<GeneratedArticle> => {
-  console.log('🔍 Checking GEMINI_API_KEY...');
-  
-  // Read the env variable inside the function, not at module level
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-  
-  if (!GEMINI_API_KEY) {
-    console.error('❌ GEMINI_API_KEY is not configured in environment variables');
-    console.error('Available env keys:', Object.keys(process.env).filter(k => k.includes('GEMINI')));
-    throw new Error('GEMINI_API_KEY is not configured');
+  console.log('🔍 Checking OPENAI_API_KEY...');
+  const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+  if (!OPENAI_API_KEY) {
+    console.error('❌ Missing OPENAI_API_KEY in environment variables');
+    throw new Error('OPENAI_API_KEY is not configured');
   }
-  
-  console.log('✅ GEMINI_API_KEY found');
+
+  console.log('✅ OPENAI_API_KEY found');
 
   const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
   console.log('📝 Selected topic:', topic);
-  
-  const prompt = `Write a short, encouraging article (300-500 words) about "${topic}". 
-  The article should:
-  - Be warm, supportive, and practical
-  - Include actionable tips
-  - Be written in a friendly, conversational tone
-  - Help people dealing with social anxiety
-  
-  Format your response as JSON with this structure:
-  {
-    "title": "Article title (sentence case, 3-8 words)",
-    "content": "Full article content with paragraphs separated by \\n\\n",
-    "keywords": ["3-5 relevant keywords"]
-  }
-  
-  Return ONLY the JSON, no additional text.`;
+
+  const prompt = `Write a short, encouraging article (300–500 words) about "${topic}".
+The article should:
+- Be warm, supportive, and practical
+- Include actionable tips
+- Be written in a friendly, conversational tone
+- Help people dealing with social anxiety
+
+Format your response as **pure JSON**, like this:
+{
+  "title": "Article title (sentence case, 3–8 words)",
+  "content": "Full article text with paragraphs separated by \\n\\n",
+  "keywords": ["3–5 relevant keywords"]
+}`;
 
   try {
-    console.log('🚀 Calling Gemini API...');
-    
-    const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }]
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+    console.log('🚀 Calling OpenAI gpt-4.1-mini...');
+    const client = new OpenAI({ apiKey: OPENAI_API_KEY });
 
-    console.log('✅ Gemini API responded successfully');
-    
-    const generatedText = response.data.candidates[0].content.parts[0].text;
-    console.log('📝 Generated text preview:', generatedText.substring(0, 100) + '...');
-    
-    // Extract JSON from the response
-    const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.error('❌ Failed to extract JSON from response:', generatedText);
-      throw new Error('Failed to extract JSON from Gemini response');
-    }
+    const response = await client.chat.completions.create({
+      model: 'gpt-4.1-mini', // 💰 Cheapest capable model
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant that only outputs valid JSON as specified.' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.8,
+    });
 
-    const parsed = JSON.parse(jsonMatch[0]);
-    console.log('✅ Parsed article:', parsed.title);
-    
+    const generatedText = response.choices[0].message?.content?.trim();
+    if (!generatedText) throw new Error('Empty response from OpenAI');
+
+    console.log('📝 Generated text preview:', generatedText.substring(0, 150) + '...');
+
+    // Clean and parse JSON
+    const cleaned = generatedText.replace(/```json\s*|\s*```/g, '').trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Failed to extract JSON from response');
+
+    const jsonString = jsonMatch[0];
+    const parsed = JSON.parse(jsonString);
+
     const wordCount = parsed.content.split(/\s+/).length;
     const readTime = Math.max(1, Math.ceil(wordCount / 200));
+
+    console.log('✅ Parsed:', parsed.title);
     console.log('📊 Word count:', wordCount, '| Read time:', readTime, 'min');
 
     return {
@@ -95,15 +84,8 @@ export const generateDailyArticle = async (): Promise<GeneratedArticle> => {
       keywords: parsed.keywords || [],
       readTime
     };
-  } catch (error) {
-    console.error('❌ Gemini API error details:');
-    if (axios.isAxiosError(error)) {
-      console.error('Status:', error.response?.status);
-      console.error('Status Text:', error.response?.statusText);
-      console.error('Response Data:', JSON.stringify(error.response?.data, null, 2));
-    } else {
-      console.error(error);
-    }
-    throw new Error('Failed to generate article with Gemini');
+  } catch (error: any) {
+    console.error('❌ OpenAI API error:', error.response?.data || error.message);
+    throw new Error('Failed to generate article with OpenAI');
   }
 };

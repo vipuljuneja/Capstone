@@ -1,149 +1,117 @@
-import React, { useRef, useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Pressable,
-  InteractionManager
-} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { getTodayArticle, toggleBookmark } from '../services/api';
+import ArticleHeader from '../Components/Articles/ArticleHeader';
+import BlobCharacter from '../Components/Articles/BlobCharacter';
+import ArticleMeta from '../Components/Articles/ArticleMeta';
+import ArticleKeywords from '../Components/Articles/ArticleKeywords';
 
 export default function DailyArticleMain({ userId, onNavigate }) {
-  void userId;
-
-  const scrollViewRef = useRef(null);
-  const isNavigatingRef = useRef(false);
-  const isMountedRef = useRef(true);
-  const interactionHandleRef = useRef(null);
-  const rafHandleRef = useRef(null);
-  const [isNavigating, setIsNavigating] = useState(false);
+  const [article, setArticle] = useState(null);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-      if (interactionHandleRef.current && typeof interactionHandleRef.current.cancel === 'function') {
-        interactionHandleRef.current.cancel();
-        interactionHandleRef.current = null;
-      }
-      if (rafHandleRef.current != null) {
-        cancelAnimationFrame(rafHandleRef.current);
-        rafHandleRef.current = null;
-      }
-      isNavigatingRef.current = false;
-    };
+    fetchTodayArticle();
   }, []);
 
-  const queueNavigation = (destination) => {
-    if (isNavigatingRef.current) {
-      return;
+  const fetchTodayArticle = async () => {
+    try {
+      setLoading(true);
+      const response = await getTodayArticle(userId);
+      setArticle(response.data.article);
+      setIsBookmarked(response.data.isBookmarked);
+    } catch (error) {
+      console.error('Error fetching article:', error);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    isNavigatingRef.current = true;
-    if (isMountedRef.current) {
-      setIsNavigating(true);
+  const handleToggleBookmark = async () => {
+    if (!article) return;
+
+    try {
+      await toggleBookmark(userId, article._id, isBookmarked);
+      setIsBookmarked(!isBookmarked);
+    } catch (error) {
+      console.error('Error toggling bookmark:', error);
     }
+  };
 
-    if (scrollViewRef.current) {
-      scrollViewRef.current.scrollTo({ y: 0, animated: false });
-    }
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#8b5cf6" />
+      </View>
+    );
+  }
 
-    // Let any momentum/gesture events settle before navigating away.
-    if (interactionHandleRef.current && typeof interactionHandleRef.current.cancel === 'function') {
-      interactionHandleRef.current.cancel();
-      interactionHandleRef.current = null;
-    }
+  if (!article) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Failed to load today's article</Text>
+      </View>
+    );
+  }
 
-    interactionHandleRef.current = InteractionManager.runAfterInteractions(() => {
-      if (!isMountedRef.current) {
-        return;
-      }
-
-      if (rafHandleRef.current != null) {
-        cancelAnimationFrame(rafHandleRef.current);
-      }
-
-      rafHandleRef.current = requestAnimationFrame(() => {
-        if (!isMountedRef.current) {
-          rafHandleRef.current = null;
-          return;
-        }
-
-        if (typeof onNavigate === 'function') {
-          onNavigate(destination);
-        }
-
-        isNavigatingRef.current = false;
-        interactionHandleRef.current = null;
-        if (isMountedRef.current) {
-          setIsNavigating(false);
-        }
-        rafHandleRef.current = null;
-      });
+  const formatDate = () => {
+    const date = new Date(article.date);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric'
     });
-  };
-
-  const handleBack = () => {
-    queueNavigation('back');
-  };
-
-  const handleViewLast7Days = () => {
-    queueNavigation('last7days');
-  };
-
-  const placeholderArticle = {
-    title: 'Stay Confident During Presentations',
-    subtitle: 'Practical tips and encouragement for your next talk.',
-    readTime: '4 min',
-    date: 'Tuesday, April 2',
-    content: `Take a deep breath and remember that your audience wants you to succeed.
-Break your presentation into three simple points, and practice transitions out loud.
-Smiling naturally relaxes your facial muscles and projects confidence, even if you feel nervous.
-Small pauses are your friend—they give listeners time to absorb your message.`,
-    keywords: ['Public Speaking', 'Confidence', 'Mindfulness']
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={handleBack}>
-          <Text style={styles.backButton}>←</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>READ</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ArticleHeader
+        title="READ"
+        onBack={() => onNavigate && onNavigate('back')}
+        onToggleBookmark={handleToggleBookmark}
+        isBookmarked={isBookmarked}
+        showBookmark
+      />
 
       <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
+        style={styles.scrollArea}
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        ref={scrollViewRef}
-        scrollEnabled={!isNavigating}
-        scrollEventThrottle={400}
       >
-        <Text style={styles.todayLabel}>Today, Just for You</Text>
-        <Text style={styles.dateText}>{placeholderArticle.date.toUpperCase()}</Text>
-
-        <View style={styles.placeholderHero}>
-          <Text style={styles.heroEmoji}>📰</Text>
+        <View style={styles.dateSection}>
+          <Text style={styles.todayLabel}>Today, Just for You</Text>
+          <Text style={styles.dateText}>{formatDate().toUpperCase()}</Text>
         </View>
 
-        <Text style={styles.readTime}>Read time: {placeholderArticle.readTime}</Text>
-        <Text style={styles.title}>{placeholderArticle.title}</Text>
-        <Text style={styles.subtitle}>{placeholderArticle.subtitle}</Text>
+        <BlobCharacter
+          color={article.illustrationData?.backgroundColor || '#e0f2e9'}
+          style={styles.heroIllustration}
+        />
 
-        <Text style={styles.articleContent}>{placeholderArticle.content}</Text>
-
-        <View style={styles.keywordsContainer}>
-          {placeholderArticle.keywords.map((keyword) => (
-            <View key={keyword} style={styles.keyword}>
-              <Text style={styles.keywordText}>{keyword}</Text>
-            </View>
-          ))}
+        <View style={styles.articleHeaderSection}>
+          <Text style={styles.title}>{article.title}</Text>
+          <ArticleMeta
+            author="Cameron Carter"
+            dateText={new Date(article.date).toLocaleDateString('en-US', {
+              month: 'long',
+              day: 'numeric',
+              year: 'numeric'
+            })}
+            readTime={article.readTime}
+            align="center"
+            style={styles.meta}
+          />
         </View>
 
-        <TouchableOpacity style={styles.viewPastButton} onPress={handleViewLast7Days}>
+        <Text style={styles.articleContent}>{article.content}</Text>
+
+        <ArticleKeywords keywords={article.keywords} />
+
+        <TouchableOpacity
+          style={styles.viewPastButton}
+          onPress={() => onNavigate && onNavigate('last7days')}
+        >
           <Text style={styles.viewPastButtonText}>View Last 7 Days</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -156,104 +124,74 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff'
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb'
-  },
-  backButton: {
-    fontSize: 24,
-    color: '#1f2937'
-  },
-  headerTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1f2937',
-    letterSpacing: 1
-  },
-  headerSpacer: {
-    width: 24
-  },
-  content: {
+  loadingContainer: {
     flex: 1,
-    paddingHorizontal: 20
-  },
-  contentContainer: {
-    paddingBottom: 40
-  },
-  todayLabel: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#4b5563',
-    marginTop: 24
-  },
-  dateText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#9ca3af',
-    marginTop: 4,
-    letterSpacing: 1
-  },
-  placeholderHero: {
-    height: 180,
-    borderRadius: 16,
-    backgroundColor: '#ede9fe',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#ffffff'
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff'
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#6b7280'
+  },
+  scrollArea: {
+    flex: 1
+  },
+  content: {
+    paddingHorizontal: 20,
+    paddingBottom: 32
+  },
+  dateSection: {
+    alignItems: 'center',
     marginTop: 24,
-    marginBottom: 16
+    marginBottom: 24
   },
-  heroEmoji: {
-    fontSize: 64
+  todayLabel: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1f2937'
   },
-  readTime: {
-    fontSize: 14,
+  dateText: {
+    fontSize: 12,
     color: '#6b7280',
-    marginBottom: 8
+    marginTop: 8,
+    letterSpacing: 0.5
+  },
+  heroIllustration: {
+    marginBottom: 20
+  },
+  articleHeaderSection: {
+    alignItems: 'center',
+    marginBottom: 24
   },
   title: {
     fontSize: 24,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 8
+    fontWeight: '700',
+    color: '#1f2937',
+    textAlign: 'center',
+    marginBottom: 12
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#6b7280',
-    marginBottom: 16
+  meta: {
+    marginBottom: 0
   },
   articleContent: {
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 26,
     color: '#374151',
     marginBottom: 24
   },
-  keywordsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 24
-  },
-  keyword: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
-    backgroundColor: '#f3f4f6'
-  },
-  keywordText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#4b5563'
-  },
   viewPastButton: {
-    backgroundColor: '#8b5cf6',
-    paddingVertical: 14,
+    backgroundColor: '#1f2937',
+    paddingVertical: 16,
     borderRadius: 12,
-    alignItems: 'center'
+    alignItems: 'center',
+    marginBottom: 32
   },
   viewPastButtonText: {
     color: '#ffffff',
