@@ -1,435 +1,66 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import AudioRecorder from './src/pages/AudioRecorder';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import {
-  User,
-  createUserWithEmailAndPassword,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signOut,
-} from 'firebase/auth';
-import LevelsScreen from './src/pages/LevelsScreen';
-import NotebookScreen from './src/pages/NotebookScreen';
-import Level1 from './src/screens/Level1';
-import Level2 from './src/screens/Level2';
-import Level3 from './src/screens/Level3';
-import DailyArticleMain from './src/screens/DailyArticleMain';
 
-import CameraDetector from './src/Components/Facial/CameraDetector';
-import Levels from './src/pages/Levels/Levels';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { onAuthStateChanged } from 'firebase/auth';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+
+import LoginScreen from './src/screens/auth/LoginScreen';
+import SignupScreen from './src/screens/auth/SignupScreen';
+import MainStack from './src/navigation/MainStack';
 
 import { auth } from './src/firebase';
 import { AuthProvider } from './src/contexts/AuthContext';
 import Toast from 'react-native-toast-message';
-import { DailyArticle } from './backend/src/models';
-import Onboarding from './src/pages/Onboarding';
 
-function App(): React.JSX.Element {
-  const [user, setUser] = useState<User | null>(null);
+const NAV_THEME = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: '#0f172a', // dark bg to match your app
+  },
+};
+
+export default function App() {
+  const [user, setUser] = useState(null);
   const [initializing, setInitializing] = useState(true);
+  const [mode, setMode] = useState('login'); // login/signup switch
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, nextUser => {
+    const unsub = onAuthStateChanged(auth, nextUser => {
       setUser(nextUser);
       setInitializing(false);
     });
-
-    return unsubscribe;
+    return unsub;
   }, []);
 
   return (
     <AuthProvider>
       <SafeAreaProvider>
         <SafeAreaView style={styles.container}>
-          {/* {initializing ? (
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" />
-          </View>
-        ) : user ? (
-          <SignedIn user={user} />
-        ) : (
-          <AuthForm />
-        )} */}
-          {/* {<CameraDetector />} */}
-          {/* <AudioRecorder /> */}
-          {/* <Levels /> */}
-          <DailyArticleMain />
+          {initializing ? (
+            <View style={styles.centered}>
+              <ActivityIndicator size="large" color="#22c55e" />
+              <Text style={styles.loadingText}>Loading...</Text>
+            </View>
+          ) : user ? (
+            <NavigationContainer theme={NAV_THEME}>
+              <MainStack user={user} />
+            </NavigationContainer>
+          ) : mode === 'signup' ? (
+            <SignupScreen onSwitchToLogin={() => setMode('login')} />
+          ) : (
+            <LoginScreen onSwitchToSignup={() => setMode('signup')} />
+          )}
           <Toast />
-          {/* <Onboarding></Onboarding> */}
-          {/* <NotebookScreen></NotebookScreen> */}
         </SafeAreaView>
       </SafeAreaProvider>
     </AuthProvider>
   );
 }
 
-function AuthForm(): React.JSX.Element {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const isSignUp = mode === 'signUp';
-
-  const canSubmit = useMemo(() => {
-    if (email.trim() === '' || password === '') {
-      return false;
-    }
-
-    if (isSignUp) {
-      return confirmPassword !== '' && password === confirmPassword;
-    }
-
-    return true;
-  }, [email, password, confirmPassword, isSignUp]);
-
-  const resetErrorAndToggleMode = () => {
-    setMode(current => (current === 'signIn' ? 'signUp' : 'signIn'));
-    setError(null);
-    setConfirmPassword('');
-  };
-
-  const handleSubmit = async () => {
-    if (!canSubmit || submitting) {
-      return;
-    }
-
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email.trim(), password);
-      } else {
-        await signInWithEmailAndPassword(auth, email.trim(), password);
-      }
-    } catch (err) {
-      const fallbackMessage = isSignUp
-        ? 'Unable to sign up. Please try again later.'
-        : 'Unable to sign in. Please try again later.';
-      const message = err instanceof Error ? err.message : fallbackMessage;
-      setError(message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const heading = isSignUp ? 'Create an account' : 'Welcome back';
-  const subheading = isSignUp
-    ? 'Sign up to get started'
-    : 'Sign in to continue';
-  const ctaText = submitting
-    ? undefined
-    : isSignUp
-      ? 'Create Account'
-      : 'Sign In';
-
-  return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.content}>
-        <Text style={styles.title}>{heading}</Text>
-        <Text style={styles.subtitle}>{subheading}</Text>
-
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          autoComplete="email"
-          keyboardType="email-address"
-          placeholder="Email"
-          style={styles.input}
-          editable={!submitting}
-        />
-
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Password"
-          secureTextEntry
-          style={styles.input}
-          editable={!submitting}
-        />
-
-        {isSignUp ? (
-          <TextInput
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            placeholder="Confirm password"
-            secureTextEntry
-            style={styles.input}
-            editable={!submitting}
-          />
-        ) : null}
-
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-        <TouchableOpacity
-          onPress={handleSubmit}
-          disabled={!canSubmit || submitting}
-          style={[
-            styles.button,
-            (!canSubmit || submitting) && styles.buttonDisabled,
-          ]}
-        >
-          {submitting ? (
-            <ActivityIndicator color="#ffffff" />
-          ) : (
-            <Text style={styles.buttonText}>{ctaText}</Text>
-          )}
-        </TouchableOpacity>
-
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleText}>
-            {isSignUp ? 'Already have an account?' : "Don't have an account?"}
-          </Text>
-          <TouchableOpacity
-            onPress={resetErrorAndToggleMode}
-            disabled={submitting}
-          >
-            <Text style={styles.toggleLink}>
-              {isSignUp ? 'Sign In' : 'Sign Up'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </KeyboardAvoidingView>
-  );
-}
-
-function SignedIn({ user }: { user: User }): React.JSX.Element {
-  const [signingOut, setSigningOut] = useState(false);
-  const [screen, setScreen] = useState('home');
-  const [showCamera, setShowCamera] = useState(false);
-
-  const handleSignOut = async () => {
-    if (signingOut) return;
-    setSigningOut(true);
-    try {
-      await signOut(auth);
-    } finally {
-      setSigningOut(false);
-    }
-  };
-
-  useEffect(() => {
-    const getToken = async () => {
-      const token = await user.getIdToken();
-      console.log('🔑 Firebase Token:', token);
-    };
-    getToken();
-  }, [user]);
-
-  if (showCamera) {
-    return (
-      <View style={styles.flex}>
-        <CameraDetector />
-        <TouchableOpacity
-          style={[styles.button, { margin: 16 }]}
-          onPress={() => setShowCamera(false)}
-        >
-          <Text style={styles.buttonText}>Back</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (screen === 'audio') {
-    return (
-      <View style={styles.flex}>
-        <AudioRecorder />
-        <TouchableOpacity
-          style={[styles.button, { margin: 16 }]}
-          onPress={() => setScreen('home')}
-        >
-          <Text style={styles.buttonText}>Back to Home</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (screen === 'levels') {
-    return (
-      <View style={styles.flex}>
-        <LevelsScreen onSelectLevel={(lvl: any) => setScreen(lvl)} />
-        <TouchableOpacity
-          style={[styles.button, { margin: 16 }]}
-          onPress={() => setScreen('home')}
-        >
-          <Text style={styles.buttonText}>Back</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (screen === 'level1') {
-    return (
-      <View style={styles.flex}>
-        <Level1 />
-        <TouchableOpacity
-          style={[styles.button, { margin: 16 }]}
-          onPress={() => setScreen('levels')}
-        >
-          <Text style={styles.buttonText}>Back to Levels</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (screen === 'level2') {
-    return (
-      <View style={styles.flex}>
-        <Level2 />
-        <TouchableOpacity
-          style={[styles.button, { margin: 16 }]}
-          onPress={() => setScreen('levels')}
-        >
-          <Text style={styles.buttonText}>Back to Levels</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (screen === 'level3') {
-    return (
-      <View style={styles.flex}>
-        <Level3 />
-        <TouchableOpacity
-          style={[styles.button, { margin: 16 }]}
-          onPress={() => setScreen('levels')}
-        >
-          <Text style={styles.buttonText}>Back to Levels</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.content}>
-      <Text style={styles.title}>You are signed in</Text>
-      <Text style={styles.subtitle}>{user.email ?? 'Signed in'}</Text>
-
-      <TouchableOpacity
-        onPress={() => setScreen('audio')}
-        style={styles.button}
-      >
-        <Text style={styles.buttonText}>🎙 Speech Analyzer</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => setShowCamera(true)}
-        style={styles.button}
-        disabled={signingOut}
-      >
-        <Text style={styles.buttonText}>Camera</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => setScreen('levels')}
-        style={styles.button}
-      >
-        <Text style={styles.buttonText}>Go to Levels</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={handleSignOut}
-        style={styles.button}
-        disabled={signingOut}
-      >
-        {signingOut ? (
-          <ActivityIndicator color="#FFFFFF" />
-        ) : (
-          <Text style={styles.buttonText}>Log Out</Text>
-        )}
-      </TouchableOpacity>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#101010',
-  },
-  flex: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 48,
-    alignItems: 'stretch',
-    backgroundColor: '#101010',
-    gap: 16,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#101010',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '600',
-    color: '#ffffff',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#cccccc',
-  },
-  input: {
-    height: 48,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    backgroundColor: '#1f1f1f',
-    color: '#ffffff',
-  },
-  errorText: {
-    color: '#ff6b6b',
-  },
-  button: {
-    backgroundColor: '#FF8C42',
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonDisabled: {
-    backgroundColor: '#333333',
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-  },
-  toggleText: {
-    color: '#cccccc',
-    fontSize: 14,
-  },
-  toggleLink: {
-    color: '#FF8C42',
-    fontWeight: '600',
-  },
+  container: { flex: 1, backgroundColor: '#0f172a' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a' },
+  loadingText: { color: '#94a3b8', marginTop: 16, fontSize: 16 },
 });
-
-export default App;

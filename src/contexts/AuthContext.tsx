@@ -1,26 +1,22 @@
 // src/contexts/AuthContext.tsx
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState
-} from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
-import { BackendUser, getUserByAuthUid } from '../services/api';
+import { getUserByAuthUid } from '../services/api';
 
 interface AuthContextType {
-  firebaseUser: User | null;
-  userProfile: BackendUser | null;
+  user: User | null;
   loading: boolean;
-  profileLoading: boolean;
-  profileError: string | null;
-  refreshUserProfile: () => Promise<BackendUser | null>;
+  mongoUser: any | null;
+  refreshMongoUser: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  loading: true,
+  mongoUser: null,
+  refreshMongoUser: async () => {},
+});
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -33,113 +29,68 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<BackendUser | null>(null);
-  const [initializing, setInitializing] = useState(true);
-  const [profileLoading, setProfileLoading] = useState(false);
-  const [profileError, setProfileError] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [mongoUser, setMongoUser] = useState<any | null>(null);
 
-  const fetchUserProfile = useCallback(async (uid: string) => {
-    const profile = await getUserByAuthUid(uid);
-    return profile;
-  }, []);
-
-  const refreshUserProfile = useCallback(async () => {
-    if (!firebaseUser) {
-      return null;
-    }
-
-    setProfileLoading(true);
-    setProfileError(null);
-
+  const fetchMongoUser = async (firebaseUser: User, retries = 3) => {
     try {
-      const profile = await fetchUserProfile(firebaseUser.uid);
-      setUserProfile(profile);
-      return profile;
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Unable to refresh profile.';
-      console.error('❌ Failed to refresh user profile:', message);
-      setUserProfile(null);
-      setProfileError(message);
-      return null;
-    } finally {
-      setProfileLoading(false);
+      console.log('🔍 Fetching MongoDB user for:', firebaseUser.uid);
+      
+      // getUserByAuthUid already returns the BackendUser directly (not wrapped in envelope)
+      const userData = await getUserByAuthUid(firebaseUser.uid);
+      
+      console.log('✅ MongoDB user found:', userData.name);
+      setMongoUser(userData);
+      
+    } catch (error: any) {
+      console.warn(`❌ Failed to fetch MongoDB user (attempt ${4 - retries}/3):`, error.message);
+      
+      // If user not found and we have retries left, wait and try again
+      // This handles the race condition during signup
+      if (retries > 0 && (
+        error.message?.includes('not found') || 
+        error.message?.includes('404') ||
+        error.message?.includes('Failed to load user profile')
+      )) {
+        console.log(`⏳ Retrying in 1 second... (${retries} attempts left)`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return fetchMongoUser(firebaseUser, retries - 1);
+      }
+      
+      // After all retries, log but don't crash
+      console.error('❌ Failed to load MongoDB user after all retries');
+      setMongoUser(null);
     }
-  }, [firebaseUser, fetchUserProfile]);
+  };
+
+  const refreshMongoUser = async () => {
+    if (user) {
+      await fetchMongoUser(user);
+    }
+  };
 
   useEffect(() => {
-    let isActive = true;
-
-    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
-      if (!isActive) return;
-
-      setFirebaseUser(nextUser);
-
-      if (!nextUser) {
-        setUserProfile(null);
-        setProfileError(null);
-        setProfileLoading(false);
-        setInitializing(false);
-        return;
+    const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
+      console.log('🔐 Auth state changed:', nextUser ? nextUser.email : 'Signed out');
+      setUser(nextUser);
+      
+      if (nextUser) {
+        // User signed in - fetch their MongoDB profile with retry logic
+        await fetchMongoUser(nextUser);
+      } else {
+        // User signed out
+        setMongoUser(null);
       }
-
-      setProfileLoading(true);
-      setProfileError(null);
-
-      fetchUserProfile(nextUser.uid)
-        .then((profile) => {
-          if (!isActive) return;
-          setUserProfile(profile);
-        })
-        .catch((error) => {
-          if (!isActive) return;
-          const message =
-            error instanceof Error
-              ? error.message
-              : 'Unable to load profile.';
-          console.error('❌ Failed to load user profile:', message);
-          setUserProfile(null);
-          setProfileError(message);
-        })
-        .finally(() => {
-          if (!isActive) return;
-          setProfileLoading(false);
-          setInitializing(false);
-        });
+      
+      setLoading(false);
     });
 
-    return () => {
-      isActive = false;
-      unsubscribe();
-    };
-  }, [fetchUserProfile]);
-
-  const loading = initializing || profileLoading;
-
-  const contextValue = useMemo(
-    () => ({
-      firebaseUser,
-      userProfile,
-      loading,
-      profileLoading,
-      profileError,
-      refreshUserProfile
-    }),
-    [
-      firebaseUser,
-      userProfile,
-      loading,
-      profileLoading,
-      profileError,
-      refreshUserProfile
-    ]
-  );
+    return unsubscribe;
+  }, []);
 
   return (
-    <AuthContext.Provider value={contextValue}>
+    <AuthContext.Provider value={{ user, loading, mongoUser, refreshMongoUser }}>
       {children}
     </AuthContext.Provider>
   );

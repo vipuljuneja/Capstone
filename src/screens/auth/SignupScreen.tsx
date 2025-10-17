@@ -11,7 +11,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { createUserWithEmailAndPassword, deleteUser, User } from 'firebase/auth';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { createUserInBackend } from '../../services/api';
 
@@ -35,53 +35,64 @@ export default function SignupScreen({ onSwitchToLogin }: SignupScreenProps) {
     password === confirmPassword;
 
   const handleSignup = async () => {
-    if (!canSubmit || loading) {
-      return;
-    }
+    if (!canSubmit || loading) return;
 
     setLoading(true);
     setError(null);
-
-    let firebaseUser: User | null = null;
-    let profileCreated = false;
+    let firebaseUser = null;
 
     try {
-      const trimmedEmail = email.trim();
-      const trimmedName = name.trim();
-
+      // Step 1: Create Firebase user (but DON'T let auth state propagate yet)
+      console.log('📝 Creating Firebase user...');
       const userCredential = await createUserWithEmailAndPassword(
         auth,
-        trimmedEmail,
+        email.trim(),
         password
       );
-
       firebaseUser = userCredential.user;
+      console.log('✅ Firebase user created:', firebaseUser.uid);
 
+      // Step 2: IMMEDIATELY create user in MongoDB BEFORE auth state updates
+      console.log('📝 Creating user in MongoDB...');
       await createUserInBackend({
         authUid: firebaseUser.uid,
-        email: trimmedEmail,
-        name: trimmedName,
+        email: email.trim(),
+        name: name.trim(),
       });
-
-      profileCreated = true;
+      console.log('✅ User created in MongoDB successfully!');
+      
+      // Success! Auth state can now update and user will be found in MongoDB
       Alert.alert('Success', 'Account created successfully!');
-    } catch (err) {
+      
+    } catch (err: any) {
       console.error('❌ Signup error:', err);
-
-      const message =
-        err instanceof Error
-          ? err.message
-          : 'Failed to create account. Please try again.';
-
-      setError(message);
-
-      if (firebaseUser && !profileCreated) {
+      
+      // ROLLBACK: If MongoDB creation failed, delete Firebase user
+      if (firebaseUser) {
         try {
-          await deleteUser(firebaseUser);
-          console.warn('Rolled back Firebase user after profile failure.');
+          console.log('🔄 Rolling back Firebase user...');
+          await firebaseUser.delete();
+          console.log('✅ Firebase user deleted - rollback successful');
+          
+          setError('Failed to create account. Please try again.');
+          Alert.alert(
+            'Account Creation Failed',
+            'Unable to create your account. Please try again.'
+          );
         } catch (deleteErr) {
           console.error('❌ Failed to delete Firebase user:', deleteErr);
+          
+          setError('Account created but profile save failed. Please contact support.');
+          Alert.alert(
+            'Profile Save Failed',
+            'Your account was created but there was an issue saving your profile. Please contact support.'
+          );
         }
+      } else {
+        // Firebase creation itself failed
+        const message = err.message || 'Failed to create account';
+        setError(message);
+        Alert.alert('Error', message);
       }
     } finally {
       setLoading(false);

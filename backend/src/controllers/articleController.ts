@@ -1,6 +1,8 @@
+// backend/src/controllers/articleController.ts
 import { Request, Response } from 'express';
 import DailyArticle from '../models/DailyArticle';
 import UserBookmark from '../models/UserBookmark';
+import User from '../models/User';
 import { generateDailyArticle } from '../services/geminiService';
 
 const getTodayDateString = (): string => {
@@ -12,13 +14,32 @@ const getRandomBackgroundColor = (): string => {
   return colors[Math.floor(Math.random() * colors.length)];
 };
 
+// Helper function to get MongoDB User ID from Firebase authUid
+const getMongoUserIdFromAuthUid = async (authUid: string) => {
+  try {
+    console.log('🔍 Looking up user with authUid:', authUid);
+    const user = await User.findOne({ authUid });
+    if (user) {
+      console.log('✅ Found user:', user._id);
+      return user._id;
+    }
+    console.log('⚠️ No user found with authUid:', authUid);
+    return null;
+  } catch (error) {
+    console.error('❌ Error finding user:', error);
+    return null;
+  }
+};
+
 export const getTodayArticle = async (req: Request, res: Response) => {
   try {
+    console.log('📰 Getting today article...');
     const today = getTodayDateString();
     
     let article = await DailyArticle.findOne({ date: today });
     
     if (!article) {
+      console.log('📝 No article for today, generating...');
       const generated = await generateDailyArticle();
       
       article = await DailyArticle.create({
@@ -32,19 +53,30 @@ export const getTodayArticle = async (req: Request, res: Response) => {
           backgroundColor: getRandomBackgroundColor()
         }
       });
+      console.log('✅ Article generated:', article._id);
+    } else {
+      console.log('✅ Found existing article:', article._id);
     }
 
-    const userId = req.query.userId as string;
+    const authUid = req.query.userId as string;
     let isBookmarked = false;
     
-    if (userId) {
-      const bookmark = await UserBookmark.findOne({
-        userId,
-        articleId: article._id
-      });
-      isBookmarked = !!bookmark;
+    if (authUid) {
+      console.log('🔖 Checking bookmark for authUid:', authUid);
+      // Convert Firebase authUid to MongoDB _id
+      const mongoUserId = await getMongoUserIdFromAuthUid(authUid);
+      
+      if (mongoUserId) {
+        const bookmark = await UserBookmark.findOne({
+          userId: mongoUserId,
+          articleId: article._id
+        });
+        isBookmarked = !!bookmark;
+        console.log('🔖 Bookmark status:', isBookmarked);
+      }
     }
 
+    console.log('✅ Sending article response');
     res.status(200).json({
       status: 'success',
       data: {
@@ -53,7 +85,7 @@ export const getTodayArticle = async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Get today article error:', error);
+    console.error('❌ Get today article error:', error);
     res.status(500).json({
       status: 'error',
       message: 'Failed to fetch today\'s article'
@@ -63,7 +95,7 @@ export const getTodayArticle = async (req: Request, res: Response) => {
 
 export const getLast7DaysArticles = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.query.userId as string;
+    const authUid = req.query.userId as string;
     const today = new Date();
     const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
     
@@ -76,18 +108,23 @@ export const getLast7DaysArticles = async (req: Request, res: Response): Promise
 
     let articlesWithBookmarks: any[] = articles;
     
-    if (userId) {
-      const bookmarks = await UserBookmark.find({
-        userId,
-        articleId: { $in: articles.map(a => a._id) }
-      });
+    if (authUid) {
+      // Convert Firebase authUid to MongoDB _id
+      const mongoUserId = await getMongoUserIdFromAuthUid(authUid);
       
-      const bookmarkedIds = new Set(bookmarks.map(b => b.articleId.toString()));
-      
-      articlesWithBookmarks = articles.map(article => ({
-        ...article.toObject(),
-        isBookmarked: bookmarkedIds.has((article._id as any).toString())
-      }));
+      if (mongoUserId) {
+        const bookmarks = await UserBookmark.find({
+          userId: mongoUserId,
+          articleId: { $in: articles.map(a => a._id) }
+        });
+        
+        const bookmarkedIds = new Set(bookmarks.map(b => b.articleId.toString()));
+        
+        articlesWithBookmarks = articles.map(article => ({
+          ...article.toObject(),
+          isBookmarked: bookmarkedIds.has((article._id as any).toString())
+        }));
+      }
     }
 
     res.status(200).json({
@@ -108,7 +145,7 @@ export const getLast7DaysArticles = async (req: Request, res: Response): Promise
 export const getArticleById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const userId = req.query.userId as string;
+    const authUid = req.query.userId as string;
     
     const article = await DailyArticle.findById(id);
     
@@ -121,12 +158,17 @@ export const getArticleById = async (req: Request, res: Response): Promise<void>
     }
 
     let isBookmarked = false;
-    if (userId) {
-      const bookmark = await UserBookmark.findOne({
-        userId,
-        articleId: article._id
-      });
-      isBookmarked = !!bookmark;
+    if (authUid) {
+      // Convert Firebase authUid to MongoDB _id
+      const mongoUserId = await getMongoUserIdFromAuthUid(authUid);
+      
+      if (mongoUserId) {
+        const bookmark = await UserBookmark.findOne({
+          userId: mongoUserId,
+          articleId: article._id
+        });
+        isBookmarked = !!bookmark;
+      }
     }
 
     res.status(200).json({
@@ -157,7 +199,26 @@ export const bookmarkArticle = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    const existingBookmark = await UserBookmark.findOne({ userId, articleId });
+    // Convert Firebase authUid to MongoDB _id if needed
+    let mongoUserId = userId;
+    
+    // Check if userId is a Firebase authUid (not a valid ObjectId format)
+    if (userId.length !== 24) {
+      const user = await User.findOne({ authUid: userId });
+      if (!user) {
+        res.status(404).json({
+          status: 'error',
+          message: 'User not found'
+        });
+        return;
+      }
+      mongoUserId = user._id;
+    }
+
+    const existingBookmark = await UserBookmark.findOne({ 
+      userId: mongoUserId, 
+      articleId 
+    });
     
     if (existingBookmark) {
       res.status(400).json({
@@ -168,7 +229,7 @@ export const bookmarkArticle = async (req: Request, res: Response): Promise<void
     }
 
     const bookmark = await UserBookmark.create({
-      userId,
+      userId: mongoUserId,
       articleId,
       bookmarkedAt: new Date()
     });
@@ -198,7 +259,25 @@ export const removeBookmark = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const result = await UserBookmark.findOneAndDelete({ userId, articleId });
+    // Convert Firebase authUid to MongoDB _id if needed
+    let mongoUserId = userId;
+    
+    if (userId.length !== 24) {
+      const user = await User.findOne({ authUid: userId });
+      if (!user) {
+        res.status(404).json({
+          status: 'error',
+          message: 'User not found'
+        });
+        return;
+      }
+      mongoUserId = user._id;
+    }
+
+    const result = await UserBookmark.findOneAndDelete({ 
+      userId: mongoUserId, 
+      articleId 
+    });
 
     if (!result) {
       res.status(404).json({
@@ -223,9 +302,20 @@ export const removeBookmark = async (req: Request, res: Response): Promise<void>
 
 export const getUserBookmarkedArticles = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
+    const authUid = req.params.userId;
 
-    const bookmarks = await UserBookmark.find({ userId })
+    // Convert Firebase authUid to MongoDB _id
+    const mongoUserId = await getMongoUserIdFromAuthUid(authUid);
+    
+    if (!mongoUserId) {
+      res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+      return;
+    }
+
+    const bookmarks = await UserBookmark.find({ userId: mongoUserId })
       .populate('articleId')
       .sort({ bookmarkedAt: -1 });
 
