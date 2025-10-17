@@ -1,3 +1,7 @@
+import { enableScreens } from 'react-native-screens';
+
+enableScreens();
+
 import React, { useEffect, useMemo, useState } from 'react';
 import AudioRecorder from './src/pages/AudioRecorder';
 import {
@@ -18,6 +22,8 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
 import LevelsScreen from './src/pages/LevelsScreen';
 import Level1 from './src/screens/Level1';
 import Level2 from './src/screens/Level2';
@@ -25,9 +31,12 @@ import Level3 from './src/screens/Level3';
 
 import CameraDetector from './src/Components/Facial/CameraDetector';
 import Levels from './src/pages/Levels/Levels';
+import Results from './src/pages/Levels/Results';
 
 import { auth } from './src/firebase';
 import Toast from 'react-native-toast-message';
+
+const Stack = createStackNavigator();
 
 function App(): React.JSX.Element {
   const [user, setUser] = useState<User | null>(null);
@@ -45,19 +54,21 @@ function App(): React.JSX.Element {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-        {/* {initializing ? (
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" />
-          </View>
-        ) : user ? (
-          <SignedIn user={user} />
-        ) : (
-          <AuthForm />
-        )} */}
-        {/* {<CameraDetector />} */}
-        {/* <AudioRecorder /> */}
-        <Levels />
-        <Toast />
+        <NavigationContainer>
+          <Stack.Navigator>
+            <Stack.Screen
+              name="Levels"
+              component={Levels}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Results"
+              component={Results}
+              options={{ headerShown: false }}
+            />
+          </Stack.Navigator>
+          {/* <Toast /> */}
+        </NavigationContainer>
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -353,7 +364,7 @@ function SignedIn({ user }: { user: User }): React.JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#101010',
+    // backgroundColor: '#101010',
   },
   flex: {
     flex: 1,
