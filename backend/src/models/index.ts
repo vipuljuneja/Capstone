@@ -9,7 +9,8 @@ export { default as PracticeSession } from './PracticeSession';
 export { default as Progress } from './Progress';
 export { default as EncouragementNote } from './EncouragementNote';
 export { default as Achievement } from './Achievement';
-
+export { default as DailyArticle } from './DailyArticle';
+export { default as UserBookmark } from './UserBookmark';
 
 // Export types
 export type { IUser } from './User';
@@ -22,3 +23,5 @@ export type { IPracticeSession } from './PracticeSession';
 export type { IProgress } from './Progress';
 export type { IEncouragementNote } from './EncouragementNote';
 export type { IAchievement } from './Achievement';
+export type { IDailyArticle } from './DailyArticle';
+export type { IUserBookmark } from './UserBookmark';
