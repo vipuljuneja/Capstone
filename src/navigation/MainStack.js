@@ -8,6 +8,7 @@ import LevelsScreen from '../screens/LevelsScreen.js';
 import NotebookScreen from '../screens/NotebookScreen';    
 import Last7DaysScreen from '../screens/Last7DaysScreen';  
 import BookmarkedArticles from '../screens/BookmarkedArticles'
+import ProfileSettingScreen from '../pages/ProfileSettingScreen.js'
 
 const Stack = createNativeStackNavigator();
 
@@ -53,6 +54,11 @@ export default function MainStack({ user }) {
         name="Notebook"
         component={NotebookScreen}
         options={{ title: 'Notebook' }}
+      />
+      <Stack.Screen
+        name="ProfileSettingScreen"
+        component={ProfileSettingScreen}
+        options={{ title: 'Profile Settings' }}
       />
 
 <Stack.Screen

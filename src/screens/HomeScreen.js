@@ -53,14 +53,24 @@ export default function HomeScreen({ navigation, user }) {
             <Text style={S.sub}>Track your progress</Text>
           </View>
         </TouchableOpacity>
-      </View>
-      <TouchableOpacity onPress={() => navigation.navigate('BookmarkedArticles')} style={S.card}>
+        <TouchableOpacity onPress={() => navigation.navigate('BookmarkedArticles')} style={S.card}>
           <Text style={S.icon}>🎯</Text>
           <View style={S.cardBody}>
             <Text style={S.title}>BookmarkedArticles</Text>
             <Text style={S.sub}>Improve your skills</Text>
           </View>
         </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => navigation.navigate('ProfileSettingScreen')} style={S.card}>
+          <Text style={S.icon}>🎯</Text>
+          <View style={S.cardBody}>
+            <Text style={S.title}>ProfileSettingScreen</Text>
+            <Text style={S.sub}>Improve your skills</Text>
+          </View>
+        </TouchableOpacity>
+
+      </View>
+      
 
       <TouchableOpacity
         onPress={handleSignOut}
