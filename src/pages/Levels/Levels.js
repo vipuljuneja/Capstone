@@ -271,9 +271,7 @@ const Levels = () => {
   return (
     <View style={styles.container}>
       <View style={styles.topSection}>
-        <TouchableOpacity style={styles.backButton}>
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
+        <View style={styles.backButtonPlaceholder} />
       </View>
 
       <View style={styles.middleSection}>
@@ -377,15 +375,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     gap: 15,
   },
-  backButton: {
+  backButtonPlaceholder: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 24,
-    color: '#333',
   },
   // NEW STYLES FOR FINISH BUTTON
   finishButton: {

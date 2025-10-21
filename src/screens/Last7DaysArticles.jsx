@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Pressable, Image } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import { getLast7DaysArticles, toggleBookmark as toggleBookmarkApi } from '../services/api';
 import ArticleHeader from '../Components/Articles/ArticleHeader';
+import { characterImageFor } from '../Components/Articles/characterImages';
 
 const ArticleCard = ({ article, onPress, onBookmark }) => {
   const formatDate = (dateString) => {
@@ -14,30 +16,34 @@ const ArticleCard = ({ article, onPress, onBookmark }) => {
   };
 
   const getBackgroundColor = () => {
-    return article.illustrationData?.backgroundColor || '#e0f2e9';
+    return article.illustrationData?.backgroundColor || '#f5f3ff';
   };
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
       <View style={[styles.cardIllustration, { backgroundColor: getBackgroundColor() }]}>
-        <View style={styles.miniBlob}>
-          <View style={styles.miniBlobEyes}>
-            <View style={styles.miniBlobEye} />
-            <View style={styles.miniBlobEye} />
-          </View>
-        </View>
+        <Image
+          source={characterImageFor(article.illustrationData?.character)}
+          style={styles.cardImage}
+          resizeMode="contain"
+        />
       </View>
       
       <View style={styles.cardContent}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardReadTime}>Read time: {article.readTime} min</Text>
-          <Pressable onPress={(e) => {
+          <Pressable
+            onPress={(e) => {
             e.stopPropagation();
             onBookmark(article);
-          }}>
-            <Text style={styles.bookmarkIcon}>
-              {article.isBookmarked ? '🔖' : '📑'}
-            </Text>
+          }}
+            style={styles.bookmarkButton}
+          >
+            <Icon
+              name={article.isBookmarked ? 'bookmark' : 'bookmark-o'}
+              size={20}
+              color="#1f2937"
+            />
           </Pressable>
         </View>
         
@@ -53,7 +59,7 @@ const ArticleCard = ({ article, onPress, onBookmark }) => {
   );
 };
 
-export default function Last7DaysArticles({ userId, onNavigate, onSelectArticle }) {
+export default function Last7DaysArticles({ userId, onSelectArticle }) {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -116,7 +122,6 @@ export default function Last7DaysArticles({ userId, onNavigate, onSelectArticle 
     <View style={styles.container}>
       <ArticleHeader
         title="LAST 7 DAYS"
-        onBack={() => onNavigate && onNavigate('back')}
       />
 
       {/* Articles List */}
@@ -173,23 +178,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center'
   },
-  miniBlob: {
-    width: 50,
-    height: 50,
-    backgroundColor: '#a78bfa',
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  miniBlobEyes: {
-    flexDirection: 'row',
-    gap: 10
-  },
-  miniBlobEye: {
-    width: 6,
-    height: 6,
-    backgroundColor: '#1f2937',
-    borderRadius: 3
+  cardImage: {
+    width: '70%',
+    height: '70%'
   },
   cardContent: {
     padding: 16
@@ -205,8 +196,11 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontWeight: '500'
   },
-  bookmarkIcon: {
-    fontSize: 20
+  bookmarkButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   cardTitle: {
     fontSize: 18,

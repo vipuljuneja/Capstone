@@ -6,7 +6,7 @@ import BlobCharacter from '../Components/Articles/BlobCharacter';
 import ArticleMeta from '../Components/Articles/ArticleMeta';
 import ArticleKeywords from '../Components/Articles/ArticleKeywords';
 
-export default function ArticleDetail({ userId, articleId, onNavigate }) {
+export default function ArticleDetail({ userId, articleId }) {
   const [article, setArticle] = useState(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -68,7 +68,6 @@ export default function ArticleDetail({ userId, articleId, onNavigate }) {
     <View style={styles.container}>
       <ArticleHeader
         title="READ"
-        onBack={() => onNavigate && onNavigate('back')}
         onToggleBookmark={handleToggleBookmark}
         isBookmarked={isBookmarked}
         showBookmark
@@ -81,6 +80,7 @@ export default function ArticleDetail({ userId, articleId, onNavigate }) {
       >
         <BlobCharacter
           color={article.illustrationData?.backgroundColor || '#e0f2e9'}
+          character={article.illustrationData?.character}
           style={styles.heroIllustration}
         />
 

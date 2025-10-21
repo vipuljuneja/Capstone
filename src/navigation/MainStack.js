@@ -1,14 +1,14 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { TouchableOpacity, Text } from 'react-native';
 
 import HomeScreen from '../screens/HomeScreen';            
 import DailyArticleMain from '../screens/DailyArticleMain';
 import LevelsScreen from '../screens/LevelsScreen.js';        
 import NotebookScreen from '../screens/NotebookScreen';    
 import Last7DaysScreen from '../screens/Last7DaysScreen';  
-import BookmarkedArticles from '../screens/BookmarkedArticles'
-import ProfileSettingScreen from '../pages/ProfileSettingScreen.js'
+import BookmarkedArticles from '../screens/BookmarkedArticles';
+import ProfileSettingScreen from '../pages/ProfileSettingScreen.js';
+import ArticleDetail from '../screens/ArticleDetail.jsx';
 
 const Stack = createNativeStackNavigator();
 
@@ -40,9 +40,22 @@ export default function MainStack({ user }) {
 
       <Stack.Screen
         name="Last7Days"
-        component={Last7DaysScreen}
         options={{ title: 'Articles: Last 7 Days' }}
-      />
+      >
+        {(props) => <Last7DaysScreen {...props} userId={user.uid} />}
+      </Stack.Screen>
+
+      <Stack.Screen
+        name="ArticleDetail"
+        options={{ title: 'Article' }}
+      >
+        {(props) => (
+          <ArticleDetail
+            userId={user.uid}
+            articleId={props.route?.params?.articleId}
+          />
+        )}
+      </Stack.Screen>
 
       <Stack.Screen
         name="Levels"
@@ -61,11 +74,11 @@ export default function MainStack({ user }) {
         options={{ title: 'Profile Settings' }}
       />
 
-<Stack.Screen
+      <Stack.Screen
         name="BookmarkedArticles"
-        // component={BookmarkedArticles}
         options={{ title: 'Bookmark' }}
-      >{(props) => <BookmarkedArticles {...props} userId={user.uid} />}
+      >
+        {(props) => <BookmarkedArticles {...props} userId={user.uid} />}
       </Stack.Screen>
 
     </Stack.Navigator>

@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 type ArticleHeaderProps = {
   title: string;
-  onBack?: () => void;
   onToggleBookmark?: () => void;
   isBookmarked?: boolean;
   showBookmark?: boolean;
@@ -11,14 +11,17 @@ type ArticleHeaderProps = {
 
 export default function ArticleHeader({
   title,
-  onBack,
   onToggleBookmark,
   isBookmarked,
   showBookmark = false
 }: ArticleHeaderProps) {
   const renderBookmark = showBookmark ? (
-    <Pressable onPress={onToggleBookmark} hitSlop={16}>
-      <Text style={styles.bookmarkIcon}>{isBookmarked ? '🔖' : '📑'}</Text>
+    <Pressable onPress={onToggleBookmark} hitSlop={16} style={styles.iconButton}>
+      <Icon
+        name={isBookmarked ? 'bookmark' : 'bookmark-o'}
+        size={24}
+        color="#1f2937"
+      />
     </Pressable>
   ) : (
     <View style={styles.bookmarkPlaceholder} />
@@ -26,9 +29,7 @@ export default function ArticleHeader({
 
   return (
     <View style={styles.container}>
-      <Pressable onPress={onBack} hitSlop={16}>
-        <Text style={styles.backButton}>←</Text>
-      </Pressable>
+      <View style={styles.spacer} />
       <Text style={styles.title}>{title}</Text>
       {renderBookmark}
     </View>
@@ -46,18 +47,21 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e5e7eb',
     backgroundColor: '#ffffff'
   },
-  backButton: {
-    fontSize: 24,
-    color: '#1f2937'
-  },
   title: {
     fontSize: 14,
     fontWeight: '600',
     color: '#1f2937',
     letterSpacing: 1
   },
-  bookmarkIcon: {
-    fontSize: 24
+  spacer: {
+    width: 24,
+    height: 24
+  },
+  iconButton: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   bookmarkPlaceholder: {
     width: 24,
