@@ -6,9 +6,12 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  Pressable
+  Pressable,
+  Image
 } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import { getUserBookmarkedArticles, removeBookmark } from '../services/api';
+import { characterImageFor } from '../Components/Articles/characterImages';
 
 const BookmarkedCard = ({ article, onPress, onRemoveBookmark }) => {
   const formatDate = (dateString) => {
@@ -22,25 +25,29 @@ const BookmarkedCard = ({ article, onPress, onRemoveBookmark }) => {
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
-      <View style={[styles.cardIllustration, { 
-        backgroundColor: article.illustrationData?.backgroundColor || '#e0f2e9' 
-      }]}>
-        <View style={styles.miniBlob}>
-          <View style={styles.miniBlobEyes}>
-            <View style={styles.miniBlobEye} />
-            <View style={styles.miniBlobEye} />
-          </View>
-        </View>
+      <View
+        style={[styles.cardIllustration, {
+          backgroundColor: article.illustrationData?.backgroundColor || '#f5f3ff'
+        }]}
+      >
+        <Image
+          source={characterImageFor(article.illustrationData?.character)}
+          style={styles.cardImage}
+          resizeMode="contain"
+        />
       </View>
       
       <View style={styles.cardContent}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardReadTime}>Read time: {article.readTime} min</Text>
-          <Pressable onPress={(e) => {
+          <Pressable
+            onPress={(e) => {
             e.stopPropagation();
             onRemoveBookmark(article);
-          }}>
-            <Text style={styles.removeIcon}>🔖</Text>
+          }}
+            style={styles.bookmarkButton}
+          >
+            <Icon name="bookmark" size={20} color="#1f2937" />
           </Pressable>
         </View>
         
@@ -56,7 +63,7 @@ const BookmarkedCard = ({ article, onPress, onRemoveBookmark }) => {
   );
 };
 
-export default function BookmarkedArticles({ userId, onNavigate, onSelectArticle }) {
+export default function BookmarkedArticles({ userId, onSelectArticle }) {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -97,11 +104,9 @@ export default function BookmarkedArticles({ userId, onNavigate, onSelectArticle
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => onNavigate && onNavigate('back')}>
-          <Text style={styles.backButton}>←</Text>
-        </Pressable>
+        <View style={styles.headerSpacer} />
         <Text style={styles.headerTitle}>BOOKMARKED</Text>
-        <View style={{ width: 24 }} />
+        <View style={styles.headerSpacer} />
       </View>
 
       {/* Search Bar */}
@@ -150,15 +155,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb'
   },
-  backButton: {
-    fontSize: 24,
-    color: '#1f2937'
-  },
   headerTitle: {
     fontSize: 14,
     fontWeight: '600',
     color: '#1f2937',
     letterSpacing: 1
+  },
+  headerSpacer: {
+    width: 24,
+    height: 24
   },
   searchContainer: {
     flexDirection: 'row',
@@ -204,23 +209,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center'
   },
-  miniBlob: {
-    width: 50,
-    height: 50,
-    backgroundColor: '#a78bfa',
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  miniBlobEyes: {
-    flexDirection: 'row',
-    gap: 10
-  },
-  miniBlobEye: {
-    width: 6,
-    height: 6,
-    backgroundColor: '#1f2937',
-    borderRadius: 3
+  cardImage: {
+    width: '70%',
+    height: '70%'
   },
   cardContent: {
     padding: 16
@@ -236,8 +227,11 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontWeight: '500'
   },
-  removeIcon: {
-    fontSize: 20
+  bookmarkButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   cardTitle: {
     fontSize: 16,

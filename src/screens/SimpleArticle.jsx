@@ -1,20 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 
-export default function SimpleArticle({ userId, onNavigate }) {
-  const handleBack = () => {
-    console.log('🔙 Simple back pressed');
-    if (onNavigate) {
-      onNavigate('back');
-    }
-  };
+export default function SimpleArticle({ userId }) {
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
+        <View style={styles.spacer} />
         <Text style={styles.title}>TEST ARTICLE</Text>
       </View>
 
@@ -39,10 +31,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb'
   },
-  backButton: {
-    fontSize: 18,
-    color: '#1f2937',
-    fontWeight: '600'
+  spacer: {
+    width: 24,
+    height: 24
   },
   title: {
     fontSize: 18,

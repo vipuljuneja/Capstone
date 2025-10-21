@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
 
@@ -38,11 +39,22 @@ export default function HomeScreen({ navigation, user }) {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => navigation.navigate('LevelsScreen')} style={S.card}>
+        <TouchableOpacity onPress={() => navigation.navigate('Levels')} style={S.card}>
           <Text style={S.icon}>🎯</Text>
           <View style={S.cardBody}>
             <Text style={S.title}>Practice Levels</Text>
             <Text style={S.sub}>Improve your skills</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Last7Days', { userId: user?.uid })}
+          style={S.card}
+        >
+          <Text style={S.icon}>🗓️</Text>
+          <View style={S.cardBody}>
+            <Text style={S.title}>Last 7 Days</Text>
+            <Text style={S.sub}>Catch up on recent articles</Text>
           </View>
         </TouchableOpacity>
 
@@ -54,10 +66,10 @@ export default function HomeScreen({ navigation, user }) {
           </View>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate('BookmarkedArticles')} style={S.card}>
-          <Text style={S.icon}>🎯</Text>
+          <Icon name="bookmark" size={32} color="#38bdf8" style={S.icon} />
           <View style={S.cardBody}>
-            <Text style={S.title}>BookmarkedArticles</Text>
-            <Text style={S.sub}>Improve your skills</Text>
+            <Text style={S.title}>Bookmarked Articles</Text>
+            <Text style={S.sub}>Find your saved reads</Text>
           </View>
         </TouchableOpacity>
 
