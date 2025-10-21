@@ -18,10 +18,11 @@ export default function MainStack({ user }) {
     <Stack.Navigator
       initialRouteName="Home"
       screenOptions={{
-        headerStyle: { backgroundColor: '#1e293b' },
-        headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: '600' },
-        headerBackTitle: 'Back', 
+        headerStyle: { backgroundColor: '#ffffff' },
+        headerTintColor: '#111827',
+        headerTitleStyle: { fontWeight: '600', color: '#111827', letterSpacing: 1 },
+        headerBackTitleVisible: false,
+        headerShadowVisible: false,
       }}
     >
       <Stack.Screen

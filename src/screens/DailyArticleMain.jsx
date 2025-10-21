@@ -1,46 +1,102 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useMemo,
+} from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { getTodayArticle, toggleBookmark } from '../services/api';
+import {
+  PanGestureHandler,
+  GestureHandlerRootView,
+} from 'react-native-gesture-handler';
+import {
+  getTodayArticle,
+  getLast7DaysArticles,
+  toggleBookmark,
+} from '../services/api';
 import BlobCharacter from '../Components/Articles/BlobCharacter';
-import ArticleMeta from '../Components/Articles/ArticleMeta';
-
 
 export default function DailyArticleMain({ route, navigation, userId }) {
   const paramUserId = route?.params?.userId || userId;
-  const [article, setArticle] = useState(null);
-  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const alive = useRef(true);
 
-
+  const safeFetch = async (fn) => {
+    try {
+      return await fn();
+    } catch (err) {
+      console.error('❌ Fetch failed:', err);
+      return null;
+    }
+  };
 
   useEffect(() => {
+    if (!paramUserId) return;
+
     alive.current = true;
     (async () => {
-      try {
-        setLoading(true);
-        const res = await getTodayArticle(paramUserId);
+      setLoading(true);
+      const res = await safeFetch(() => getLast7DaysArticles(paramUserId));
+      if (!alive.current) return;
+
+      const list = Array.isArray(res?.data?.articles)
+        ? res.data.articles
+        : [];
+
+      if (list.length > 0) {
+        setArticles(list);
+        setCurrentIndex(0);
+      } else {
+        const todayRes = await safeFetch(() => getTodayArticle(paramUserId));
         if (!alive.current) return;
-        setArticle(res.data.article);
-        setIsBookmarked(res.data.isBookmarked);
-      } catch (e) {
-        if (alive.current) console.error('Error fetching article:', e);
-      } finally {
-        if (alive.current) setLoading(false);
+        const todayArticle = todayRes?.data?.article;
+        if (todayArticle) {
+          setArticles([
+            {
+              ...todayArticle,
+              isBookmarked: todayRes?.data?.isBookmarked ?? false,
+            },
+          ]);
+          setCurrentIndex(0);
+        } else setArticles([]);
       }
+      if (alive.current) setLoading(false);
     })();
-    return () => { alive.current = false; };
+
+    return () => {
+      alive.current = false;
+    };
   }, [paramUserId]);
 
+  const currentArticle = articles[currentIndex];
+
   const onToggleBookmark = async () => {
-    if (!article) return;
+    if (!currentArticle) return;
     try {
-      await toggleBookmark(paramUserId, article._id, isBookmarked);
+      await toggleBookmark(
+        paramUserId,
+        currentArticle._id,
+        currentArticle.isBookmarked,
+      );
       if (!alive.current) return;
-      setIsBookmarked(v => !v);
+      setArticles((prev) =>
+        prev.map((a, i) =>
+          i === currentIndex ? { ...a, isBookmarked: !a.isBookmarked } : a,
+        ),
+      );
     } catch (e) {
-      console.error('Error toggling bookmark:', e);
+      console.error('❌ Bookmark toggle failed:', e);
     }
   };
 
@@ -49,115 +105,231 @@ export default function DailyArticleMain({ route, navigation, userId }) {
       headerRight: () => (
         <TouchableOpacity onPress={onToggleBookmark} hitSlop={16}>
           <Icon
-            name={isBookmarked ? 'bookmark' : 'bookmark-o'}
+            name={currentArticle?.isBookmarked ? 'bookmark' : 'bookmark-o'}
             size={22}
-            color="#ffffff"
+            color="#111827"
           />
         </TouchableOpacity>
       ),
     });
-  }, [navigation, isBookmarked, article]);
+  }, [navigation, currentArticle]);
 
-  if (loading) {
+  // ✅ stable swipe handler
+  const handleSwipe = ({ nativeEvent }) => {
+    if (!nativeEvent || nativeEvent.state !== 5) return; // only act on end
+    const tx = nativeEvent.translationX ?? 0;
+    if (tx > 50) setCurrentIndex((i) => Math.max(i - 1, 0));
+    else if (tx < -50)
+      setCurrentIndex((i) => Math.min(i + 1, articles.length - 1));
+  };
+
+  const { underlined, rest, cardBgColor, dateLabel } = useMemo(() => {
+    if (!currentArticle)
+      return { underlined: '', rest: '', cardBgColor: '#e0f2e9', dateLabel: '' };
+
+    const dt = currentArticle.date ? new Date(currentArticle.date) : null;
+    const dateLabel = dt
+      ? dt
+          .toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'short',
+            day: 'numeric',
+          })
+          .toUpperCase()
+      : '';
+
+    const bg = currentArticle?.illustrationData?.backgroundColor || '#e0f2e9';
+    const normalized =
+      currentArticle.content?.replace(/\s+/g, ' ').trim() || '';
+    const preview =
+      normalized.length > 280
+        ? `${normalized.slice(0, 277).trim()}...`
+        : normalized;
+    const firstSentence = preview.match(/^[^.!?]+[.!?]/)?.[0];
+    const splitIndex =
+      !firstSentence || firstSentence.length > 100
+        ? preview.indexOf(' ', 80)
+        : firstSentence.length;
+    const hasSplit = splitIndex > 0;
+    const underlined = hasSplit
+      ? preview.slice(0, splitIndex).trim()
+      : preview;
+    const rest = hasSplit ? preview.slice(splitIndex).trim() : '';
+
+    return { underlined, rest, cardBgColor: bg, dateLabel };
+  }, [currentArticle]);
+
+  if (loading)
     return (
       <View style={S.loading}>
         <ActivityIndicator size="large" color="#8b5cf6" />
+        <Text style={{ marginTop: 10 }}>Loading...</Text>
       </View>
     );
-  }
 
-  if (!article) {
+  if (!articles.length || !currentArticle)
     return (
       <View style={S.loading}>
-        <Text style={S.errText}>Failed to load today's article</Text>
+        <Text style={S.errText}>No articles available</Text>
       </View>
     );
-  }
-
-  const dt = new Date(article.date);
-  const dateLabel = dt.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }).toUpperCase();
-  const previewText = (() => {
-    const normalized = article.content?.replace(/\s+/g, ' ').trim();
-    if (!normalized) return '';
-    return normalized.length > 180 ? `${normalized.slice(0, 177).trim()}...` : normalized;
-  })();
 
   return (
-    <View style={S.page}>
-      <ScrollView style={S.scroll} contentContainerStyle={S.body} showsVerticalScrollIndicator={false}>
-        <View style={S.dateWrap}>
-          <Text style={S.today}>Today, Just for You</Text>
-          <Text style={S.date}>{dateLabel}</Text>
-        </View>
-
-        <BlobCharacter
-          color={article.illustrationData?.backgroundColor || '#e0f2e9'}
-          character={article.illustrationData?.character}
-          style={S.hero}
-        />
-
-        <View style={S.head}>
-          <Text style={S.title}>{article.title}</Text>
-          <ArticleMeta
-            author="Cameron Carter"
-            dateText={dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-            readTime={article.readTime}
-            align="center"
-            style={S.meta}
-          />
-        </View>
-
-        <View style={S.card}>
-          <View style={S.cardMetaRow}>
-            <Text style={S.cardMetaLabel}>Read time</Text>
-            <Text style={S.cardMetaValue}>{article.readTime} min</Text>
-          </View>
-
-          <Text style={S.cardTitle}>{article.title}</Text>
-          <Text style={S.cardAuthor}>Cameron Carter</Text>
-          <Text style={S.cardSummary}>{previewText}</Text>
-
-          <TouchableOpacity
-            style={S.readButton}
-            onPress={() => navigation.navigate('ArticleDetail', { articleId: article._id })}
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <PanGestureHandler onHandlerStateChange={handleSwipe}>
+        <View style={S.page}>
+          <ScrollView
+            style={S.scroll}
+            contentContainerStyle={S.body}
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled
           >
-            <Text style={S.readButtonTxt}>READ</Text>
-          </TouchableOpacity>
-        </View>
+            <View style={S.dateWrap}>
+              <Text style={S.today}>
+                {currentIndex === 0 ? 'Today, Just for You' : 'Previously for You'}
+              </Text>
+              {dateLabel ? <Text style={S.date}>{dateLabel}</Text> : null}
+            </View>
 
-        <TouchableOpacity
-          style={S.pastBtn}
-          onPress={() => navigation.navigate('Last7Days', { userId: paramUserId })}
-        >
-          <Text style={S.pastTxt}>View Last 7 Days</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
+            <View style={[S.card, { backgroundColor: cardBgColor }]}>
+              <View style={S.heroContainer}>
+                <View
+                  style={[S.glowCircle, { backgroundColor: `${cardBgColor}90` }]}
+                />
+                <BlobCharacter
+                  color="transparent"
+                  character={currentArticle.illustrationData?.character}
+                  style={S.hero}
+                />
+              </View>
+
+              <Text style={S.readTimeLabel}>
+                Read time : {currentArticle.readTime} min
+              </Text>
+
+              <Text style={S.cardTitle}>{currentArticle.title}</Text>
+              <Text style={S.cardAuthor}>Cameron Carter</Text>
+
+              <View style={S.contentPreview}>
+                <Text style={S.cardSummary}>
+                  <Text style={S.underlinedText}>{underlined}</Text>
+                  {rest && ' '}
+                  {rest}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={S.readButton}
+                activeOpacity={0.8}
+                onPress={() =>
+                  navigation.push('ArticleDetail', {
+                    articleId: currentArticle._id,
+                  })
+                }
+              >
+                <Text style={S.readButtonTxt}>READ</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+
+          {articles.length > 1 && (
+            <View style={S.footer}>
+              <View style={S.indicator}>
+                {articles.map((_, idx) => (
+                  <View
+                    key={`dot-${idx}`}
+                    style={[S.dot, idx === currentIndex && S.dotActive]}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
+        </View>
+      </PanGestureHandler>
+    </GestureHandlerRootView>
   );
 }
 
 const S = StyleSheet.create({
   page: { flex: 1, backgroundColor: '#fff' },
-  loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
+  loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   errText: { fontSize: 16, color: '#6b7280' },
   scroll: { flex: 1 },
-  body: { paddingHorizontal: 20, paddingBottom: 32 },
+  body: { paddingHorizontal: 20, paddingBottom: 120 },
   dateWrap: { alignItems: 'center', marginTop: 24, marginBottom: 24 },
   today: { fontSize: 20, fontWeight: '600', color: '#1f2937' },
   date: { fontSize: 12, color: '#6b7280', marginTop: 8, letterSpacing: 0.5 },
-  hero: { marginBottom: 20 },
-  head: { alignItems: 'center', marginBottom: 24 },
-  title: { fontSize: 24, fontWeight: '700', color: '#1f2937', textAlign: 'center', marginBottom: 12 },
-  meta: { marginBottom: 0 },
-  card: { backgroundColor: '#f9fafb', borderRadius: 20, padding: 24, marginBottom: 28, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 },
-  cardMetaRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  cardMetaLabel: { fontSize: 13, color: '#6b7280', fontWeight: '500' },
-  cardMetaValue: { fontSize: 13, color: '#1f2937', fontWeight: '600' },
-  cardTitle: { fontSize: 22, fontWeight: '700', color: '#1f2937', marginBottom: 8 },
-  cardAuthor: { fontSize: 14, color: '#6b7280', marginBottom: 16 },
-  cardSummary: { fontSize: 15, lineHeight: 24, color: '#374151', marginBottom: 20 },
-  readButton: { backgroundColor: '#312e81', borderRadius: 999, alignSelf: 'center', paddingVertical: 12, paddingHorizontal: 36 },
-  readButtonTxt: { fontSize: 15, fontWeight: '700', color: '#fff', letterSpacing: 1 },
-  pastBtn: { backgroundColor: '#1f2937', paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginBottom: 32 },
-  pastTxt: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  card: {
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  heroContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 280,
+    marginBottom: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  glowCircle: {
+    position: 'absolute',
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+  },
+  hero: { height: 280, width: '100%', zIndex: 1 },
+  readTimeLabel: {
+    fontSize: 13,
+    color: '#9ca3af',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  cardTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 12,
+    textAlign: 'center',
+    lineHeight: 34,
+  },
+  cardAuthor: {
+    fontSize: 15,
+    color: '#6b7280',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  contentPreview: { marginBottom: 28 },
+  cardSummary: { fontSize: 15, lineHeight: 24, color: '#374151' },
+  underlinedText: {
+    textDecorationLine: 'underline',
+    textDecorationColor: '#a78bfa',
+  },
+  readButton: {
+    backgroundColor: '#3730a3',
+    borderRadius: 999,
+    alignSelf: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 100,
+  },
+  readButtonTxt: { fontSize: 15, fontWeight: '700', color: '#fff', letterSpacing: 1.2 },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 24,
+  },
+  indicator: { flexDirection: 'row', gap: 8 },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#d1d5db',
+  },
+  dotActive: { backgroundColor: '#3730a3', width: 24 },
 });

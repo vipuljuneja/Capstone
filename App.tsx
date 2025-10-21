@@ -1,7 +1,7 @@
 import { enableScreens } from 'react-native-screens';
 
 enableScreens();
-
+import 'react-native-gesture-handler';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -16,11 +16,18 @@ import { auth } from './src/firebase';
 import { AuthProvider } from './src/contexts/AuthContext';
 import Toast from 'react-native-toast-message';
 
+
+
+
 const NAV_THEME = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    background: '#0f172a', // dark bg to match your app
+    background: '#f5f5f0',
+    card: '#ffffff',
+    primary: '#111827',
+    text: '#111827',
+    border: '#e5e7eb',
   },
 };
 
@@ -63,12 +70,12 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
+  container: { flex: 1, backgroundColor: '#f5f5f0' },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0f172a',
+    backgroundColor: '#f5f5f0',
   },
-  loadingText: { color: '#94a3b8', marginTop: 16, fontSize: 16 },
+  loadingText: { color: '#475569', marginTop: 16, fontSize: 16 },
 });
