@@ -96,17 +96,17 @@ export default function HomeScreen({ navigation, user }) {
 }
 
 const S = StyleSheet.create({
-  wrap: { flex: 1, paddingHorizontal: 24, paddingVertical: 48, justifyContent: 'space-between', backgroundColor: '#0f172a' },
+  wrap: { flex: 1, paddingHorizontal: 24, paddingVertical: 48, justifyContent: 'space-between', backgroundColor: '#f5f5f0' },
   header: { alignItems: 'center', paddingTop: 60 },
-  welcome: { fontSize: 32, fontWeight: '700', color: '#fff', marginBottom: 8 },
-  email: { fontSize: 16, color: '#94a3b8' },
+  welcome: { fontSize: 32, fontWeight: '700', color: '#0f172a', marginBottom: 8 },
+  email: { fontSize: 16, color: '#6b7280' },
   menu: { flex: 1, gap: 16, paddingTop: 40 },
-  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b', padding: 20, borderRadius: 16, borderWidth: 1, borderColor: '#334155' },
+  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', padding: 20, borderRadius: 20, borderWidth: 1, borderColor: '#e5e7eb', shadowColor: '#000', shadowOpacity: 0.06, shadowOffset: { width: 0, height: 4 }, shadowRadius: 12, elevation: 3 },
   icon: { fontSize: 32, marginRight: 16 },
   cardBody: { flex: 1 },
-  title: { fontSize: 18, fontWeight: '600', color: '#fff', marginBottom: 4 },
-  sub: { fontSize: 14, color: '#94a3b8' },
-  logout: { backgroundColor: '#dc2626', paddingVertical: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 18, fontWeight: '600', color: '#0f172a', marginBottom: 4 },
+  sub: { fontSize: 14, color: '#6b7280' },
+  logout: { backgroundColor: '#312e81', paddingVertical: 16, borderRadius: 999, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.1, shadowOffset: { width: 0, height: 6 }, shadowRadius: 12, elevation: 4 },
   disabled: { opacity: 0.6 },
-  logoutTxt: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  logoutTxt: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 1 },
 });
