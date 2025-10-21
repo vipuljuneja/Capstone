@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  ActivityIndicator,
+  TouchableOpacity 
+} from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import { getArticleById, toggleBookmark } from '../services/api';
 import ArticleHeader from '../Components/Articles/ArticleHeader';
 import BlobCharacter from '../Components/Articles/BlobCharacter';
@@ -66,12 +74,7 @@ export default function ArticleDetail({ userId, articleId }) {
 
   return (
     <View style={styles.container}>
-      <ArticleHeader
-        title="READ"
-        onToggleBookmark={handleToggleBookmark}
-        isBookmarked={isBookmarked}
-        showBookmark
-      />
+  
 
       <ScrollView
         style={styles.scrollArea}
@@ -86,13 +89,26 @@ export default function ArticleDetail({ userId, articleId }) {
 
         <View style={styles.articleHeaderSection}>
           <Text style={styles.title}>{article.title}</Text>
-          <ArticleMeta
-            author="Cameron Carter"
-            dateText={formatDate()}
-            readTime={article.readTime}
-            align="left"
-            style={styles.meta}
-          />
+          <View style={styles.metaRow}>
+            <ArticleMeta
+              author="Cameron Carter"
+              dateText={formatDate()}
+              readTime={article.readTime}
+              align="left"
+              style={styles.meta}
+            />
+            <TouchableOpacity 
+              onPress={handleToggleBookmark}
+              style={styles.bookmarkButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Icon
+                name={isBookmarked ? 'bookmark' : 'bookmark-o'}
+                size={24}
+                color="#111827"
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <Text style={styles.articleContent}>{article.content}</Text>
@@ -144,8 +160,18 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     marginBottom: 12
   },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
   meta: {
-    marginBottom: 0
+    marginBottom: 0,
+    flex: 1
+  },
+  bookmarkButton: {
+    padding: 8,
+    marginLeft: 12
   },
   articleContent: {
     fontSize: 16,
