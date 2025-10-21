@@ -12,12 +12,19 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import {
-  PanGestureHandler,
   GestureHandlerRootView,
+  PanGestureHandler,
 } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
 import {
   getTodayArticle,
   getLast7DaysArticles,
@@ -25,12 +32,70 @@ import {
 } from '../services/api';
 import BlobCharacter from '../Components/Articles/BlobCharacter';
 
+const { width } = Dimensions.get('window');
+
+// Extract ArticleCard as a separate component
+const ArticleCard = ({ article, index, currentIndex, navigation, cardBgColor, underlined, rest, dateLabel }) => {
+  return (
+    <View style={S.cardWrapper}>
+      <View style={S.dateWrap}>
+        <Text style={S.today}>
+          {index === 0 ? 'Today, Just for You' : 'Previously for You'}
+        </Text>
+        {dateLabel ? <Text style={S.date}>{dateLabel}</Text> : null}
+      </View>
+
+      <View style={[S.card, { backgroundColor: cardBgColor }]}>
+        <View style={S.heroContainer}>
+          {/* <View
+            style={[S.glowCircle, { backgroundColor: `${cardBgColor}90` }]}
+          /> */}
+          <BlobCharacter
+            color="transparent"
+            character={article.illustrationData?.character}
+            style={S.hero}
+          />
+        </View>
+
+        <Text style={S.readTimeLabel}>
+          Read time : {article.readTime} min
+        </Text>
+
+        <Text style={S.cardTitle}>{article.title}</Text>
+        <Text style={S.cardAuthor}>Cameron Carter</Text>
+
+        <View style={S.contentPreview}>
+          <Text style={S.cardSummary}>
+            <Text style={S.underlinedText}>{underlined}</Text>
+            {rest && ' '}
+            {rest}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={S.readButton}
+          activeOpacity={0.8}
+          onPress={() =>
+            navigation.push('ArticleDetail', {
+              articleId: article._id,
+            })
+          }
+        >
+          <Text style={S.readButtonTxt}>READ</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
 export default function DailyArticleMain({ route, navigation, userId }) {
   const paramUserId = route?.params?.userId || userId;
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const alive = useRef(true);
+
+  const translateX = useSharedValue(0);
 
   const safeFetch = async (fn) => {
     try {
@@ -43,8 +108,8 @@ export default function DailyArticleMain({ route, navigation, userId }) {
 
   useEffect(() => {
     if (!paramUserId) return;
-
     alive.current = true;
+
     (async () => {
       setLoading(true);
       const res = await safeFetch(() => getLast7DaysArticles(paramUserId));
@@ -68,7 +133,6 @@ export default function DailyArticleMain({ route, navigation, userId }) {
               isBookmarked: todayRes?.data?.isBookmarked ?? false,
             },
           ]);
-          setCurrentIndex(0);
         } else setArticles([]);
       }
       if (alive.current) setLoading(false);
@@ -114,50 +178,75 @@ export default function DailyArticleMain({ route, navigation, userId }) {
     });
   }, [navigation, currentArticle]);
 
-  // ✅ stable swipe handler
-  const handleSwipe = ({ nativeEvent }) => {
-    if (!nativeEvent || nativeEvent.state !== 5) return; // only act on end
-    const tx = nativeEvent.translationX ?? 0;
-    if (tx > 50) setCurrentIndex((i) => Math.max(i - 1, 0));
-    else if (tx < -50)
-      setCurrentIndex((i) => Math.min(i + 1, articles.length - 1));
+  // --- IMPROVED SWIPE LOGIC ---
+  const handleGesture = ({ nativeEvent }) => {
+    const tx = nativeEvent.translationX;
+    translateX.value = tx;
   };
 
-  const { underlined, rest, cardBgColor, dateLabel } = useMemo(() => {
-    if (!currentArticle)
-      return { underlined: '', rest: '', cardBgColor: '#e0f2e9', dateLabel: '' };
+  const handleGestureEnd = ({ nativeEvent }) => {
+    const tx = nativeEvent.translationX;
+    const threshold = 80;
+    
+    if (tx > threshold && currentIndex > 0) {
+      // Swipe right - go to previous
+      translateX.value = withTiming(width, { duration: 200 }, () => {
+        runOnJS(switchArticle)(-1);
+      });
+    } else if (tx < -threshold && currentIndex < articles.length - 1) {
+      // Swipe left - go to next
+      translateX.value = withTiming(-width, { duration: 200 }, () => {
+        runOnJS(switchArticle)(1);
+      });
+    } else {
+      // Snap back
+      translateX.value = withTiming(0, { duration: 150 });
+    }
+  };
 
-    const dt = currentArticle.date ? new Date(currentArticle.date) : null;
-    const dateLabel = dt
-      ? dt
-          .toLocaleDateString('en-US', {
-            weekday: 'long',
-            month: 'short',
-            day: 'numeric',
-          })
-          .toUpperCase()
-      : '';
+  const switchArticle = (direction) => {
+    setCurrentIndex((i) => i + direction);
+    translateX.value = 0;
+  };
 
-    const bg = currentArticle?.illustrationData?.backgroundColor || '#e0f2e9';
-    const normalized =
-      currentArticle.content?.replace(/\s+/g, ' ').trim() || '';
-    const preview =
-      normalized.length > 280
-        ? `${normalized.slice(0, 277).trim()}...`
-        : normalized;
-    const firstSentence = preview.match(/^[^.!?]+[.!?]/)?.[0];
-    const splitIndex =
-      !firstSentence || firstSentence.length > 100
-        ? preview.indexOf(' ', 80)
-        : firstSentence.length;
-    const hasSplit = splitIndex > 0;
-    const underlined = hasSplit
-      ? preview.slice(0, splitIndex).trim()
-      : preview;
-    const rest = hasSplit ? preview.slice(splitIndex).trim() : '';
+  const containerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value - currentIndex * width }],
+  }));
 
-    return { underlined, rest, cardBgColor: bg, dateLabel };
-  }, [currentArticle]);
+  // Process article data for all articles
+  const processedArticles = useMemo(() => {
+    return articles.map((article) => {
+      const dt = article.date ? new Date(article.date) : null;
+      const dateLabel = dt
+        ? dt
+            .toLocaleDateString('en-US', {
+              weekday: 'long',
+              month: 'short',
+              day: 'numeric',
+            })
+            .toUpperCase()
+        : '';
+
+      const bg = article?.illustrationData?.backgroundColor || '#e0f2e9';
+      const normalized = article.content?.replace(/\s+/g, ' ').trim() || '';
+      const preview =
+        normalized.length > 280
+          ? `${normalized.slice(0, 277).trim()}...`
+          : normalized;
+      const firstSentence = preview.match(/^[^.!?]+[.!?]/)?.[0];
+      const splitIndex =
+        !firstSentence || firstSentence.length > 100
+          ? preview.indexOf(' ', 80)
+          : firstSentence.length;
+      const hasSplit = splitIndex > 0;
+      const underlined = hasSplit
+        ? preview.slice(0, splitIndex).trim()
+        : preview;
+      const rest = hasSplit ? preview.slice(splitIndex).trim() : '';
+
+      return { article, cardBgColor: bg, dateLabel, underlined, rest };
+    });
+  }, [articles]);
 
   if (loading)
     return (
@@ -176,76 +265,46 @@ export default function DailyArticleMain({ route, navigation, userId }) {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <PanGestureHandler onHandlerStateChange={handleSwipe}>
-        <View style={S.page}>
-          <ScrollView
-            style={S.scroll}
-            contentContainerStyle={S.body}
-            showsVerticalScrollIndicator={false}
-            nestedScrollEnabled
-          >
-            <View style={S.dateWrap}>
-              <Text style={S.today}>
-                {currentIndex === 0 ? 'Today, Just for You' : 'Previously for You'}
-              </Text>
-              {dateLabel ? <Text style={S.date}>{dateLabel}</Text> : null}
-            </View>
-
-            <View style={[S.card, { backgroundColor: cardBgColor }]}>
-              <View style={S.heroContainer}>
-                <View
-                  style={[S.glowCircle, { backgroundColor: `${cardBgColor}90` }]}
-                />
-                <BlobCharacter
-                  color="transparent"
-                  character={currentArticle.illustrationData?.character}
-                  style={S.hero}
-                />
-              </View>
-
-              <Text style={S.readTimeLabel}>
-                Read time : {currentArticle.readTime} min
-              </Text>
-
-              <Text style={S.cardTitle}>{currentArticle.title}</Text>
-              <Text style={S.cardAuthor}>Cameron Carter</Text>
-
-              <View style={S.contentPreview}>
-                <Text style={S.cardSummary}>
-                  <Text style={S.underlinedText}>{underlined}</Text>
-                  {rest && ' '}
-                  {rest}
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                style={S.readButton}
-                activeOpacity={0.8}
-                onPress={() =>
-                  navigation.push('ArticleDetail', {
-                    articleId: currentArticle._id,
-                  })
-                }
-              >
-                <Text style={S.readButtonTxt}>READ</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-
-          {articles.length > 1 && (
-            <View style={S.footer}>
-              <View style={S.indicator}>
-                {articles.map((_, idx) => (
-                  <View
-                    key={`dot-${idx}`}
-                    style={[S.dot, idx === currentIndex && S.dotActive]}
+      <View style={S.page}>
+        <PanGestureHandler onGestureEvent={handleGesture} onEnded={handleGestureEnd}>
+          <Animated.View style={[S.carouselContainer, containerStyle]}>
+            {processedArticles.map((data, index) => (
+              <View key={data.article._id} style={S.articlePage}>
+                <ScrollView
+                  style={S.scroll}
+                  contentContainerStyle={S.body}
+                  showsVerticalScrollIndicator={false}
+                  nestedScrollEnabled
+                >
+                  <ArticleCard
+                    article={data.article}
+                    index={index}
+                    currentIndex={currentIndex}
+                    navigation={navigation}
+                    cardBgColor={data.cardBgColor}
+                    underlined={data.underlined}
+                    rest={data.rest}
+                    dateLabel={data.dateLabel}
                   />
-                ))}
+                </ScrollView>
               </View>
+            ))}
+          </Animated.View>
+        </PanGestureHandler>
+
+        {/* {articles.length > 1 && (
+          <View style={S.footer}>
+            <View style={S.indicator}>
+              {articles.map((_, idx) => (
+                <View
+                  key={`dot-${idx}`}
+                  style={[S.dot, idx === currentIndex && S.dotActive]}
+                />
+              ))}
             </View>
-          )}
-        </View>
-      </PanGestureHandler>
+          </View>
+        )} */}
+      </View>
     </GestureHandlerRootView>
   );
 }
@@ -254,15 +313,23 @@ const S = StyleSheet.create({
   page: { flex: 1, backgroundColor: '#fff' },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   errText: { fontSize: 16, color: '#6b7280' },
+  carouselContainer: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  articlePage: {
+    width: width,
+  },
   scroll: { flex: 1 },
   body: { paddingHorizontal: 20, paddingBottom: 120 },
+  cardWrapper: { flex: 1 },
   dateWrap: { alignItems: 'center', marginTop: 24, marginBottom: 24 },
   today: { fontSize: 20, fontWeight: '600', color: '#1f2937' },
   date: { fontSize: 12, color: '#6b7280', marginTop: 8, letterSpacing: 0.5 },
   card: {
     borderRadius: 20,
     padding: 24,
-    marginBottom: 28,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
@@ -272,7 +339,7 @@ const S = StyleSheet.create({
   heroContainer: {
     position: 'relative',
     width: '100%',
-    height: 280,
+    height: 180,
     marginBottom: 20,
     justifyContent: 'center',
     alignItems: 'center',
@@ -280,10 +347,10 @@ const S = StyleSheet.create({
   glowCircle: {
     position: 'absolute',
     width: 250,
-    height: 250,
+    height: 150,
     borderRadius: 125,
   },
-  hero: { height: 280, width: '100%', zIndex: 1 },
+  hero: { height: 260, width: '100%', zIndex: 1 },
   readTimeLabel: {
     fontSize: 13,
     color: '#9ca3af',
@@ -317,12 +384,22 @@ const S = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 100,
   },
-  readButtonTxt: { fontSize: 15, fontWeight: '700', color: '#fff', letterSpacing: 1.2 },
+  readButtonTxt: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 1.2,
+  },
   footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     paddingBottom: 24,
+    backgroundColor: 'transparent',
   },
   indicator: { flexDirection: 'row', gap: 8 },
   dot: {
