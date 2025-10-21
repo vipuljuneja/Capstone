@@ -13,6 +13,8 @@ export default function DailyArticleMain({ route, navigation, userId }) {
   const [loading, setLoading] = useState(true);
   const alive = useRef(true);
 
+
+
   useEffect(() => {
     alive.current = true;
     (async () => {

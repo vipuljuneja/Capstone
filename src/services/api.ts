@@ -1,7 +1,7 @@
 // src/services/api.ts
 import axios, { AxiosError } from 'axios';
-// import { BACKEND_URL } from '@env';
-const BACKEND_URL = 'http://10.128.252.6:3000';
+import { BACKEND_URL } from '@env';
+// const BACKEND_URL = 'http://10.128.252.6:3000';
 
 const API_BASE_URL = __DEV__
   ? `${BACKEND_URL}/api`
