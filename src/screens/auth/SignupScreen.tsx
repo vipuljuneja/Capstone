@@ -1,7 +1,9 @@
-// src/screens/auth/SignupScreen.tsx
+
 import React, { useState } from 'react';
+import { FlatList } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import {
   View,
   Text,
@@ -49,89 +51,103 @@ export default function SignupScreen({ onSwitchToLogin }: SignupScreenProps) {
     confirmPassword !== '' &&
     password === confirmPassword;
 
-  const handleSignup = async () => {
-    if (!canSubmit || loading) return;
+ const handleSignup = async () => {
+  if (!canSubmit || loading) return;
 
-    setLoading(true);
-    setError(null);
-    let firebaseUser = null;
+  setLoading(true);
+  setError(null);
 
-    try {
-      console.log('📝 Creating Firebase user...');
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email.trim(),
-        password
-      );
-      firebaseUser = userCredential.user;
-      console.log('✅ Firebase user created:', firebaseUser.uid);
+  let isMounted = true; 
+  let firebaseUser = null;
 
-      console.log('📝 Creating user in MongoDB...');
-      await createUserInBackend({
-        authUid: firebaseUser.uid,
-        email: email.trim(),
-        name: name.trim(),
-      });
-      console.log('✅ User created in MongoDB successfully!');
-      
-      Alert.alert('Success', 'Account created successfully!');
-      
-    } catch (err: any) {
-      console.error('❌ Signup error:', err);
-      
-      if (firebaseUser) {
-        try {
-          console.log('🔄 Rolling back Firebase user...');
-          await firebaseUser.delete();
-          console.log('✅ Firebase user deleted - rollback successful');
-          
-          setError('Failed to create account. Please try again.');
-          Alert.alert(
-            'Account Creation Failed',
-            'Unable to create your account. Please try again.'
-          );
-        } catch (deleteErr) {
-          console.error('❌ Failed to delete Firebase user:', deleteErr);
-          
-          setError('Account created but profile save failed. Please contact support.');
-          Alert.alert(
-            'Profile Save Failed',
-            'Your account was created but there was an issue saving your profile. Please contact support.'
-          );
-        }
-      } else {
-        const message = err.message || 'Failed to create account';
-        setError(message);
-        Alert.alert('Error', message);
+  try {
+    console.log('📝 Creating Firebase user...');
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email.trim(),
+      password
+    );
+
+    if (!isMounted) return;
+    firebaseUser = userCredential.user;
+    console.log('✅ Firebase user created:', firebaseUser.uid);
+
+    console.log('📝 Creating MongoDB user...');
+    await createUserInBackend({
+      authUid: firebaseUser.uid,
+      email: email.trim(),
+      name: name.trim(),
+    });
+
+    if (!isMounted) return;
+    console.log('✅ MongoDB user created successfully.');
+
+    // Optional small delay helps prevent alert glitch on iOS
+    setTimeout(() => {
+      if (isMounted) {
+        Alert.alert('Success', 'Account created successfully!');
       }
-    } finally {
-      setLoading(false);
+    }, 150);
+
+
+
+  } catch (err: any) {
+    console.error('❌ Signup error:', err);
+
+    // Rollback if Firebase user was created but backend failed
+    if (firebaseUser) {
+      try {
+        console.log('🔄 Rolling back Firebase user...');
+        await firebaseUser.delete();
+        console.log('✅ Firebase user deleted (rollback successful)');
+      } catch (deleteErr) {
+        console.error('❌ Rollback failed:', deleteErr);
+      }
     }
+
+    if (isMounted) {
+      const message =
+        err?.message ||
+        'Account creation failed. Please try again.';
+      setError(message);
+      Alert.alert('Error', message);
+    }
+
+  } finally {
+    if (isMounted) setLoading(false);
+  }
+
+  // Cleanup guard when component unmounts
+  return () => {
+    isMounted = false;
   };
+};
+
 
  return (
-  <KeyboardAvoidingView
-    style={styles.container}
-    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-  >
-<LinearGradient
-        colors={['#F6EAC2', '#EEF3E7']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0.1, y: 0.5 }}
-        locations={[0.2, 0.8]}
-        style={StyleSheet.absoluteFill}
-      />
+  // <KeyboardAvoidingView
+  //   style={styles.container}
+  //   behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+  // >
+   
 
+    // <KeyboardAwareScrollView
+    //   contentContainerStyle={styles.scrollContent}
+    //   keyboardShouldPersistTaps="handled"
 
+    //   // extraScrollHeight={40}
+    // >
+<View style={styles.container}>
+     <LinearGradient
+      colors={['#F6EAC2', '#EEF3E7']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0.1, y: 0.5 }}
+      locations={[0.2, 0.8]}
+      style={StyleSheet.absoluteFill}
+    />
 
+    
 
-
-    {/* <ScrollView
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-    > */}
-      {/* Blob Character */}
       <View style={styles.blobContainer}>
         <Image source={blobCharacter} style={styles.blobImage} />
         
@@ -222,8 +238,10 @@ export default function SignupScreen({ onSwitchToLogin }: SignupScreenProps) {
           )}
         </TouchableOpacity>
       </View>
-    {/* </ScrollView> */}
-  </KeyboardAvoidingView>
+      </View>
+
+
+
 );
 
 }
