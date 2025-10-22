@@ -1,11 +1,11 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import HomeScreen from '../screens/HomeScreen';            
+import HomeScreen from '../screens/HomeScreen';
 import DailyArticleMain from '../screens/DailyArticleMain';
-import LevelsScreen from '../screens/LevelsScreen.js';        
-import NotebookScreen from '../screens/NotebookScreen';    
-import Last7DaysScreen from '../screens/Last7DaysScreen';  
+import LevelsScreen from '../screens/LevelsScreen.js';
+import NotebookScreen from '../screens/NotebookScreen';
+import Last7DaysScreen from '../screens/Last7DaysScreen';
 import BookmarkedArticles from '../screens/BookmarkedArticles';
 import ProfileSettingScreen from '../pages/ProfileSettingScreen.js';
 import ArticleDetail from '../screens/ArticleDetail.jsx';
@@ -14,7 +14,8 @@ import Onboarding from '../pages/Onboarding';
 const Stack = createNativeStackNavigator();
 
 export default function MainStack({ user }) {
-    
+  console.log("USER",user)
+
   return (
     <Stack.Navigator
       initialRouteName="Home"
@@ -67,9 +68,10 @@ export default function MainStack({ user }) {
 
       <Stack.Screen
         name="Notebook"
-        component={NotebookScreen}
         options={{ title: 'Notebook' }}
-      />
+      >
+        {(props) => <NotebookScreen {...props} userId={user.uid} />}
+      </Stack.Screen>
       <Stack.Screen
         name="ProfileSettingScreen"
         component={ProfileSettingScreen}
