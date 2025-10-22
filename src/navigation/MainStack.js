@@ -13,9 +13,9 @@ import Onboarding from '../pages/Onboarding';
 
 const Stack = createNativeStackNavigator();
 
-export default function MainStack({ user }) {
+export default function MainStack({ user, mongoUser }) {
   console.log("USER",user)
-
+console.log("MONGO USER",mongoUser)
   return (
     <Stack.Navigator
       initialRouteName="Home"
@@ -70,7 +70,7 @@ export default function MainStack({ user }) {
         name="Notebook"
         options={{ title: 'Notebook' }}
       >
-        {(props) => <NotebookScreen {...props} userId={user.uid} />}
+        {(props) => <NotebookScreen {...props} userId={mongoUser._id} />}
       </Stack.Screen>
       <Stack.Screen
         name="ProfileSettingScreen"

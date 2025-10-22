@@ -353,7 +353,9 @@ const spacing = 16;
 const cardWidth = (screenWidth - spacing * 2 - spacing) / 2;
 const today = dayjs().format("YYYY-MM-DD");
 
-export default function NotebookScreen({ userId, navigation }) {
+export default function NotebookScreen({ userId, navigation, mongoUser }) {
+  console.log(userId)
+  console.log(mongoUser)
   const [selectedDate, setSelectedDate] = useState(today);
   const [activeTab, setActiveTab] = useState("pipo"); 
   const [fullCalendarVisible, setFullCalendarVisible] = useState(false);
