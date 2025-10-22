@@ -9,3 +9,4 @@ export * from './practiceSessionController';
 export * from './progressController';
 export * from './encouragementController';
 export * from './articleController';
+export * from './selfReflection.controller';

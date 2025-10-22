@@ -21,7 +21,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       authUid,
       email,
       name,
-      profile: profile || { severityLevel: 'Moderate', focusHints: [] },
+      profile: profile || { severityLevel: 'MODERATE', focusHints: [] },
       streak: { current: 0, longest: 0, lastActiveAt: null },
       achievements: []
     });
@@ -51,11 +51,49 @@ export const getUserByAuthUid = async (req: Request, res: Response): Promise<voi
 export const updateUserProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     const { authUid } = req.params;
-    const { name, profile } = req.body;
+    const { name, profile, avatarImage } = req.body;
+
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (profile !== undefined) updateData.profile = profile;
+    if (avatarImage !== undefined) updateData.avatarImage = avatarImage;
 
     const user = await User.findOneAndUpdate(
       { authUid },
-      { name, profile },
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    res.json({ success: true, data: user });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateSeverityLevel = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { authUid } = req.params;
+    const { severityLevel } = req.body;
+
+    if (!severityLevel) {
+      res.status(400).json({ error: 'severityLevel is required' });
+      return;
+    }
+
+    const validLevels = ['LOW', 'MILD', 'MODERATE', 'HIGH'];
+    if (!validLevels.includes(severityLevel)) {
+      res.status(400).json({ error: 'Invalid severity level. Must be one of: LOW, MILD, MODERATE, HIGH' });
+      return;
+    }
+
+    const user = await User.findOneAndUpdate(
+      { authUid },
+      { 'profile.severityLevel': severityLevel },
       { new: true, runValidators: true }
     );
 

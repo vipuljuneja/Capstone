@@ -43,6 +43,7 @@ export type BackendUser = {
   authUid: string;
   email: string;
   name: string;
+  avatarImage?: string;
   profile?: {
     severityLevel?: string;
     focusHints?: string[];
@@ -63,7 +64,7 @@ export const createUserInBackend = async (userData: {
         email: userData.email,
         name: userData.name,
         profile: {
-          severityLevel: 'Moderate',
+          severityLevel: 'MODERATE',
           focusHints: [],
         },
       },
@@ -97,6 +98,57 @@ export const getUserByAuthUid = async (
   } catch (error) {
     const message = extractErrorMessage(error);
     console.error('❌ Failed to get user:', message);
+    throw new Error(message);
+  }
+};
+
+export const updateSeverityLevel = async (
+  authUid: string,
+  severityLevel: 'LOW' | 'MILD' | 'MODERATE' | 'HIGH',
+): Promise<BackendUser> => {
+  try {
+    const { data } = await apiClient.put<ApiSuccessEnvelope<BackendUser>>(
+      `/users/${authUid}/severity`,
+      { severityLevel },
+    );
+
+    if (!data?.success || !data?.data) {
+      throw new Error('Failed to update severity level.');
+    }
+
+    return data.data;
+  } catch (error) {
+    const message = extractErrorMessage(error);
+    console.error('❌ Failed to update severity level:', message);
+    throw new Error(message);
+  }
+};
+
+export const updateUserProfile = async (
+  authUid: string,
+  profileData: {
+    name?: string;
+    avatarImage?: string;
+    profile?: {
+      severityLevel?: 'LOW' | 'MILD' | 'MODERATE' | 'HIGH';
+      focusHints?: string[];
+    };
+  },
+): Promise<BackendUser> => {
+  try {
+    const { data } = await apiClient.put<ApiSuccessEnvelope<BackendUser>>(
+      `/users/${authUid}`,
+      profileData,
+    );
+
+    if (!data?.success || !data?.data) {
+      throw new Error('Failed to update user profile.');
+    }
+
+    return data.data;
+  } catch (error) {
+    const message = extractErrorMessage(error);
+    console.error('❌ Failed to update user profile:', message);
     throw new Error(message);
   }
 };
@@ -222,6 +274,231 @@ export const toggleBookmark = async (
   } catch (error: any) {
     console.error(
       '❌ Failed to toggle bookmark:',
+      error.response?.data || error.message,
+    );
+    throw error;
+  }
+};
+
+// ============================================
+// REFLECTION / NOTEBOOK API
+// ============================================
+
+export type Reflection = {
+  _id: string;
+  userId: string;
+  title: string;
+  description: string;
+  date: string;
+  type: 'pipo' | 'self';
+  imageName?: string; // For Pipo avatar image
+  linkedSessionId?: string; // Link to PracticeSession
+  scenarioId?: string; // Reference to scenario
+  level?: number; // 1, 2, or 3
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateReflectionData = {
+  userId: string;
+  title: string;
+  description?: string;
+  date: string;
+  type?: 'pipo' | 'self';
+  imageName?: string; // For Pipo avatar image
+};
+
+export type UpdateReflectionData = {
+  title?: string;
+  description?: string;
+  date?: string;
+  type?: 'pipo' | 'self';
+  imageName?: string; // For Pipo avatar image
+};
+
+/**
+ * Create a new reflection entry
+ */
+export const createReflection = async (
+  data: CreateReflectionData,
+): Promise<Reflection> => {
+  try {
+    const response = await apiClient.post<ApiSuccessEnvelope<Reflection>>(
+      '/reflections',
+      data,
+    );
+
+    if (!response.data?.success || !response.data?.data) {
+      throw new Error('Failed to create reflection');
+    }
+
+    return response.data.data;
+  } catch (error: any) {
+    console.error(
+      '❌ Failed to create reflection:',
+      error.response?.data || error.message,
+    );
+    throw error;
+  }
+};
+
+/**
+ * Get reflections for a user with optional filters
+ */
+export const getReflectionsByUser = async (
+  userId: string,
+  filters?: {
+    date?: string;
+    type?: 'pipo' | 'self';
+    startDate?: string;
+    endDate?: string;
+  },
+): Promise<Reflection[]> => {
+  try {
+    const response = await apiClient.get<ApiSuccessEnvelope<Reflection[]>>(
+      `/reflections/user/${userId}`,
+      { params: filters },
+    );
+
+    if (!response.data?.success || !response.data?.data) {
+      throw new Error('Failed to fetch reflections');
+    }
+
+    return response.data.data;
+  } catch (error: any) {
+    console.error(
+      '❌ Failed to get reflections:',
+      error.response?.data || error.message,
+    );
+    throw error;
+  }
+};
+
+/**
+ * Get dates that have reflections (for calendar markers)
+ */
+export const getReflectionDates = async (
+  userId: string,
+  filters?: {
+    startDate?: string;
+    endDate?: string;
+    type?: 'pipo' | 'self';
+  },
+): Promise<Array<{ date: string; type: 'pipo' | 'self' }>> => {
+  try {
+    const response = await apiClient.get<
+      ApiSuccessEnvelope<Array<{ date: string; type: 'pipo' | 'self' }>>
+    >(`/reflections/user/${userId}/dates`, { params: filters });
+
+    if (!response.data?.success || !response.data?.data) {
+      throw new Error('Failed to fetch reflection dates');
+    }
+
+    return response.data.data;
+  } catch (error: any) {
+    console.error(
+      '❌ Failed to get reflection dates:',
+      error.response?.data || error.message,
+    );
+    throw error;
+  }
+};
+
+/**
+ * Get a single reflection by ID
+ */
+export const getReflectionById = async (
+  reflectionId: string,
+): Promise<Reflection> => {
+  try {
+    const response = await apiClient.get<ApiSuccessEnvelope<Reflection>>(
+      `/reflections/${reflectionId}`,
+    );
+
+    if (!response.data?.success || !response.data?.data) {
+      throw new Error('Failed to fetch reflection');
+    }
+
+    return response.data.data;
+  } catch (error: any) {
+    console.error(
+      '❌ Failed to get reflection:',
+      error.response?.data || error.message,
+    );
+    throw error;
+  }
+};
+
+/**
+ * Update a reflection
+ */
+export const updateReflection = async (
+  reflectionId: string,
+  data: UpdateReflectionData,
+): Promise<Reflection> => {
+  try {
+    const response = await apiClient.put<ApiSuccessEnvelope<Reflection>>(
+      `/reflections/${reflectionId}`,
+      data,
+    );
+
+    if (!response.data?.success || !response.data?.data) {
+      throw new Error('Failed to update reflection');
+    }
+
+    return response.data.data;
+  } catch (error: any) {
+    console.error(
+      '❌ Failed to update reflection:',
+      error.response?.data || error.message,
+    );
+    throw error;
+  }
+};
+
+/**
+ * Delete a reflection
+ */
+export const deleteReflection = async (
+  reflectionId: string,
+): Promise<void> => {
+  try {
+    const response = await apiClient.delete<
+      ApiSuccessEnvelope<{ message: string }>
+    >(`/reflections/${reflectionId}`);
+
+    if (!response.data?.success) {
+      throw new Error('Failed to delete reflection');
+    }
+  } catch (error: any) {
+    console.error(
+      '❌ Failed to delete reflection:',
+      error.response?.data || error.message,
+    );
+    throw error;
+  }
+};
+
+/**
+ * Create a Pipo note from a completed practice session
+ */
+export const createPipoNoteFromSession = async (
+  sessionId: string,
+): Promise<Reflection> => {
+  try {
+    const response = await apiClient.post<ApiSuccessEnvelope<Reflection>>(
+      '/reflections/from-session',
+      { sessionId },
+    );
+
+    if (!response.data?.success || !response.data?.data) {
+      throw new Error('Failed to create Pipo note from session');
+    }
+
+    return response.data.data;
+  } catch (error: any) {
+    console.error(
+      '❌ Failed to create Pipo note from session:',
       error.response?.data || error.message,
     );
     throw error;

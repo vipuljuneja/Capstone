@@ -1,11 +1,45 @@
-import React, { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, ScrollView, Image } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
+import { useAuth } from '../contexts/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function HomeScreen({ navigation, user }) {
   const [signingOut, setSigningOut] = useState(false);
+  const { mongoUser, refreshMongoUser } = useAuth();
+
+  // Refresh user data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshMongoUser();
+    }, [])
+  );
+
+  const getSeverityBadgeStyle = (level) => {
+    const styles = {
+      LOW: { bg: '#dcfce7', text: '#166534' },
+      MILD: { bg: '#fef3c7', text: '#92400e' },
+      MODERATE: { bg: '#fce7f3', text: '#9f1239' },
+      HIGH: { bg: '#fee2e2', text: '#991b1b' },
+    };
+    return styles[level] || styles.MODERATE;
+  };
+
+  const avatarImages = {
+    pipo_set: require('../../assets/pipo_set.png'),
+    bro_set: require('../../assets/bro_set.png'),
+    cherry_set: require('../../assets/cherry_set.png'),
+  };
+
+  const getUserAvatar = () => {
+    const avatarName = mongoUser?.avatarImage || 'pipo_set';
+    return avatarImages[avatarName] || avatarImages.pipo_set;
+  };
+
+  const severityLevel = mongoUser?.profile?.severityLevel;
+  const userName = mongoUser?.name || user?.email?.split('@')[0] || 'User';
 
   const handleSignOut = async () => {
     if (signingOut) return;
@@ -28,8 +62,26 @@ export default function HomeScreen({ navigation, user }) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={S.header}>
-          <Text style={S.welcome}>Welcome 👋</Text>
+          <Image source={getUserAvatar()} style={S.avatar} />
+          <Text style={S.welcome}>Welcome, {userName}! 👋</Text>
           <Text style={S.email}>{user?.email}</Text>
+          {severityLevel && (
+            <View
+              style={[
+                S.severityBadge,
+                { backgroundColor: getSeverityBadgeStyle(severityLevel).bg }
+              ]}
+            >
+              <Text
+                style={[
+                  S.severityText,
+                  { color: getSeverityBadgeStyle(severityLevel).text }
+                ]}
+              >
+                Anxiety Level: {severityLevel}
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={S.menu}>
@@ -68,6 +120,14 @@ export default function HomeScreen({ navigation, user }) {
             <View style={S.cardBody}>
               <Text style={S.title}>Notebook</Text>
               <Text style={S.sub}>Track your progress</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => navigation.navigate('Onboarding')} style={S.card}>
+            <Text style={S.icon}>🧠</Text>
+            <View style={S.cardBody}>
+              <Text style={S.title}>Anxiety Assessment</Text>
+              <Text style={S.sub}>Take or retake the assessment</Text>
             </View>
           </TouchableOpacity>
 
@@ -113,8 +173,25 @@ const S = StyleSheet.create({
     paddingVertical: 48,
   },
   header: { alignItems: 'center', paddingTop: 60 },
-  welcome: { fontSize: 32, fontWeight: '700', color: '#0f172a', marginBottom: 8 },
-  email: { fontSize: 16, color: '#6b7280' },
+  avatar: {
+    width: 100,
+    height: 100,
+    resizeMode: 'contain',
+    marginBottom: 16,
+  },
+  welcome: { fontSize: 28, fontWeight: '700', color: '#0f172a', marginBottom: 8 },
+  email: { fontSize: 14, color: '#6b7280', marginBottom: 12 },
+  severityBadge: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 8,
+  },
+  severityText: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
   menu: { flex: 1, gap: 16, paddingTop: 40, paddingBottom: 20 },
   card: {
     flexDirection: 'row',

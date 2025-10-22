@@ -16,6 +16,9 @@ router.get('/users/:authUid', controllers.getUserByAuthUid);
 // PUT /api/users/:authUid - Update user profile
 router.put('/users/:authUid', controllers.updateUserProfile);
 
+// PUT /api/users/:authUid/severity - Update user severity level
+router.put('/users/:authUid/severity', controllers.updateSeverityLevel);
+
 // PUT /api/users/:authUid/streak - Update user streak
 router.put('/users/:authUid/streak', controllers.updateUserStreak);
 
@@ -213,5 +216,30 @@ router.post('/articles/generate', controllers.generateTodayArticleManually);
 router.post('/bookmarks', controllers.bookmarkArticle);
 router.delete('/bookmarks', controllers.removeBookmark);
 router.get('/bookmarks/user/:userId', controllers.getUserBookmarkedArticles);
+
+// ============================================
+// SELF REFLECTION / NOTEBOOK ROUTES
+// ============================================
+
+// POST /api/reflections - Create new reflection
+router.post('/reflections', controllers.createReflection);
+
+// POST /api/reflections/from-session - Create Pipo note from practice session
+router.post('/reflections/from-session', controllers.createPipoNoteFromSession);
+
+// GET /api/reflections/user/:userId - Get reflections by user (with optional filters)
+router.get('/reflections/user/:userId', controllers.getReflectionsByUser);
+
+// GET /api/reflections/user/:userId/dates - Get dates that have reflections (for calendar markers)
+router.get('/reflections/user/:userId/dates', controllers.getReflectionDates);
+
+// GET /api/reflections/:reflectionId - Get reflection by ID
+router.get('/reflections/:reflectionId', controllers.getReflectionById);
+
+// PUT /api/reflections/:reflectionId - Update reflection
+router.put('/reflections/:reflectionId', controllers.updateReflection);
+
+// DELETE /api/reflections/:reflectionId - Delete reflection
+router.delete('/reflections/:reflectionId', controllers.deleteReflection);
 
 export default router;

@@ -9,6 +9,7 @@ import Last7DaysScreen from '../screens/Last7DaysScreen';
 import BookmarkedArticles from '../screens/BookmarkedArticles';
 import ProfileSettingScreen from '../pages/ProfileSettingScreen.js';
 import ArticleDetail from '../screens/ArticleDetail.jsx';
+import Onboarding from '../pages/Onboarding';
 
 const Stack = createNativeStackNavigator();
 
@@ -80,6 +81,13 @@ export default function MainStack({ user }) {
         options={{ title: 'Bookmark' }}
       >
         {(props) => <BookmarkedArticles {...props} userId={user.uid} />}
+      </Stack.Screen>
+
+      <Stack.Screen
+        name="Onboarding"
+        options={{ title: 'Anxiety Assessment', headerShown: false }}
+      >
+        {(props) => <Onboarding {...props} user={user} />}
       </Stack.Screen>
 
     </Stack.Navigator>
