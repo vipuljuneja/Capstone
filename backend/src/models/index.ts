@@ -11,6 +11,7 @@ export { default as EncouragementNote } from './EncouragementNote';
 export { default as Achievement } from './Achievement';
 export { default as DailyArticle } from './DailyArticle';
 export { default as UserBookmark } from './UserBookmark';
+export { default as SelfReflection } from './SelfReflection';
 
 // Export types
 export type { IUser } from './User';
@@ -25,3 +26,4 @@ export type { IEncouragementNote } from './EncouragementNote';
 export type { IAchievement } from './Achievement';
 export type { IDailyArticle } from './DailyArticle';
 export type { IUserBookmark } from './UserBookmark';
+export type { ISelfReflection } from './SelfReflection';

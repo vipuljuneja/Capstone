@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { View, Text, Pressable, StyleSheet, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import QuestionCard from "../Components/Onboarding/QuestionCard";
-// import { useNavigation } from "@react-navigation/native";
+import { updateSeverityLevel } from "../services/api";
+import { useNavigation } from "@react-navigation/native";
 
 
 
@@ -31,11 +32,11 @@ function getSummary(responses) {
   return { label: "HIGH", title: "Carrying a lot right now", message: "We’ll go gently step by step." };
 }
 
-export default function Onboarding() {
+export default function Onboarding({ user }) {
   const [phase, setPhase] = useState("intro"); 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [responses, setResponses] = useState(Array(questionList.length).fill(null));
-  // const navigation = useNavigation(); 
+  const navigation = useNavigation(); 
 
   const selected = responses[currentIndex];
   const progress = (currentIndex + (selected ? 1 : 0)) / questionList.length;
@@ -43,10 +44,22 @@ export default function Onboarding() {
   const startQuestions = () => setPhase("questions");
 
   const skipAll = async () => {
-    const filled = responses.map(v => (v == null ? 0 : v));
-    console.log("Onboarding skipped:", filled);
-    await AsyncStorage.setItem("surveyResponses", JSON.stringify(filled));
-    // navigation.replace("");
+    try {
+      const filled = responses.map(v => (v == null ? 0 : v));
+      console.log("Onboarding skipped:", filled);
+      await AsyncStorage.setItem("surveyResponses", JSON.stringify(filled));
+      
+      // Update with default MODERATE severity level
+      if (user?.uid) {
+        await updateSeverityLevel(user.uid, 'MODERATE');
+        console.log("✅ Severity level set to MODERATE (skipped)");
+      }
+      
+      navigation.goBack();
+    } catch (error) {
+      console.error("❌ Error in skipAll:", error);
+      navigation.goBack();
+    }
   };
 
   const handleSelect = (option) => {
@@ -73,10 +86,43 @@ export default function Onboarding() {
     if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
   };
 
-  const handleFinish = () => {
-    const summary = getSummary(responses);
-    console.log("Final results:", { responses, summary });
-    // navigation.replace("");
+  const handleFinish = async () => {
+    try {
+      const summary = getSummary(responses);
+      console.log("Final results:", { responses, summary });
+      
+      // Update the severity level in the backend
+      if (user?.uid) {
+        await updateSeverityLevel(user.uid, summary.label);
+        console.log("✅ Severity level updated:", summary.label);
+        
+        Alert.alert(
+          "Assessment Complete! 🎉",
+          `Your anxiety level: ${summary.label}\n\n${summary.message}`,
+          [
+            {
+              text: "Let's Start!",
+              onPress: () => navigation.goBack()
+            }
+          ]
+        );
+      } else {
+        console.warn("⚠️ No user found, skipping backend update");
+        navigation.goBack();
+      }
+    } catch (error) {
+      console.error("❌ Error updating severity level:", error);
+      Alert.alert(
+        "Error",
+        "Failed to save your assessment. Please try again.",
+        [
+          {
+            text: "OK",
+            onPress: () => navigation.goBack()
+          }
+        ]
+      );
+    }
   };
 
   if (phase === "intro") {

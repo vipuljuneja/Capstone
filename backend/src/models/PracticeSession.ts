@@ -65,6 +65,7 @@ export interface IPracticeSession extends Document {
   aggregate: IAggregate;
   aiFeedbackCards: IFeedbackCard[];
   achievementsUnlocked: string[];
+  pipoNoteId: Types.ObjectId | null; // Link to SelfReflection (Pipo note)
   startedAt: Date;
   completedAt: Date | null;
   createdAt: Date;
@@ -194,6 +195,12 @@ const PracticeSessionSchema: Schema = new Schema(
     achievementsUnlocked: {
       type: [String],
       default: []
+    },
+    pipoNoteId: {
+      type: Schema.Types.ObjectId,
+      ref: 'SelfReflection',
+      default: null
+      // Links to the Pipo note created from this session
     },
     startedAt: {
       type: Date,
