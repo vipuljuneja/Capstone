@@ -30,7 +30,7 @@ const NAV_THEME = {
 };
 
 function RootApp() {
-  const { user, loading } = useAuth();
+  const { user, loading, mongoUser } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
 
   if (loading) {
@@ -46,7 +46,7 @@ function RootApp() {
     <SafeAreaView style={styles.container}>
       {user ? (
         <NavigationContainer theme={NAV_THEME}>
-          <MainStack user={user} />
+<MainStack user={user} mongoUser={mongoUser} />
         </NavigationContainer>
       ) : mode === 'signup' ? (
         <SignupScreen onSwitchToLogin={() => setMode('login')} />
