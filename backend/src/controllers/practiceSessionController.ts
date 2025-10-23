@@ -1,5 +1,84 @@
 import { Request, Response } from 'express';
 import { PracticeSession, Progress } from '../models';
+import SelfReflection from '../models/SelfReflection';
+import Scenario from '../models/Scenario';
+import { 
+  generateAIFeedbackCards, 
+  generatePipoNote, 
+  prepareSessionDataForAI 
+} from '../services/practiceSessionAIService';
+
+/**
+ * Helper function to generate AI feedback cards from facial analysis
+ */
+interface FacialAnalysis {
+  recommendations?: Array<{
+    priority: string;
+    area: string;
+    issue: string;
+    recommendation: string;
+    exercise: string;
+    impact: string;
+  }>;
+  strengths?: Array<{
+    metric: string;
+    score: number;
+    message: string;
+    impact: string;
+  }>;
+  weaknesses?: Array<{
+    metric: string;
+    score: number;
+    severity: string;
+    issue: string;
+    why: string;
+  }>;
+}
+
+const generateFeedbackCardsFromFacialAnalysis = (facialAnalysis: FacialAnalysis | null): Array<{title: string; body: string; type: 'tip' | 'praise' | 'warning'}> => {
+  const feedbackCards: Array<{title: string; body: string; type: 'tip' | 'praise' | 'warning'}> = [];
+
+  if (!facialAnalysis) {
+    return feedbackCards;
+  }
+
+  // Add recommendations as tips or warnings
+  if (facialAnalysis.recommendations) {
+    facialAnalysis.recommendations.forEach(rec => {
+      feedbackCards.push({
+        title: rec.area,
+        body: `${rec.recommendation}\n\n💡 Exercise: ${rec.exercise}\n\n📊 Impact: ${rec.impact}`,
+        type: rec.priority === 'high' ? 'warning' : 'tip'
+      });
+    });
+  }
+
+  // Add top 2 strengths as praise
+  if (facialAnalysis.strengths) {
+    facialAnalysis.strengths.slice(0, 2).forEach(strength => {
+      feedbackCards.push({
+        title: strength.metric,
+        body: `${strength.message}\n\nImpact: ${strength.impact}`,
+        type: 'praise'
+      });
+    });
+  }
+
+  // Add high severity weaknesses as warnings
+  if (facialAnalysis.weaknesses) {
+    facialAnalysis.weaknesses
+      .filter(w => w.severity === 'high')
+      .forEach(weakness => {
+        feedbackCards.push({
+          title: `Improve: ${weakness.metric}`,
+          body: `${weakness.issue}\n\nWhy it matters: ${weakness.why}`,
+          type: 'warning'
+        });
+      });
+  }
+
+  return feedbackCards;
+};
 
 export const startPracticeSession = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -53,7 +132,13 @@ export const addStepToSession = async (req: Request, res: Response): Promise<voi
 export const completeSession = async (req: Request, res: Response): Promise<void> => {
   try {
     const { sessionId } = req.params;
-    const { aggregate, aiFeedbackCards, achievementsUnlocked } = req.body;
+    const { aggregate, facialAnalysis, aiFeedbackCards, achievementsUnlocked } = req.body;
+
+    // Generate AI feedback cards from facial analysis if provided
+    let feedbackCards = aiFeedbackCards || [];
+    if (facialAnalysis && (!aiFeedbackCards || aiFeedbackCards.length === 0)) {
+      feedbackCards = generateFeedbackCardsFromFacialAnalysis(facialAnalysis);
+    }
 
     const session = await PracticeSession.findByIdAndUpdate(
       sessionId,
@@ -61,7 +146,8 @@ export const completeSession = async (req: Request, res: Response): Promise<void
         status: 'completed',
         completedAt: new Date(),
         aggregate,
-        aiFeedbackCards,
+        facialAnalysis,
+        aiFeedbackCards: feedbackCards,
         achievementsUnlocked
       },
       { new: true }
@@ -194,6 +280,197 @@ export const deleteSession = async (req: Request, res: Response): Promise<void> 
 
     res.json({ success: true, message: 'Session deleted' });
   } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Create a complete practice session in one go
+ * This is useful when the frontend has all data ready (steps + facial analysis)
+ */
+export const createCompleteSession = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const {
+      userId,
+      scenarioId,
+      level,
+      steps,
+      facialAnalysis,
+      aggregate,
+      aiFeedbackCards,
+      achievementsUnlocked
+    } = req.body;
+
+    // Validate required fields
+    if (!userId || !scenarioId || !level) {
+      res.status(400).json({ error: 'Missing required fields: userId, scenarioId, level' });
+      return;
+    }
+
+    // Validate ObjectId format for scenarioId
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(scenarioId)) {
+      res.status(400).json({ 
+        error: `Invalid scenarioId format: "${scenarioId}". Must be a valid MongoDB ObjectId (24 character hex string).`,
+        hint: 'Please pass a real scenario ID from your Levels component, not "default-scenario"'
+      });
+      return;
+    }
+
+    // Fetch scenario title for better AI context
+    let scenarioTitle = 'Practice';
+    try {
+      const scenario = await Scenario.findById(scenarioId);
+      if (scenario) {
+        scenarioTitle = scenario.title;
+      }
+    } catch (err) {
+      console.warn('Could not fetch scenario title, using default');
+    }
+
+    // Prepare temporary session object for AI analysis
+    const tempSessionData = {
+      userId,
+      scenarioId,
+      level,
+      steps: steps || [],
+      aggregate: aggregate || {
+        wpmAvg: 0,
+        fillersPerMin: 0,
+        toneScore: 0,
+        eyeContactRatio: null,
+        score: 0
+      },
+      facialAnalysis
+    };
+
+    console.log('🤖 Generating AI feedback cards and Pipo note...');
+    
+    // Prepare data for AI (minimal, token-efficient)
+    const aiData = prepareSessionDataForAI(tempSessionData, scenarioTitle);
+    console.log('📊 AI Data Summary:', {
+      wpm: aiData.wpmAvg,
+      fillers: aiData.fillersPerMin,
+      score: aiData.overallScore,
+      transcriptLength: aiData.transcript.length
+    });
+
+    // Generate AI feedback cards AND Pipo note IN PARALLEL for speed
+    const startTime = Date.now();
+    const [feedbackCards, pipoNoteContent] = await Promise.all([
+      // AI Feedback Cards
+      generateAIFeedbackCards(aiData).catch((error: any) => {
+        console.error('⚠️ Failed to generate AI cards:', error.message);
+        // Fallback to facial analysis cards if AI fails
+        return facialAnalysis ? generateFeedbackCardsFromFacialAnalysis(facialAnalysis) : [];
+      }),
+      
+      // AI Pipo Note
+      generatePipoNote(aiData).catch((error: any) => {
+        console.error('⚠️ Failed to generate AI Pipo note:', error.message);
+        return { title: '', body: '' };
+      })
+    ]);
+
+    const aiTime = Date.now() - startTime;
+    console.log(`✅ AI generation completed in ${(aiTime / 1000).toFixed(1)}s`);
+    console.log(`   - Generated ${feedbackCards.length} AI feedback cards`);
+    console.log(`   - Generated AI Pipo note: "${pipoNoteContent.title}"`);
+
+    // Create the session
+    const session = await PracticeSession.create({
+      userId,
+      scenarioId,
+      level,
+      status: 'completed',
+      steps: steps || [],
+      aggregate: aggregate || {
+        wpmAvg: 0,
+        fillersPerMin: 0,
+        toneScore: 0,
+        eyeContactRatio: null,
+        score: 0
+      },
+      facialAnalysis,
+      aiFeedbackCards: feedbackCards,
+      achievementsUnlocked: achievementsUnlocked || [],
+      startedAt: steps && steps.length > 0 ? steps[0].startedAt : new Date(),
+      completedAt: new Date()
+    });
+
+    // Update progress
+    const progress = await Progress.findOne({ userId, scenarioId });
+
+    if (progress) {
+      const levelKey = level.toString();
+      const levelProgress = progress.levels.get(levelKey) || {
+        attempts: 0,
+        lastCompletedAt: null,
+        achievements: [],
+        unlockedAt: null
+      };
+
+      levelProgress.attempts += 1;
+      levelProgress.lastCompletedAt = new Date();
+      levelProgress.achievements = [
+        ...new Set([...levelProgress.achievements, ...(achievementsUnlocked || [])])
+      ];
+
+      progress.levels.set(levelKey, levelProgress);
+      progress.totalSessions += 1;
+      progress.lastPlayedAt = new Date();
+
+      // Unlock next level if score is high enough
+      if (aggregate && aggregate.score >= 70 && level < 3) {
+        const nextLevelKey = (level + 1).toString();
+        const nextLevelProgress = progress.levels.get(nextLevelKey) || {
+          attempts: 0,
+          lastCompletedAt: null,
+          achievements: [],
+          unlockedAt: null
+        };
+
+        if (!nextLevelProgress.unlockedAt) {
+          nextLevelProgress.unlockedAt = new Date();
+          progress.levels.set(nextLevelKey, nextLevelProgress);
+        }
+      }
+
+      await progress.save();
+    }
+
+    // Create Pipo note with AI-generated content
+    let pipoNoteId = null;
+    if (pipoNoteContent.title && pipoNoteContent.body) {
+      try {
+        console.log('📝 Creating Pipo note in database...');
+        const pipoNote = await SelfReflection.create({
+          userId,
+          title: pipoNoteContent.title,
+          description: pipoNoteContent.body,
+          date: session.completedAt || new Date(),
+          type: 'pipo',
+          imageName: 'articlePipo.png',
+          linkedSessionId: session._id,
+          scenarioId,
+          level
+        });
+
+        // Update session with pipoNoteId
+        session.pipoNoteId = pipoNote._id as any;
+        await session.save();
+
+        pipoNoteId = pipoNote._id;
+        console.log('✅ Pipo note created and linked:', pipoNote._id);
+      } catch (pipoError: any) {
+        console.error('⚠️ Failed to create Pipo note in database:', pipoError.message);
+        // Session still saved successfully, just without Pipo note
+      }
+    }
+
+    res.status(201).json({ success: true, data: session });
+  } catch (error: any) {
+    console.error('Error creating complete session:', error);
     res.status(500).json({ error: error.message });
   }
 };

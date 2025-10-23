@@ -9,7 +9,7 @@ const API_BASE_URL = __DEV__
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: 15000, // Default 15 seconds
 });
 
 type ApiSuccessEnvelope<T> = {
@@ -473,6 +473,139 @@ export const deleteReflection = async (
   } catch (error: any) {
     console.error(
       '❌ Failed to delete reflection:',
+      error.response?.data || error.message,
+    );
+    throw error;
+  }
+};
+
+/**
+ * Practice Session Types
+ */
+export interface PracticeSessionData {
+  userId: string;
+  scenarioId: string;
+  level: number;
+  steps: any[];
+  aggregate: {
+    wpmAvg: number;
+    fillersPerMin: number;
+    toneScore: number;
+    eyeContactRatio: number | null;
+    score: number;
+  };
+  facialAnalysis: any | null;
+  achievementsUnlocked?: string[];
+}
+
+export interface PracticeSession {
+  _id: string;
+  userId: string;
+  scenarioId: string;
+  level: number;
+  status: 'active' | 'abandoned' | 'completed';
+  steps: any[];
+  aggregate: any;
+  facialAnalysis: any;
+  aiFeedbackCards: any[];
+  achievementsUnlocked: string[];
+  pipoNoteId: string | null;
+  startedAt: string;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Submit a complete practice session
+ * This creates a session with all data in one go
+ */
+export const submitCompletePracticeSession = async (
+  sessionData: PracticeSessionData,
+): Promise<PracticeSession> => {
+  try {
+    console.log('📤 Submitting complete practice session...', {
+      userId: sessionData.userId,
+      scenarioId: sessionData.scenarioId,
+      level: sessionData.level,
+      stepsCount: sessionData.steps?.length || 0,
+      overallScore: sessionData.aggregate?.score || 0,
+    });
+
+    const response = await apiClient.post<ApiSuccessEnvelope<PracticeSession>>(
+      '/practice-sessions/complete',
+      sessionData,
+      {
+        timeout: 60000,
+      }
+    );
+
+    if (!response.data?.success || !response.data?.data) {
+      throw new Error('Failed to submit practice session');
+    }
+
+    console.log('✅ Practice session submitted successfully:', response.data.data._id);
+    return response.data.data;
+  } catch (error: any) {
+    console.error(
+      '❌ Failed to submit practice session:',
+      error.response?.data || error.message,
+    );
+    throw error;
+  }
+};
+
+/**
+ * Get user's practice sessions
+ */
+export const getUserPracticeSessions = async (
+  userId: string,
+  status?: 'active' | 'abandoned' | 'completed',
+  limit?: number,
+): Promise<PracticeSession[]> => {
+  try {
+    const params: any = {};
+    if (status) params.status = status;
+    if (limit) params.limit = limit;
+
+    const response = await apiClient.get<ApiSuccessEnvelope<PracticeSession[]>>(
+      `/practice-sessions/user/${userId}`,
+      { params },
+    );
+
+    if (!response.data?.success || !response.data?.data) {
+      throw new Error('Failed to fetch practice sessions');
+    }
+
+    return response.data.data;
+  } catch (error: any) {
+    console.error(
+      '❌ Failed to fetch practice sessions:',
+      error.response?.data || error.message,
+    );
+    throw error;
+  }
+};
+
+/**
+ * Get a single practice session by ID
+ */
+export const getPracticeSessionById = async (
+  sessionId: string,
+): Promise<PracticeSession> => {
+  try {
+    const response = await apiClient.get<ApiSuccessEnvelope<PracticeSession>>(
+      `/practice-sessions/${sessionId}`,
+    );
+
+    if (!response.data?.success || !response.data?.data) {
+      throw new Error('Failed to fetch practice session');
+    }
+
+    return response.data.data;
+  } catch (error: any) {
+    console.error(
+      '❌ Failed to fetch practice session:',
       error.response?.data || error.message,
     );
     throw error;

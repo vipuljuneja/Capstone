@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,19 +8,28 @@ import {
   SafeAreaView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { submitCompletePracticeSession } from '../../services/api';
+import { formatCompleteSessionData } from '../../utils/sessionDataFormatter';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Results = ({ navigation, route }) => {
+  // const { mongoUser } = useAuth();
+  const { mongoUser, refreshMongoUser } = useAuth();
   const {
     totalQuestions,
     transcriptionResults = [],
     facialAnalysisResults = [],
+    scenarioId,
+    level = 1,
   } = route.params || {
     totalQuestions: 0,
     transcriptionResults: [],
     facialAnalysisResults: [],
+    scenarioId: null,
+    level: 1,
   };
 
-  console.log('Transcription route.params:', route.params);
+  const [savedSessionId, setSavedSessionId] = useState(null);
 
   const facialAnalysis =
     facialAnalysisResults && facialAnalysisResults.length > 0
@@ -59,6 +68,145 @@ const Results = ({ navigation, route }) => {
 
   const stats = calculateAverages();
 
+  // 🔥 LOGGING SECTION — runs once when screen mounts
+  useEffect(() => {
+    console.group('📊 SESSION SUMMARY');
+
+    console.log('🧍 Facial Analysis:', facialAnalysis?.summary || 'No data');
+    console.log('🎤 Speech Stats:', stats);
+
+    if (facialAnalysis) {
+      console.group('💪 Strengths');
+      console.table(facialAnalysis.strengths || []);
+      console.groupEnd();
+
+      console.group('⚠️ Weaknesses');
+      console.table(facialAnalysis.weaknesses || []);
+      console.groupEnd();
+
+      console.group('📋 Recommendations');
+      console.table(
+        (facialAnalysis.recommendations || []).map(r => ({
+          area: r.area,
+          priority: r.priority,
+          impact: r.impact,
+        })),
+      );
+      console.groupEnd();
+    }
+
+    console.group('🗣️ Speech Breakdown');
+    transcriptionResults.forEach((r, i) => {
+      console.log(`Question ${i + 1}`, {
+        WPM: r.wpm,
+        FillerWords: r.fillerWordCount,
+        Pauses: r.pauseCount,
+        Duration: r.duration,
+      });
+    });
+    console.groupEnd();
+
+    // Combine everything into one object (ideal for saving to DB)
+    const sessionSummary = {
+      createdAt: new Date().toISOString(),
+      totalQuestions,
+      duration: stats.totalDuration,
+      speech: {
+        avgWpm: stats.avgWpm,
+        avgFillerWords: stats.avgFillerWords,
+        avgPauses: stats.avgPauses,
+        transcriptionResults,
+      },
+      facial: facialAnalysis
+        ? {
+            overallScore: facialAnalysis.summary.overallScore,
+            scores: facialAnalysis.scores,
+            strengths: facialAnalysis.strengths,
+            weaknesses: facialAnalysis.weaknesses,
+            recommendations: facialAnalysis.recommendations,
+          }
+        : null,
+    };
+
+    console.group('🧠 Final Combined Object (ready to save)');
+    console.dir(sessionSummary, { depth: null });
+    console.groupEnd();
+
+    console.groupEnd();
+
+    // 💾 AUTO-SAVE SESSION TO BACKEND
+    const saveSession = async () => {
+      // Skip if already saved or missing required data
+      if (savedSessionId) {
+        console.log('⏭️ Session already saved, skipping...');
+        return;
+      }
+
+      if (!mongoUser?._id) {
+        console.warn('⚠️ Cannot save session: User not logged in');
+        return;
+      }
+
+      if (!scenarioId) {
+        console.warn('⚠️ Cannot save session: Scenario ID not provided');
+        return;
+      }
+
+      if (!transcriptionResults || transcriptionResults.length === 0) {
+        console.warn('⚠️ Cannot save session: No transcription results');
+        return;
+      }
+
+      try {
+        console.group('💾 SAVING PRACTICE SESSION');
+        console.log('User ID:', mongoUser._id);
+        console.log('Scenario ID:', scenarioId);
+        console.log('Level:', level);
+        console.log('Steps count:', transcriptionResults.length);
+        console.log('Overall score:', facialAnalysis?.summary?.overallScore || 0);
+
+        // Format data for backend
+        const sessionData = formatCompleteSessionData(
+          mongoUser._id,
+          scenarioId,
+          level,
+          transcriptionResults,
+          facialAnalysis
+        );
+
+        console.log('📦 Formatted session data:', {
+          userId: sessionData.userId,
+          scenarioId: sessionData.scenarioId,
+          level: sessionData.level,
+          stepsCount: sessionData.steps.length,
+          score: sessionData.aggregate.score,
+          hasFacialAnalysis: !!sessionData.facialAnalysis,
+        });
+
+        // Submit to backend
+        const savedSession = await submitCompletePracticeSession(sessionData);
+
+        console.log('✅ SESSION SAVED');
+        console.log('Session ID:', savedSession._id);
+        console.log('Status:', savedSession.status);
+        console.log('Feedback Cards:', savedSession.aiFeedbackCards?.length || 0);
+        console.log('Pipo Note ID:', savedSession.pipoNoteId);
+        console.groupEnd();
+
+        setSavedSessionId(savedSession._id);
+      } catch (error) {
+        console.error('❌ FAILED TO SAVE SESSION');
+        console.error('Error:', error.message);
+        console.error('Details:', error.response?.data || error);
+        console.groupEnd();
+      }
+    };
+
+    // Execute save
+    saveSession();
+  }, []);
+
+  // --- COLORS HELPERS ---
   const getScoreColor = score => {
     if (score >= 80) return '#10b981';
     if (score >= 60) return '#f59e0b';
@@ -105,13 +253,9 @@ const Results = ({ navigation, route }) => {
     }
   };
 
-  const handleGoHome = () => {
-    navigation.navigate('Home');
-  };
+  const handleGoHome = () => navigation.navigate('Home');
+  const handleRetry = () => navigation.navigate('Levels');
 
-  const handleRetry = () => {
-    navigation.navigate('Levels');
-  };
 
   return (
     <SafeAreaView style={styles.container}>

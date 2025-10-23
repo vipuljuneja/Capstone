@@ -130,6 +130,9 @@ router.get('/media-jobs/scenario/:scenarioId', controllers.getMediaJobsForScenar
 // POST /api/practice-sessions - Start new practice session
 router.post('/practice-sessions', controllers.startPracticeSession);
 
+// POST /api/practice-sessions/complete - Create complete session in one go
+router.post('/practice-sessions/complete', controllers.createCompleteSession);
+
 // POST /api/practice-sessions/:sessionId/steps - Add step to active session
 router.post('/practice-sessions/:sessionId/steps', controllers.addStepToSession);
 
