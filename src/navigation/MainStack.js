@@ -10,6 +10,8 @@ import BookmarkedArticles from '../screens/BookmarkedArticles';
 import ProfileSettingScreen from '../pages/ProfileSettingScreen.js';
 import ArticleDetail from '../screens/ArticleDetail.jsx';
 import Onboarding from '../pages/Onboarding';
+import ProfileScreen from '../screens/ProfileScreen.js'
+import ChangePasswordScreen from '../Components/ProfileSettings/ChangePasswordScreen.js'
 import Levels from '../pages/Levels/Levels.js';
 import ResultsScreen from '../pages/Levels/Results.js';
 
@@ -62,6 +64,10 @@ export default function MainStack({ user, mongoUser }) {
         component={Levels}
         options={{ title: 'Practice Levels' }}
       />
+      <Stack.Screen name="Profile" options={{ title: 'Profile' }}>
+        {(props) => <ProfileScreen {...props} />}
+      </Stack.Screen>
+
 
       <Stack.Screen name="Results" options={{ title: 'Results' }}>
         {props => <ResultsScreen {...props} userId={user.uid} />}
@@ -74,6 +80,17 @@ export default function MainStack({ user, mongoUser }) {
         component={ProfileSettingScreen}
         options={{ title: 'Profile Settings' }}
       />
+      <Stack.Screen
+        name="ChangePasswordScreen"
+        component={ChangePasswordScreen}
+        options={{ title: 'Change Password' }}
+      />
+  
+      <Stack.Screen
+        name="BookmarkedArticles"
+        options={{ title: 'Bookmark' }}
+      >
+        {(props) => <BookmarkedArticles {...props} userId={user.uid} />}
 
       <Stack.Screen name="BookmarkedArticles" options={{ title: 'Bookmark' }}>
         {props => <BookmarkedArticles {...props} userId={user.uid} />}
