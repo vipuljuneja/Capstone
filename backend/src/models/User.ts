@@ -4,6 +4,7 @@ export interface IUser extends Document {
   authUid: string;
   email: string;
   name: string;
+  avatarImage?: string; // Stores the avatar name (e.g., 'pipo_set', 'bro_set', 'cherry_set')
   profile: {
     severityLevel: 'LOW' | 'MILD' | 'MODERATE' | 'HIGH';
     focusHints: string[];
@@ -36,6 +37,11 @@ const UserSchema: Schema = new Schema(
     name: {
       type: String,
       required: true,
+      trim: true
+    },
+    avatarImage: {
+      type: String,
+      default: 'pipo_set',
       trim: true
     },
     profile: {
