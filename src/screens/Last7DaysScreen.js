@@ -4,6 +4,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { getLast7DaysArticles, toggleBookmark as toggleBookmarkApi } from '../services/api';
 import ArticleHeader from '../Components/Articles/ArticleHeader';
 import { characterImageFor } from '../Components/Articles/characterImages';
+import { useAuth } from '../contexts/AuthContext';
 
 const ArticleCard = ({ article, onPress, onBookmark }) => {
   const formatDate = (dateString) => {
@@ -59,18 +60,21 @@ const ArticleCard = ({ article, onPress, onBookmark }) => {
   );
 };
 
-export default function Last7DaysScreen({ navigation, route, userId }) {
+export default function Last7DaysScreen({ navigation }) {
+  const { user } = useAuth();
+  const userId = user?.uid;
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const effectiveUserId = route?.params?.userId || userId;
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchLast7Days = async () => {
+      if (!userId) return;
+      
       try {
         setLoading(true);
-        const response = await getLast7DaysArticles(effectiveUserId || undefined);
+        const response = await getLast7DaysArticles(userId);
         if (!isMounted) return;
 
         const articlesData = response?.data?.articles;
@@ -92,13 +96,13 @@ export default function Last7DaysScreen({ navigation, route, userId }) {
     return () => {
       isMounted = false;
     };
-  }, [effectiveUserId]);
+  }, [userId]);
 
   const handleToggleBookmark = async (article) => {
-    if (!effectiveUserId) return;
+    if (!userId) return;
 
     try {
-      await toggleBookmarkApi(effectiveUserId, article._id, article.isBookmarked);
+      await toggleBookmarkApi(userId, article._id, article.isBookmarked);
       setArticles(prev => 
         prev.map(a => 
           a._id === article._id 

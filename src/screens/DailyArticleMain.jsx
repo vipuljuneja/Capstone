@@ -31,6 +31,7 @@ import {
   toggleBookmark,
 } from '../services/api';
 import BlobCharacter from '../Components/Articles/BlobCharacter';
+import { useAuth } from '../contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -88,8 +89,9 @@ const ArticleCard = ({ article, index, currentIndex, navigation, cardBgColor, un
   );
 };
 
-export default function DailyArticleMain({ route, navigation, userId }) {
-  const paramUserId = route?.params?.userId || userId;
+export default function DailyArticleMain({ route, navigation }) {
+  const { user } = useAuth();
+  const userId = user?.uid;
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -107,12 +109,12 @@ export default function DailyArticleMain({ route, navigation, userId }) {
   };
 
   useEffect(() => {
-    if (!paramUserId) return;
+    if (!userId) return;
     alive.current = true;
 
     (async () => {
       setLoading(true);
-      const res = await safeFetch(() => getLast7DaysArticles(paramUserId));
+      const res = await safeFetch(() => getLast7DaysArticles(userId));
       if (!alive.current) return;
 
       const list = Array.isArray(res?.data?.articles)
@@ -123,7 +125,7 @@ export default function DailyArticleMain({ route, navigation, userId }) {
         setArticles(list);
         setCurrentIndex(0);
       } else {
-        const todayRes = await safeFetch(() => getTodayArticle(paramUserId));
+        const todayRes = await safeFetch(() => getTodayArticle(userId));
         if (!alive.current) return;
         const todayArticle = todayRes?.data?.article;
         if (todayArticle) {
@@ -141,15 +143,15 @@ export default function DailyArticleMain({ route, navigation, userId }) {
     return () => {
       alive.current = false;
     };
-  }, [paramUserId]);
+  }, [userId]);
 
   const currentArticle = articles[currentIndex];
 
   const onToggleBookmark = async () => {
-    if (!currentArticle) return;
+    if (!currentArticle || !userId) return;
     try {
       await toggleBookmark(
-        paramUserId,
+        userId,
         currentArticle._id,
         currentArticle.isBookmarked,
       );

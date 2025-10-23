@@ -33,7 +33,7 @@ export default function MainStack() {
       <Stack.Screen
         name="Home"
         component={HomeScreen}
-        options={{ headerShown: false, title: 'Home' }}
+        options={{ title: 'Home' }}
       />
 
       <Stack.Screen
@@ -75,7 +75,7 @@ export default function MainStack() {
       <Stack.Screen
         name="Notebook"
         component={NotebookScreen}
-        options={{ headerShown: false, title: 'Notebook' }}
+        options={{ title: 'Notebook' }}
       />
 
       <Stack.Screen
@@ -101,6 +101,7 @@ export default function MainStack() {
         component={Onboarding}
         options={{ title: 'Anxiety Assessment', headerShown: false }}
       />
+
     </Stack.Navigator>
   );
 }

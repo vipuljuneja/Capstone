@@ -51,16 +51,11 @@ export const getUserByAuthUid = async (req: Request, res: Response): Promise<voi
 export const updateUserProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     const { authUid } = req.params;
-    const { name, profile, avatarImage } = req.body;
-
-    const updateData: any = {};
-    if (name !== undefined) updateData.name = name;
-    if (profile !== undefined) updateData.profile = profile;
-    if (avatarImage !== undefined) updateData.avatarImage = avatarImage;
+    const { name, profile } = req.body;
 
     const user = await User.findOneAndUpdate(
       { authUid },
-      updateData,
+      { name, profile },
       { new: true, runValidators: true }
     );
 
