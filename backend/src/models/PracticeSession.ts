@@ -56,6 +56,94 @@ interface IFeedbackCard {
   type: 'tip' | 'praise' | 'warning';
 }
 
+interface IFacialAnalysisScores {
+  eyeContact: number;
+  posture: number;
+  expressiveness: number;
+  composure: number;
+  naturalness: number;
+}
+
+interface IEyeRollDetail {
+  frameIndex: number;
+  timestamp: number;
+  intensity: number;
+  lookUpValue: number;
+}
+
+interface IFacialDetailedMetrics {
+  eyeRolls: {
+    count: number;
+    details: IEyeRollDetail[];
+  };
+  blinking: {
+    total: number;
+    perMinute: number;
+    isExcessive: boolean;
+  };
+  gaze: {
+    stabilityScore: number;
+    isStable: boolean;
+  };
+  smiles: {
+    percentage: number;
+    genuine: number;
+    forced: number;
+    authenticityRatio: number;
+  };
+  tension: {
+    average: number;
+    max: number;
+    isHigh: boolean;
+  };
+  microExpressions: {
+    count: number;
+    types: Record<string, number>;
+  };
+}
+
+interface IFacialStrength {
+  metric: string;
+  score: number;
+  icon: string;
+  message: string;
+  impact: string;
+}
+
+interface IFacialWeakness {
+  metric: string;
+  score: number;
+  severity: 'low' | 'medium' | 'high';
+  icon: string;
+  issue: string;
+  why: string;
+}
+
+interface IFacialRecommendation {
+  priority: 'low' | 'medium' | 'high';
+  area: string;
+  issue: string;
+  recommendation: string;
+  exercise: string;
+  impact: string;
+}
+
+interface IFacialAnalysis {
+  summary: {
+    overallScore: number;
+    level: string;
+    totalFrames: number;
+    duration: number;
+    timestamp: Date;
+  };
+  scores: IFacialAnalysisScores;
+  detailedMetrics: IFacialDetailedMetrics;
+  strengths: IFacialStrength[];
+  weaknesses: IFacialWeakness[];
+  recommendations: IFacialRecommendation[];
+  keyInsights: string[];
+}
+
 export interface IPracticeSession extends Document {
   userId: Types.ObjectId;
   scenarioId: Types.ObjectId;
@@ -63,6 +151,7 @@ export interface IPracticeSession extends Document {
   status: 'active' | 'abandoned' | 'completed';
   steps: IStep[];
   aggregate: IAggregate;
+  facialAnalysis: IFacialAnalysis | null; // Complete facial analysis data
   aiFeedbackCards: IFeedbackCard[];
   achievementsUnlocked: string[];
   pipoNoteId: Types.ObjectId | null; // Link to SelfReflection (Pipo note)
@@ -174,6 +263,98 @@ const PracticeSessionSchema: Schema = new Schema(
         max: 100,
         default: 0
       }
+    },
+    facialAnalysis: {
+      type: {
+        summary: {
+          overallScore: Number,
+          level: String,
+          totalFrames: Number,
+          duration: Number,
+          timestamp: Date
+        },
+        scores: {
+          eyeContact: Number,
+          posture: Number,
+          expressiveness: Number,
+          composure: Number,
+          naturalness: Number
+        },
+        detailedMetrics: {
+          eyeRolls: {
+            count: Number,
+            details: [
+              {
+                frameIndex: Number,
+                timestamp: Number,
+                intensity: Number,
+                lookUpValue: Number
+              }
+            ]
+          },
+          blinking: {
+            total: Number,
+            perMinute: Number,
+            isExcessive: Boolean
+          },
+          gaze: {
+            stabilityScore: Number,
+            isStable: Boolean
+          },
+          smiles: {
+            percentage: Number,
+            genuine: Number,
+            forced: Number,
+            authenticityRatio: Number
+          },
+          tension: {
+            average: Number,
+            max: Number,
+            isHigh: Boolean
+          },
+          microExpressions: {
+            count: Number,
+            types: Schema.Types.Mixed
+          }
+        },
+        strengths: [
+          {
+            metric: String,
+            score: Number,
+            icon: String,
+            message: String,
+            impact: String
+          }
+        ],
+        weaknesses: [
+          {
+            metric: String,
+            score: Number,
+            severity: {
+              type: String,
+              enum: ['low', 'medium', 'high']
+            },
+            icon: String,
+            issue: String,
+            why: String
+          }
+        ],
+        recommendations: [
+          {
+            priority: {
+              type: String,
+              enum: ['low', 'medium', 'high']
+            },
+            area: String,
+            issue: String,
+            recommendation: String,
+            exercise: String,
+            impact: String
+          }
+        ],
+        keyInsights: [String]
+      },
+      default: null
     },
     aiFeedbackCards: [
       {

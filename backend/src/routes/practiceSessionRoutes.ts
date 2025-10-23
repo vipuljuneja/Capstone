@@ -4,6 +4,7 @@ import {
   abandonSession,
   addStepToSession,
   completeSession,
+  createCompleteSession,
   deleteSession,
   getSessionById,
   getUserSessions,
@@ -13,6 +14,7 @@ import {
 const router = express.Router();
 
 router.post('/', verifyFirebaseToken, startPracticeSession);
+router.post('/complete', verifyFirebaseToken, createCompleteSession); // Create complete session in one go
 router.post('/:sessionId/steps', verifyFirebaseToken, addStepToSession);
 router.post('/:sessionId/complete', verifyFirebaseToken, completeSession);
 router.post('/:sessionId/abandon', verifyFirebaseToken, abandonSession);
