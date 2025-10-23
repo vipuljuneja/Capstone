@@ -1,388 +1,634 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
-  SafeAreaView,
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  Pressable,
-  Dimensions,
-  Modal,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-  RefreshControl,
+    SafeAreaView,
+    View,
+    Text,
+    StyleSheet,
+    Dimensions,
+    Pressable,
+    Platform,
 } from "react-native";
-import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import dayjs from "dayjs";
-import { CalendarProvider, WeekCalendar } from "react-native-calendars";
-
+import { getReflectionsByUser } from "../services/api";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import FullCalendar from "../Components/Notebook/FullCalendar";
+import { Modal, KeyboardAvoidingView, ActivityIndicator } from "react-native";
+import { CalendarProvider, WeekCalendar } from "react-native-calendars";
 import AddReflectionCard from "../Components/Notebook/AddReflectionCard";
+import { createReflection, getReflectionDates } from "../services/api";
+import { useNavigation } from "@react-navigation/native";
 
 
-import {
-  createReflection,
-  getReflectionsByUser,
-  getReflectionDates,
-} from "../services/api";
+
 
 const { width: screenWidth } = Dimensions.get("window");
 const spacing = 16;
 const cardWidth = (screenWidth - spacing * 2 - spacing) / 2;
-const today = dayjs().format("YYYY-MM-DD");
 
-export default function NotebookScreen({ userId, navigation, mongoUser }) {
-  console.log(userId)
-  console.log(mongoUser)
-  const [selectedDate, setSelectedDate] = useState(today);
-  const [activeTab, setActiveTab] = useState("pipo"); 
-  const [fullCalendarVisible, setFullCalendarVisible] = useState(false);
-  const [writerOpen, setWriterOpen] = useState(false);
-
- 
-  const [noteCards, setNoteCards] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-
-  
-  const [dotDates, setDotDates] = useState({}); 
-
-  const toUICard = (r) => ({
-    id: r._id,
-    type: r.type,
-    date: r.date,
-    title: r.title,
-    subtitle: r.description || "",
-  });
-
-  const fetchCards = useCallback(async () => {
-    if (!userId) return;
-    setLoading(true);
-    try {
-      const items = await getReflectionsByUser(userId, {
-        date: selectedDate,
-        type: activeTab,
-      });
-      setNoteCards(items.map(toUICard));
-    } catch (e) {
-      console.error("Get reflections failed:", e);
-    } finally {
-      setLoading(false);
+const SR = StyleSheet.create({
+    card: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 22,
+        paddingTop: 18,
+        paddingHorizontal: 18,
+        paddingBottom: 24,
+        marginHorizontal: 16,
+        marginTop: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: "#F0F0F0",
+        ...Platform.select({
+            ios: {
+                shadowColor: "#000",
+                shadowOpacity: 0.12,
+                shadowRadius: 12,
+                shadowOffset: { width: 0, height: 8 },
+            },
+            android: { elevation: 3 },
+        }),
+    },
+    title: {
+        fontSize: 20,
+        fontWeight: "800",
+        color: "#1F1F1F",
+        marginBottom: 10,
+    },
+    rule: {
+        height: StyleSheet.hairlineWidth,
+        backgroundColor: "#E7E7E7",
+        marginBottom: 10,
+    },
+    body: {
+        fontSize: 15,
+        lineHeight: 22,
+        color: "#2F2F2F",
+    },
+    actions: {
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        gap: 12,
+        marginTop: 14,
+    },
+    actionBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: "#FFFFFF",
+        alignItems: "center",
+        justifyContent: "center",
+        ...Platform.select({
+            ios: {
+                shadowColor: "#000",
+                shadowOpacity: 0.08,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 4 },
+            },
+            android: { elevation: 2 },
+        }),
     }
-  }, [userId, selectedDate, activeTab]);
 
-  const fetchDots = useCallback(async () => {
-    if (!userId) return;
-    const startDate = dayjs(selectedDate).startOf("month").format("YYYY-MM-DD");
-    const endDate = dayjs(selectedDate).endOf("month").format("YYYY-MM-DD");
-    try {
-      const dates = await getReflectionDates(userId, { startDate, endDate });
-      const next = {};
-      dates.forEach((d) => {
-        next[d.date] = true; 
-      });
-      setDotDates(next);
-    } catch (e) {
-      console.error("Get reflection dates failed:", e);
-    }
-  }, [userId, selectedDate]);
 
-  useEffect(() => {
-    fetchCards();
-  }, [fetchCards]);
+});
 
-  useEffect(() => {
-    fetchDots();
-  }, [fetchDots]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await Promise.all([fetchCards(), fetchDots()]);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const handleSaveReflection = async ({ title, description }) => {
-    if (!userId) return;
-    try {
-      const created = await createReflection({
-        userId,
-        title,
-        description,
-        date: selectedDate,
-        type: activeTab,
-      });
-
-      
-      setNoteCards((prev) => [toUICard(created), ...prev]);
-      setDotDates((prev) => ({ ...prev, [selectedDate]: true }));
-    } catch (e) {
-      console.error("Create reflection failed:", e);
-    }
-  };
-
-  const markedDates = useMemo(() => {
-    const marks = {};
-    Object.keys(dotDates).forEach((d) => {
-      marks[d] = { marked: true, dotColor: "#111" };
-    });
-    marks[selectedDate] = {
-      ...(marks[selectedDate] || {}),
-      selected: true,
-      selectedColor: "#CFCFCF",
-      selectedTextColor: "#111",
-    };
-    return marks;
-  }, [dotDates, selectedDate]);
-
-  const visibleCards = noteCards; 
-  const onAddCard = () => setWriterOpen(true);
-
-  if (!userId) {
+function SelfReflectionCard({ title, description, onEdit, onDelete }) {
     return (
-      <SafeAreaView style={styles.center}>
-        <Text style={{ fontWeight: "700", marginBottom: 8 }}>
-          Missing user
-        </Text>
-        <Text>Pass `userId` as a prop from your MainStack.</Text>
-      </SafeAreaView>
-    );
-  }
+        <View style={SR.card}>
+            <Text style={SR.title} numberOfLines={2}>{title ?? ""}</Text>
+            <View style={SR.rule} />
+            <Text style={SR.body}>{description ?? ""}</Text>
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => {}} hitSlop={12}>
-          <MaterialIcons name="arrow-back" size={22} color="#000" />
-        </Pressable>
-
-        <Text style={styles.headerTitle}>
-          {new Date(selectedDate)
-            .toLocaleDateString("en-CA", {
-              weekday: "long",
-              month: "short",
-              day: "2-digit",
-              timeZone: "UTC",
-            })
-            .toUpperCase()}
-        </Text>
-
-        <Pressable onPress={() => setFullCalendarVisible(true)} hitSlop={12}>
-          <MaterialIcons name="calendar-today" size={22} color="#000" />
-        </Pressable>
-      </View>
-
-      {/* Week calendar strip */}
-      <CalendarProvider date={selectedDate} onDateChanged={(d) => setSelectedDate(d)}>
-        <WeekCalendar
-          firstDay={1}
-          markedDates={markedDates}
-          allowShadow={false}
-          style={styles.weekCalendar}
-          onDayPress={(d) => setSelectedDate(d.dateString)}
-          theme={{
-            todayTextColor: "#111",
-            selectedDayBackgroundColor: "#CFCFCF",
-            textSectionTitleColor: "#666",
-            dayTextColor: "#666",
-          }}
-        />
-      </CalendarProvider>
-
-      {/* Notes grid */}
-      <FlatList
-        data={visibleCards}
-        numColumns={2}
-        keyExtractor={(item) => item.id}
-        columnWrapperStyle={{ gap: spacing, paddingHorizontal: 16 }}
-        contentContainerStyle={{ paddingTop: 20, paddingBottom: 96, flexGrow: 1 }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
-          </View>
-        )}
-        ListFooterComponent={<View style={{ height: 16 }} />}
-        ListEmptyComponent={
-          loading ? (
-            <View style={styles.emptyWrap}>
-              <ActivityIndicator />
+            <View style={SR.actions}>
+                <Pressable onPress={onDelete} style={SR.actionBtn} hitSlop={8}>
+                    <MaterialIcons name="delete-outline" size={20} color="#222" />
+                </Pressable>
+                <Pressable onPress={onEdit} style={SR.actionBtn} hitSlop={8}>
+                    <MaterialIcons name="edit" size={20} color="#222" />
+                </Pressable>
             </View>
-          ) : (
-            <View style={styles.emptyWrap}>
-              {activeTab === "pipo" ? (
-                <Text style={styles.emptyText}>
-                  If you start now,{"\n"}I promise I’ll cheer louder than anyone!
-                </Text>
-              ) : (
-                <View style={styles.emptyWrap}>
-                  <Text>Take a little moment just for you.</Text>
-                  <Pressable onPress={onAddCard} style={styles.addBtn}>
-                    <MaterialIcons name="edit" size={18} color="#fff" />
-                    <Text style={styles.addBtnText}>Write</Text>
-                  </Pressable>
-                </View>
-              )}
-            </View>
-          )
-        }
-      />
-
-      {/* footer Button control */}
-      <View style={styles.tabContainer}>
-        <View style={styles.tabGroup}>
-          <Pressable
-            style={[styles.tabButton, activeTab === "pipo" && styles.tabActive]}
-            onPress={() => setActiveTab("pipo")}
-          >
-            <Text style={[styles.tabText, activeTab === "pipo" && styles.tabTextActive]}>
-              From Pipo
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={[styles.tabButton, activeTab === "self" && styles.tabActive]}
-            onPress={() => setActiveTab("self")}
-          >
-            <Text style={[styles.tabText, activeTab === "self" && styles.tabTextActive]}>
-              Self Reflection
-            </Text>
-          </Pressable>
         </View>
-      </View>
-
-      {/* Full calendar modal */}
-      <FullCalendar
-        selectedDate={selectedDate}
-        modalVisible={fullCalendarVisible}
-        setSelectedDate={setSelectedDate}
-        setModalVisible={setFullCalendarVisible}
-      />
-
-      {/* Fullscreen Writer */}
-      <Modal
-        visible={writerOpen}
-        animationType="slide"
-        onRequestClose={() => setWriterOpen(false)}
-        presentationStyle="fullScreen"
-      >
-        <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
-          <View style={{ flexDirection: "row", alignItems: "center", padding: 12, gap: 12 }}>
-            <Pressable onPress={() => setWriterOpen(false)} hitSlop={12}>
-              <MaterialIcons name="arrow-back" size={22} color="#000" />
-            </Pressable>
-            <Text style={{ fontSize: 16, fontWeight: "700" }}>Write</Text>
-          </View>
-
-          <KeyboardAvoidingView
-            style={{ flex: 1 }}
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-          >
-            <View style={{ padding: 16, flex: 1 }}>
-              <AddReflectionCard
-                selectedDate={selectedDate}
-                onCancel={() => setWriterOpen(false)}
-                onSave={async ({ title, description }) => {
-                  await handleSaveReflection({ title, description });
-                  setWriterOpen(false);
-                }}
-              />
-            </View>
-          </KeyboardAvoidingView>
-        </SafeAreaView>
-      </Modal>
-    </SafeAreaView>
-  );
+    );
 }
 
+
+
+
+function PipoCard({ title, subtitle, index ,onPress}) {
+    const isEven = index % 2 === 0;
+    const tint = isEven ? "#EEF5FF" : "#FFF8E9";
+    const border = isEven ? "#CFE0FF" : "#FFE8B8";
+
+    return (
+        <Pressable onPress={onPress} style={[styles.pipoCard, { backgroundColor: tint, borderColor: border }]}>
+      <View style={styles.pipoIconWrap}>
+        <View style={styles.pipoBlob} />
+      </View>
+      <Text style={styles.pipoTitle} numberOfLines={2}>{title}</Text>
+      <Text style={styles.pipoSubtitle} numberOfLines={1}>{subtitle}</Text>
+    </Pressable>
+    );
+}
+
+
+export default function NotebookScreen({ userId }) {
+    const [activeTab, setActiveTab] = useState("pipo");
+    const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
+    const [fullCalendarVisible, setFullCalendarVisible] = useState(false);
+    const [writerOpen, setWriterOpen] = useState(false);
+    const [dotDates, setDotDates] = useState({});
+      const navigation = useNavigation();
+
+
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+    const isSelf = activeTab === "self";
+
+    const onEditSelf = (item) => {
+        console.log("edit self reflection", item);
+        setWriterOpen(true);
+    };
+
+    const onDeleteSelf = (item) => {
+        console.log("delete self reflection", item);
+    };
+
+    const toUICard = useCallback((r, i) => ({
+        id: String(r?._id ?? r?.id ?? i),
+        type: r?.type ?? (isSelf ? "self" : "pipo"),
+        date: r?.date ?? selectedDate,
+        title: r?.title ?? "",
+        subtitle: r?.description ?? "",
+    }), [isSelf, selectedDate]);
+
+    const fetchCards = useCallback(async () => {
+        if (!userId) return;
+        if (activeTab === "pipo") {
+            const fakePipo = [
+                {
+                    id: "1",
+                    type: "pipo",
+                    date: selectedDate,
+                    title: "Mindful Break",
+                    subtitle: "Pause for a minute and take 3 deep breaths.",
+                },
+                {
+                    id: "2",
+                    type: "pipo",
+                    date: selectedDate,
+                    title: "Daily Gratitude",
+                    subtitle: "Write one thing you’re grateful for today.",
+                },
+                {
+                    id: "3",
+                    type: "pipo",
+                    date: selectedDate,
+                    title: "Tiny Challenge",
+                    subtitle: "Stretch your arms and stand for 2 minutes.",
+                },
+                {
+                    id: "4",
+                    type: "pipo",
+                    date: selectedDate,
+                    title: "Positive Note",
+                    subtitle: "Message a friend and say something kind.",
+                },
+            ];
+            setItems(fakePipo);
+            return;
+        }
+        setLoading(true);
+        try {
+            const list = await getReflectionsByUser(userId, {
+                date: selectedDate,
+                type: activeTab,
+            });
+            const safe = Array.isArray(list) ? list : [];
+            setItems(safe.map(toUICard));
+        } catch (e) {
+            console.error("Get reflections failed:", e);
+            setItems([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [userId, selectedDate, activeTab, toUICard]);
+    const fetchDots = useCallback(async () => {
+        if (!userId) return;
+        const startDate = dayjs(selectedDate).startOf("month").format("YYYY-MM-DD");
+        const endDate = dayjs(selectedDate).endOf("month").format("YYYY-MM-DD");
+        try {
+            const dates = await getReflectionDates(userId, { startDate, endDate });
+            const next = {};
+            (Array.isArray(dates) ? dates : []).forEach(d => {
+                const ds = d?.date;
+                if (typeof ds === "string" && ds.length >= 10) next[ds] = true;
+            });
+            setDotDates(next);
+        } catch (e) {
+            console.error("Get reflection dates failed:", e);
+            setDotDates({});
+        }
+    }, [userId, selectedDate]);
+
+    useEffect(() => {
+        fetchDots();
+    }, [fetchDots]);
+
+
+    useEffect(() => {
+        fetchCards();
+    }, [fetchCards]);
+
+    const markedDates = useMemo(() => {
+        const marks = {};
+        if (dotDates && typeof dotDates === "object") {
+            Object.keys(dotDates).forEach(d => {
+                marks[d] = { marked: true, dotColor: "#111" };
+            });
+        }
+        marks[selectedDate] = {
+            ...(marks[selectedDate] || {}),
+            selected: true,
+            selectedColor: "#CFCFCF",
+            selectedTextColor: "#111",
+        };
+        return marks;
+    }, [dotDates, selectedDate]);
+
+
+    const handleSaveReflection = async ({ title, description }) => {
+        if (!userId) return;
+        const alreadyHasSelf = Array.isArray(selfData) && selfData.length > 0;
+        if (alreadyHasSelf) {
+            console.warn("A self reflection already exists for this date.");
+            return;
+        }
+
+        try {
+            const created = await createReflection({
+                userId,
+                title,
+                description,
+                date: selectedDate,
+                type: "self",
+            });
+            await fetchCards();
+            setDotDates(prev => ({ ...(prev || {}), [selectedDate]: true }));
+        } catch (e) {
+            console.error("Create reflection failed:", e);
+        }
+    };
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        try {
+            await fetchCards();
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
+    const pipoData = useMemo(
+        () => (Array.isArray(items) ? items.filter(it => it.type !== "self") : []),
+        [items]
+    );
+    const selfData = useMemo(
+        () => (Array.isArray(items) ? items.filter(it => it.type === "self") : []),
+        [items]
+    );
+
+    if (!userId) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.center}>
+                    <Text style={{ fontWeight: "700", marginBottom: 8 }}>Missing user</Text>
+                    <Text>Pass `userId` as a prop from your MainStack.</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    return (
+        <SafeAreaView style={styles.container}>
+            {/* Header */}
+            <View style={styles.header}>
+                
+                <Text></Text>
+                <Text style={styles.headerTitle}>
+                    {new Date(selectedDate)
+                        .toLocaleDateString("en-CA", {
+                            weekday: "long",
+                            month: "short",
+                            day: "2-digit",
+                            timeZone: "UTC",
+                        })
+                        .toUpperCase()}
+                </Text>
+
+                <Pressable onPress={() => setFullCalendarVisible(true)} hitSlop={12}>
+                    <MaterialIcons name="calendar-today" size={22} color="#000" />
+                </Pressable>
+            </View>
+            <FullCalendar
+                selectedDate={selectedDate}
+                modalVisible={fullCalendarVisible}
+                setSelectedDate={setSelectedDate}
+                setModalVisible={setFullCalendarVisible}
+            />
+            <CalendarProvider
+                date={selectedDate}
+                onDateChanged={(d) => setSelectedDate(d)}
+            >
+                <WeekCalendar
+                    firstDay={1}
+                    markedDates={markedDates}
+                    allowShadow={false}
+                    style={styles.weekCalendar}
+                    onDayPress={(d) => setSelectedDate(d.dateString)}
+                    theme={{
+                        todayTextColor: "#111",
+                        selectedDayBackgroundColor: "#CFCFCF",
+                        textSectionTitleColor: "#666",
+                        dayTextColor: "#666",
+                    }}
+                />
+            </CalendarProvider>
+
+
+            {/* CONTENT */}
+            {isSelf ? (
+                <ScrollView
+                    contentContainerStyle={{ paddingTop: 12, paddingBottom: 120 }}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                >
+                    {selfData.length === 0 && (
+                        <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
+                            <Pressable
+                                onPress={() => setWriterOpen(true)}
+                                style={{
+                                    alignSelf: "flex-start",
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    backgroundColor: "#111",
+                                    paddingHorizontal: 14,
+                                    paddingVertical: 10,
+                                    borderRadius: 20,
+                                }}
+                            >
+                                <MaterialIcons name="edit" size={18} color="#fff" />
+                                <Text style={{ color: "#fff", fontSize: 14, fontWeight: "600" }}>Write</Text>
+                            </Pressable>
+                        </View>
+                    )}
+
+                    {loading && selfData.length === 0 ? (
+                        <View style={styles.emptyWrap}><ActivityIndicator /></View>
+                    ) : selfData.length === 0 ? (
+                        <View style={styles.emptyWrap}>
+                            <Text>Take a little moment just for you.</Text>
+                        </View>
+                    ) : (
+                        selfData.map((item) => (
+                            <SelfReflectionCard
+                                key={item.id}
+                                title={item.title}
+                                description={item.subtitle}
+                                onEdit={() => onEditSelf(item)}
+                                onDelete={() => onDeleteSelf(item)}
+                            />
+                        ))
+                    )}
+                    <View style={{ height: 16 }} />
+                </ScrollView>
+
+
+            ) : (
+                <ScrollView
+                    contentContainerStyle={{ paddingTop: 20, paddingBottom: 96, paddingHorizontal: 16 }}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                    }
+                >
+                    {loading && pipoData.length === 0 ? (
+                        <View style={styles.emptyWrap}><Text>Loading…</Text></View>
+                    ) : pipoData.length === 0 ? (
+                        <View style={styles.emptyWrap}>
+                            <Text style={styles.emptyText}>
+                                If you start now,{"\n"}I promise I’ll cheer louder than anyone!
+                            </Text>
+                        </View>
+                    ) : (
+                        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+                            {pipoData.map((item, i) => (
+                                <PipoCard
+  key={item.id}
+  title={item.title}
+  subtitle={item.subtitle}
+  index={i}
+  onPress={() =>
+    navigation.navigate("PipoDetail", {
+      pipo: {
+        id: item.id,
+        title: item.title,
+        subtitle: item.subtitle,          
+        dateISO: selectedDate,            
+        dateText: dayjs(selectedDate).format("ddd, MMM D").toUpperCase(),
+        
+      },
+    })
+  }
+/>
+                            ))}
+                        </View>
+
+                    )}
+                    <View style={{ height: 16 }} />
+                </ScrollView>
+            )}
+
+            {/* footer tabs */}
+            <View style={styles.tabContainer}>
+                <View style={styles.tabGroup}>
+                    <Pressable
+                        style={[styles.tabButton, activeTab === "pipo" && styles.tabActive]}
+                        onPress={() => setActiveTab("pipo")}
+                    >
+                        <Text style={[styles.tabText, activeTab === "pipo" && styles.tabTextActive]}>
+                            From Pipo
+                        </Text>
+                    </Pressable>
+
+                    <Pressable
+                        style={[styles.tabButton, activeTab === "self" && styles.tabActive]}
+                        onPress={() => setActiveTab("self")}
+                    >
+                        <Text style={[styles.tabText, activeTab === "self" && styles.tabTextActive]}>
+                            Self Reflection
+                        </Text>
+                    </Pressable>
+                </View>
+            </View>
+            <Modal
+                visible={writerOpen}
+                animationType="slide"
+                onRequestClose={() => setWriterOpen(false)}
+                presentationStyle="fullScreen"
+            >
+                <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", padding: 12, gap: 12 }}>
+                        <Pressable onPress={() => setWriterOpen(false)} hitSlop={12}>
+                            <MaterialIcons name="arrow-back" size={22} color="#000" />
+                        </Pressable>
+                        <Text style={{ fontSize: 16, fontWeight: "700" }}>Write</Text>
+                    </View>
+
+                    <KeyboardAvoidingView
+                        style={{ flex: 1 }}
+                        behavior={Platform.OS === "ios" ? "padding" : undefined}
+                        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+                    >
+                        <View style={{ padding: 16, flex: 1 }}>
+                            <AddReflectionCard
+                                selectedDate={selectedDate}
+                                onCancel={() => setWriterOpen(false)}
+                                onSave={async ({ title, description }) => {
+                                    await handleSaveReflection({ title, description });
+                                    setWriterOpen(false);
+                                }}
+                            />
+                        </View>
+                    </KeyboardAvoidingView>
+                </SafeAreaView>
+            </Modal>
+
+        </SafeAreaView>
+    );
+}
+
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+    container: { flex: 1, backgroundColor: "#FFF" },
+    center: { flex: 1, alignItems: "center", justifyContent: "center" },
 
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 4,
-    paddingBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
+    header: {
+        paddingHorizontal: 16,
+        paddingTop: 4,
+        paddingBottom: 12,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+    },
+    headerTitle: {
+        fontSize: 14,
+        fontWeight: "700",
+        letterSpacing: 0.5,
+        alignItems: "center",
+        textAlign: "center"
+    },
 
-  weekCalendar: {
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: "#eee",
-  },
+    card: {
+        backgroundColor: "#EEE",
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 16,
+        justifyContent: "flex-start",
+    },
+    cardTitle: {
+        fontSize: 16,
+        fontWeight: "700",
+        marginBottom: 8,
+        color: "#222",
+    },
+    cardSubtitle: { fontSize: 12, color: "#7A7A7A" },
 
-  card: {
-    width: cardWidth,
-    height: 180,
-    backgroundColor: "#EEE",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    justifyContent: "flex-start",
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 8,
-    color: "#222",
-  },
-  cardSubtitle: { fontSize: 12, color: "#7A7A7A" },
+    tabContainer: {
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 24,
+        alignItems: "center",
+        paddingHorizontal: 20,
+    },
+    tabGroup: {
+        flexDirection: "row",
+        backgroundColor: "rgba(208, 217, 255, 0.8)",
+        borderRadius: 26,
+        padding: 4,
+        width: 340,
+        ...Platform.select({
+            ios: {
+                shadowColor: "#000",
+                shadowOpacity: 0.15,
+                shadowRadius: 4,
+                shadowOffset: { width: 0, height: 2 },
+            },
+            android: { elevation: 4 },
+        }),
+    },
+    tabButton: {
+        flex: 1,
+        borderRadius: 22,
+        paddingVertical: 10,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    tabActive: { backgroundColor: "#FFFFFF" },
+    tabText: { fontSize: 14, fontWeight: "600", color: "#666" },
+    tabTextActive: { color: "#111", fontWeight: "700" },
 
-  tabContainer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 24,
-    alignItems: "center",
-  },
-  tabGroup: {
-    flexDirection: "row",
-    backgroundColor: "#E6E6E6",
-    borderRadius: 22,
-    padding: 6,
-    width: 280,
-  },
-  tabButton: {
-    flex: 1,
-    borderRadius: 16,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  tabActive: { backgroundColor: "#FFF" },
-  tabText: { fontSize: 14, fontWeight: "600", color: "#333" },
-  tabTextActive: { color: "#111" },
+    emptyWrap: {
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 48,
+    },
+    emptyText: { color: "#777", fontSize: 14, textAlign: "center" },
+    weekCalendar: {
+        paddingVertical: 8,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderColor: "#eee",
+    },
+    pipoCard: {
+        width: cardWidth,
+        borderRadius: 20,
+        borderWidth: 1,
+        padding: 16,
+        marginBottom: 16,
+        alignItems: "center",
+        ...Platform.select({
+            ios: {
+                shadowColor: "#000",
+                shadowOpacity: 0.05,
+                shadowRadius: 6,
+                shadowOffset: { width: 0, height: 3 },
+            },
+            android: { elevation: 2 },
+        }),
+    },
+    pipoIconWrap: {
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 10,
+    },
+    pipoBlob: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: "#CFC3FF",
+    },
+    pipoTitle: {
+        fontSize: 15,
+        fontWeight: "700",
+        color: "#2A2A2A",
+        marginTop: 6,
+        marginBottom: 4,
+        textAlign: "center",
+    },
+    pipoSubtitle: {
+        fontSize: 12,
+        color: "#737373",
+        textAlign: "center",
+    },
 
-  emptyWrap: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 48,
-    gap: 12,
-  },
-  emptyText: { color: "#777", fontSize: 14, textAlign: "center" },
-  addBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#111",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  addBtnText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+
 });

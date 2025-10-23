@@ -14,6 +14,7 @@ import ProfileScreen from '../screens/ProfileScreen.js';
 import ChangePasswordScreen from '../Components/ProfileSettings/ChangePasswordScreen.js';
 import Levels from '../pages/Levels/Levels.js';
 import ResultsScreen from '../pages/Levels/Results.js';
+import PipoDetailScreen from '../Components/Notebook/PipoDetailScreen'
 
 const Stack = createNativeStackNavigator();
 
@@ -71,6 +72,11 @@ export default function MainStack({ user, mongoUser }) {
       <Stack.Screen name="Notebook" options={{ title: 'Notebook' }}>
         {(props) => <NotebookScreen {...props} userId={mongoId} />}
       </Stack.Screen>
+      <Stack.Screen
+  name="PipoDetail"
+  component={PipoDetailScreen}
+  options={{ title: 'Notebook detail' }}
+/>
 
       <Stack.Screen
         name="ProfileSettingScreen"
