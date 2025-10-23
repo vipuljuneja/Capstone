@@ -2,12 +2,7 @@ import { enableScreens } from 'react-native-screens';
 enableScreens();
 import 'react-native-gesture-handler';
 import React, { useState } from 'react';
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';

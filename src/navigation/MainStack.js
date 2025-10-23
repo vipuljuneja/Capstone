@@ -3,13 +3,17 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import HomeScreen from '../screens/HomeScreen';
 import DailyArticleMain from '../screens/DailyArticleMain';
-import LevelsScreen from '../screens/LevelsScreen.js';
+// import LevelsScreen from '../screens/LevelsScreen.js'; 
 import NotebookScreen from '../screens/NotebookScreen';
 import Last7DaysScreen from '../screens/Last7DaysScreen';
 import BookmarkedArticles from '../screens/BookmarkedArticles';
 import ProfileSettingScreen from '../pages/ProfileSettingScreen.js';
 import ArticleDetail from '../screens/ArticleDetail.jsx';
 import Onboarding from '../pages/Onboarding';
+import ProfileScreen from '../screens/ProfileScreen.js';
+import ChangePasswordScreen from '../Components/ProfileSettings/ChangePasswordScreen.js';
+import Levels from '../pages/Levels/Levels.js';
+import ResultsScreen from '../pages/Levels/Results.js';
 
 const Stack = createNativeStackNavigator();
 
@@ -23,6 +27,7 @@ export default function MainStack() {
         headerTitleStyle: { fontWeight: '600', color: '#111827', letterSpacing: 1 },
         headerBackTitleVisible: false,
         headerShadowVisible: false,
+        animation: 'slide_from_right',
       }}
     >
       <Stack.Screen
@@ -51,8 +56,20 @@ export default function MainStack() {
 
       <Stack.Screen
         name="Levels"
-        component={LevelsScreen}
+        component={Levels}
         options={{ title: 'Practice Levels' }}
+      />
+
+      <Stack.Screen
+        name="Results"
+        component={ResultsScreen}
+        options={{ title: 'Results' }}
+      />
+
+      <Stack.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: 'Profile' }}
       />
 
       <Stack.Screen
@@ -65,6 +82,12 @@ export default function MainStack() {
         name="ProfileSettingScreen"
         component={ProfileSettingScreen}
         options={{ title: 'Profile Settings' }}
+      />
+
+      <Stack.Screen
+        name="ChangePasswordScreen"
+        component={ChangePasswordScreen}
+        options={{ title: 'Change Password' }}
       />
 
       <Stack.Screen
