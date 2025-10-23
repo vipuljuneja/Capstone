@@ -32,6 +32,7 @@ export default function ProfileSettingScreen({ navigation }) {
     { name: "pipo_set", image: require("../../assets/pipo_set.png") },
     { name: "bro_set", image: require("../../assets/bro_set.png") },
     { name: "cherry_set", image: require("../../assets/cherry_set.png") },
+    { name: "mshrom_set", image: require("../../assets/mshrom_set.png")}
   ];
 
   // Load user data when component mounts
@@ -67,52 +68,52 @@ export default function ProfileSettingScreen({ navigation }) {
       });
 
       // Update password in Firebase if provided
-      if (currentPassword && newPassword) {
-        if (newPassword.length < 6) {
-          Alert.alert("Error", "New password must be at least 6 characters long.");
-          setLoading(false);
-          return;
-        }
+      // if (currentPassword && newPassword) {
+      //   if (newPassword.length < 6) {
+      //     Alert.alert("Error", "New password must be at least 6 characters long.");
+      //     setLoading(false);
+      //     return;
+      //   }
 
-        try {
-          // Reauthenticate user with current password
-          const credential = EmailAuthProvider.credential(
-            user.email,
-            currentPassword
-          );
-          await reauthenticateWithCredential(user, credential);
+      //   try {
+      //     // Reauthenticate user with current password
+      //     const credential = EmailAuthProvider.credential(
+      //       user.email,
+      //       currentPassword
+      //     );
+      //     await reauthenticateWithCredential(user, credential);
 
-          // Update password
-          await updatePassword(user, newPassword);
+      //     // Update password
+      //     await updatePassword(user, newPassword);
           
-          Alert.alert(
-            "Success",
-            "Profile and password updated successfully!",
-            [
-              {
-                text: "OK",
-                onPress: () => {
-                  setCurrentPassword("");
-                  setNewPassword("");
-                }
-              }
-            ]
-          );
-        } catch (passwordError) {
-          console.error("Password update error:", passwordError);
-          if (passwordError.code === "auth/wrong-password") {
-            Alert.alert("Error", "Current password is incorrect.");
-          } else if (passwordError.code === "auth/too-many-requests") {
-            Alert.alert("Error", "Too many failed attempts. Please try again later.");
-          } else {
-            Alert.alert("Error", "Failed to update password. Please try again.");
-          }
-          setLoading(false);
-          return;
-        }
-      } else {
-        Alert.alert("Success", "Profile updated successfully!");
-      }
+      //     Alert.alert(
+      //       "Success",
+      //       "Profile and password updated successfully!",
+      //       [
+      //         {
+      //           text: "OK",
+      //           onPress: () => {
+      //             setCurrentPassword("");
+      //             setNewPassword("");
+      //           }
+      //         }
+      //       ]
+      //     );
+      //   } catch (passwordError) {
+      //     console.error("Password update error:", passwordError);
+      //     if (passwordError.code === "auth/wrong-password") {
+      //       Alert.alert("Error", "Current password is incorrect.");
+      //     } else if (passwordError.code === "auth/too-many-requests") {
+      //       Alert.alert("Error", "Too many failed attempts. Please try again later.");
+      //     } else {
+      //       Alert.alert("Error", "Failed to update password. Please try again.");
+      //     }
+      //     setLoading(false);
+      //     return;
+      //   }
+      // } else {
+      //   Alert.alert("Success", "Profile updated successfully!");
+      // }
 
       // Refresh MongoDB user data
       await refreshMongoUser();
@@ -145,6 +146,21 @@ export default function ProfileSettingScreen({ navigation }) {
         {/* Big avatar */}
         <Image source={avatars[selectedAvatar].image} style={styles.avatar} />
 
+        {/* Avatar Picker */}
+        <View style={styles.avatarPicker}>
+          {avatars.map((item, index) => (
+            <TouchableOpacity
+              key={index}
+              onPress={() => setSelectedAvatar(index)}
+              style={[
+                styles.avatarOption,
+                selectedAvatar === index && styles.selectedAvatar,
+              ]}
+            >
+              <Image source={item.image} style={styles.smallAvatar} />
+            </TouchableOpacity>
+          ))}
+        </View>
         {/* Name Field */}
         <View style={styles.field}>
           <Text style={styles.label}>Name</Text>
@@ -158,7 +174,7 @@ export default function ProfileSettingScreen({ navigation }) {
           />
         </View>
 
-        <View style={styles.divider} />
+        {/* <View style={styles.divider} />
 
         <Text style={styles.sectionTitle}>Change Password (Optional)</Text>
         <Text style={styles.sectionSubtitle}>Leave blank to keep current password</Text>
@@ -211,23 +227,9 @@ export default function ProfileSettingScreen({ navigation }) {
               />
             </TouchableOpacity>
           </View>
-        </View>
+        </View> */}
 
-        {/* Avatar Picker */}
-        <View style={styles.avatarPicker}>
-          {avatars.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => setSelectedAvatar(index)}
-              style={[
-                styles.avatarOption,
-                selectedAvatar === index && styles.selectedAvatar,
-              ]}
-            >
-              <Image source={item.image} style={styles.smallAvatar} />
-            </TouchableOpacity>
-          ))}
-        </View>
+        
 
         {/* Save Button */}
         <TouchableOpacity 

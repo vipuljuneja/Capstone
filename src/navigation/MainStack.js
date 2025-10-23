@@ -10,6 +10,8 @@ import BookmarkedArticles from '../screens/BookmarkedArticles';
 import ProfileSettingScreen from '../pages/ProfileSettingScreen.js';
 import ArticleDetail from '../screens/ArticleDetail.jsx';
 import Onboarding from '../pages/Onboarding';
+import ProfileScreen from '../screens/ProfileScreen.js'
+import ChangePasswordScreen from '../Components/ProfileSettings/ChangePasswordScreen.js'
 
 const Stack = createNativeStackNavigator();
 
@@ -65,6 +67,10 @@ console.log("MONGO USER",mongoUser)
         component={LevelsScreen}
         options={{ title: 'Practice Levels' }}
       />
+      <Stack.Screen name="Profile" options={{ title: 'Profile' }}>
+        {(props) => <ProfileScreen {...props} />}
+      </Stack.Screen>
+
 
       <Stack.Screen
         name="Notebook"
@@ -77,7 +83,12 @@ console.log("MONGO USER",mongoUser)
         component={ProfileSettingScreen}
         options={{ title: 'Profile Settings' }}
       />
-
+      <Stack.Screen
+        name="ChangePasswordScreen"
+        component={ChangePasswordScreen}
+        options={{ title: 'Change Password' }}
+      />
+  
       <Stack.Screen
         name="BookmarkedArticles"
         options={{ title: 'Bookmark' }}

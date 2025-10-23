@@ -31,6 +31,7 @@ export default function HomeScreen({ navigation, user }) {
     pipo_set: require('../../assets/pipo_set.png'),
     bro_set: require('../../assets/bro_set.png'),
     cherry_set: require('../../assets/cherry_set.png'),
+    mshrom_set: require('../../assets/mshrom_set.png')
   };
 
   const getUserAvatar = () => {
@@ -139,7 +140,7 @@ export default function HomeScreen({ navigation, user }) {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.navigate('ProfileSettingScreen')} style={S.card}>
+          <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={S.card}>
             <Text style={S.icon}>⚙️</Text>
             <View style={S.cardBody}>
               <Text style={S.title}>Profile Settings</Text>
