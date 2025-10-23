@@ -13,9 +13,7 @@ import Onboarding from '../pages/Onboarding';
 
 const Stack = createNativeStackNavigator();
 
-export default function MainStack({ user, mongoUser }) {
-  console.log("USER",user)
-console.log("MONGO USER",mongoUser)
+export default function MainStack() {
   return (
     <Stack.Navigator
       initialRouteName="Home"
@@ -29,36 +27,27 @@ console.log("MONGO USER",mongoUser)
     >
       <Stack.Screen
         name="Home"
+        component={HomeScreen}
         options={{ title: 'Home' }}
-      >
-        {(props) => <HomeScreen {...props} user={user} />}
-      </Stack.Screen>
+      />
 
       <Stack.Screen
         name="Article"
+        component={DailyArticleMain}
         options={{ title: 'Daily Article' }}
-      >
-        {(props) => <DailyArticleMain {...props} userId={user.uid} />}
-      </Stack.Screen>
+      />
 
       <Stack.Screen
         name="Last7Days"
+        component={Last7DaysScreen}
         options={{ title: 'Articles: Last 7 Days' }}
-      >
-        {(props) => <Last7DaysScreen {...props} userId={user.uid} />}
-      </Stack.Screen>
+      />
 
       <Stack.Screen
         name="ArticleDetail"
+        component={ArticleDetail}
         options={{ title: 'Article' }}
-      >
-        {(props) => (
-          <ArticleDetail
-            userId={user.uid}
-            articleId={props.route?.params?.articleId}
-          />
-        )}
-      </Stack.Screen>
+      />
 
       <Stack.Screen
         name="Levels"
@@ -68,10 +57,10 @@ console.log("MONGO USER",mongoUser)
 
       <Stack.Screen
         name="Notebook"
+        component={NotebookScreen}
         options={{ title: 'Notebook' }}
-      >
-        {(props) => <NotebookScreen {...props} userId={mongoUser._id} />}
-      </Stack.Screen>
+      />
+
       <Stack.Screen
         name="ProfileSettingScreen"
         component={ProfileSettingScreen}
@@ -80,17 +69,15 @@ console.log("MONGO USER",mongoUser)
 
       <Stack.Screen
         name="BookmarkedArticles"
+        component={BookmarkedArticles}
         options={{ title: 'Bookmark' }}
-      >
-        {(props) => <BookmarkedArticles {...props} userId={user.uid} />}
-      </Stack.Screen>
+      />
 
       <Stack.Screen
         name="Onboarding"
+        component={Onboarding}
         options={{ title: 'Anxiety Assessment', headerShown: false }}
-      >
-        {(props) => <Onboarding {...props} user={user} />}
-      </Stack.Screen>
+      />
 
     </Stack.Navigator>
   );

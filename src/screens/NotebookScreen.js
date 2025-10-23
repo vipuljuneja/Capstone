@@ -19,7 +19,7 @@ import { CalendarProvider, WeekCalendar } from "react-native-calendars";
 
 import FullCalendar from "../Components/Notebook/FullCalendar";
 import AddReflectionCard from "../Components/Notebook/AddReflectionCard";
-
+import { useAuth } from "../contexts/AuthContext";
 
 import {
   createReflection,
@@ -32,9 +32,9 @@ const spacing = 16;
 const cardWidth = (screenWidth - spacing * 2 - spacing) / 2;
 const today = dayjs().format("YYYY-MM-DD");
 
-export default function NotebookScreen({ userId, navigation, mongoUser }) {
-  console.log(userId)
-  console.log(mongoUser)
+export default function NotebookScreen({ navigation }) {
+  const { mongoUser } = useAuth();
+  const userId = mongoUser?._id;
   const [selectedDate, setSelectedDate] = useState(today);
   const [activeTab, setActiveTab] = useState("pipo"); 
   const [fullCalendarVisible, setFullCalendarVisible] = useState(false);
