@@ -6,9 +6,9 @@ import { auth } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
 
-export default function HomeScreen({ navigation, user }) {
+export default function HomeScreen({ navigation }) {
   const [signingOut, setSigningOut] = useState(false);
-  const { mongoUser, refreshMongoUser } = useAuth();
+  const { user, mongoUser, refreshMongoUser } = useAuth();
 
   // Refresh user data when screen comes into focus
   useFocusEffect(

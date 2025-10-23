@@ -18,10 +18,7 @@ import PipoDetailScreen from '../Components/Notebook/PipoDetailScreen'
 
 const Stack = createNativeStackNavigator();
 
-export default function MainStack({ user, mongoUser }) {
-  const uid = user?.uid;
-  const mongoId = mongoUser?._id;
-
+export default function MainStack() {
   return (
     <Stack.Navigator
       initialRouteName="Home"
@@ -31,29 +28,32 @@ export default function MainStack({ user, mongoUser }) {
         headerTitleStyle: { fontWeight: '600', color: '#111827', letterSpacing: 1 },
         headerBackTitleVisible: false,
         headerShadowVisible: false,
+        animation: 'slide_from_right',
       }}
     >
-      <Stack.Screen name="Home" options={{ title: 'Home' }}>
-        {(props) => <HomeScreen {...props} user={user} />}
-      </Stack.Screen>
+      <Stack.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{ title: 'Home' }}
+      />
 
-      <Stack.Screen name="Article" options={{ title: 'Daily Article' }}>
-        {(props) => <DailyArticleMain {...props} userId={uid} />}
-      </Stack.Screen>
+      <Stack.Screen
+        name="Article"
+        component={DailyArticleMain}
+        options={{ title: 'Daily Article' }}
+      />
 
-      <Stack.Screen name="Last7Days" options={{ title: 'Articles: Last 7 Days' }}>
-        {(props) => <Last7DaysScreen {...props} userId={uid} />}
-      </Stack.Screen>
+      <Stack.Screen
+        name="Last7Days"
+        component={Last7DaysScreen}
+        options={{ title: 'Articles: Last 7 Days' }}
+      />
 
-      <Stack.Screen name="ArticleDetail" options={{ title: 'Article' }}>
-        {(props) => (
-          <ArticleDetail
-            {...props}
-            userId={uid}
-            articleId={props.route?.params?.articleId}
-          />
-        )}
-      </Stack.Screen>
+      <Stack.Screen
+        name="ArticleDetail"
+        component={ArticleDetail}
+        options={{ title: 'Article' }}
+      />
 
       <Stack.Screen
         name="Levels"
@@ -61,23 +61,28 @@ export default function MainStack({ user, mongoUser }) {
         options={{ title: 'Practice Levels' }}
       />
 
-      <Stack.Screen name="Results" options={{ title: 'Results' }}>
-        {(props) => <ResultsScreen {...props} userId={uid} />}
-      </Stack.Screen>
-
-      <Stack.Screen name="Profile" options={{ title: 'Profile' }}>
-        {(props) => <ProfileScreen {...props} />}
-      </Stack.Screen>
-
-      <Stack.Screen name="Notebook" options={{ title: 'Notebook' }}>
-        {(props) => <NotebookScreen {...props} userId={mongoId} />}
-      </Stack.Screen>
       <Stack.Screen
+        name="Results"
+        component={ResultsScreen}
+        options={{ title: 'Results' }}
+      />
+
+      <Stack.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: 'Profile' }}
+      />
+
+      <Stack.Screen
+        name="Notebook"
+        component={NotebookScreen}
+        options={{ title: 'Notebook' }}
+      />
+   <Stack.Screen
   name="PipoDetail"
   component={PipoDetailScreen}
   options={{ title: 'Notebook detail' }}
 />
-
       <Stack.Screen
         name="ProfileSettingScreen"
         component={ProfileSettingScreen}
@@ -90,16 +95,18 @@ export default function MainStack({ user, mongoUser }) {
         options={{ title: 'Change Password' }}
       />
 
-      <Stack.Screen name="BookmarkedArticles" options={{ title: 'Bookmark' }}>
-        {(props) => <BookmarkedArticles {...props} userId={uid} />}
-      </Stack.Screen>
+      <Stack.Screen
+        name="BookmarkedArticles"
+        component={BookmarkedArticles}
+        options={{ title: 'Bookmark' }}
+      />
 
       <Stack.Screen
         name="Onboarding"
+        component={Onboarding}
         options={{ title: 'Anxiety Assessment', headerShown: false }}
-      >
-        {(props) => <Onboarding {...props} user={user} />}
-      </Stack.Screen>
+      />
+
     </Stack.Navigator>
   );
 }

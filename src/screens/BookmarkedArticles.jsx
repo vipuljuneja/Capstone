@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { getUserBookmarkedArticles, removeBookmark } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 // --- Blob assets ---
 import articlePipo from '../../assets/pipo/articlePipo.png';
@@ -93,19 +94,18 @@ const BookmarkedCard = ({ article, onPress, onRemoveBookmark }) => {
 
 export default function BookmarkedArticles({
   navigation,
-  route,
-  userId,
   onSelectArticle,
 }) {
+  const { user } = useAuth();
+  const userId = user?.uid;
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const resolvedUserId = route?.params?.userId || userId;
 
   useEffect(() => {
-    if (!resolvedUserId) return;
-    fetchBookmarkedArticles(resolvedUserId);
-  }, [resolvedUserId]);
+    if (!userId) return;
+    fetchBookmarkedArticles(userId);
+  }, [userId]);
 
   const fetchBookmarkedArticles = async (id) => {
     try {
@@ -130,8 +130,8 @@ export default function BookmarkedArticles({
 
   const handleRemoveBookmark = async (article) => {
     try {
-      if (!resolvedUserId) return;
-      await removeBookmark(resolvedUserId, article._id);
+      if (!userId) return;
+      await removeBookmark(userId, article._id);
       setArticles((prev) => prev.filter((a) => a._id !== article._id));
     } catch (error) {
       console.error('Error removing bookmark:', error);

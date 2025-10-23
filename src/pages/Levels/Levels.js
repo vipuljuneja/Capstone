@@ -169,6 +169,8 @@ const Levels = () => {
               totalQuestions: currentState.totalLines,
               transcriptionResults: transcriptionToPass,
               facialAnalysisResults: facialAnalysisToPass,
+              scenarioId: '507f1f77bcf86cd799439011',
+              level: 1,
             });
           } catch (error) {
             console.error('Navigation error:', error);

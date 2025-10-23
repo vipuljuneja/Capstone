@@ -13,15 +13,21 @@ import ArticleHeader from '../Components/Articles/ArticleHeader';
 import BlobCharacter from '../Components/Articles/BlobCharacter';
 import ArticleMeta from '../Components/Articles/ArticleMeta';
 import ArticleKeywords from '../Components/Articles/ArticleKeywords';
+import { useAuth } from '../contexts/AuthContext';
 
-export default function ArticleDetail({ userId, articleId }) {
+export default function ArticleDetail({ route }) {
+  const { user } = useAuth();
+  const userId = user?.uid;
+  const articleId = route?.params?.articleId;
   const [article, setArticle] = useState(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchArticle();
-  }, [articleId]);
+    if (userId && articleId) {
+      fetchArticle();
+    }
+  }, [articleId, userId]);
 
   const fetchArticle = async () => {
     try {
@@ -37,7 +43,7 @@ export default function ArticleDetail({ userId, articleId }) {
   };
 
   const handleToggleBookmark = async () => {
-    if (!article) return;
+    if (!article || !userId) return;
 
     try {
       await toggleBookmark(userId, article._id, isBookmarked);

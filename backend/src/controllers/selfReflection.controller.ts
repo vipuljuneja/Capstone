@@ -2,8 +2,9 @@ import { Request, Response } from 'express';
 import SelfReflection from '../models/SelfReflection';
 import User from '../models/User';
 import PracticeSession from '../models/PracticeSession';
+import Scenario from '../models/Scenario';
 import mongoose from 'mongoose';
-import { generatePipoMessageFromSession } from '../services/pipoMessageService';
+import { generatePipoNote, prepareSessionDataForAI } from '../services/practiceSessionAIService';
 
 /**
  * Create a new self-reflection entry
@@ -342,8 +343,20 @@ export const createPipoNoteFromSession = async (req: Request, res: Response) => 
       }
     }
 
-    // Generate friendly Pipo message from session data
-    const pipoMessage = await generatePipoMessageFromSession(session);
+    // Fetch scenario title for better AI context
+    let scenarioTitle = 'Practice';
+    try {
+      const scenario = await Scenario.findById(session.scenarioId);
+      if (scenario) {
+        scenarioTitle = scenario.title;
+      }
+    } catch (err) {
+      console.warn('Could not fetch scenario title');
+    }
+
+    // Generate AI-powered Pipo message
+    const aiData = prepareSessionDataForAI(session, scenarioTitle);
+    const pipoMessage = await generatePipoNote(aiData);
 
     // Create the Pipo reflection note
     const pipoNote = await SelfReflection.create({
@@ -352,7 +365,7 @@ export const createPipoNoteFromSession = async (req: Request, res: Response) => 
       description: pipoMessage.body,
       date: session.completedAt || new Date(),
       type: 'pipo',
-      imageName: pipoMessage.imageName,
+      imageName: 'articlePipo.png', // Default Pipo image
       linkedSessionId: session._id,
       scenarioId: session.scenarioId,
       level: session.level,

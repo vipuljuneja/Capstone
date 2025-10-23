@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import QuestionCard from "../Components/Onboarding/QuestionCard";
 import { updateSeverityLevel } from "../services/api";
 import { useNavigation } from "@react-navigation/native";
+import { useAuth } from "../contexts/AuthContext";
 
 
 
@@ -32,7 +33,8 @@ function getSummary(responses) {
   return { label: "HIGH", title: "Carrying a lot right now", message: "We’ll go gently step by step." };
 }
 
-export default function Onboarding({ user }) {
+export default function Onboarding() {
+  const { user } = useAuth();
   const [phase, setPhase] = useState("intro"); 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [responses, setResponses] = useState(Array(questionList.length).fill(null));
