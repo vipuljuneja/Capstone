@@ -114,6 +114,7 @@ export default function DailyArticleMain({ route, navigation }) {
 
     (async () => {
       setLoading(true);
+      // 📰 getLast7DaysArticles auto-generates today's article if missing (backend ensures this)
       const res = await safeFetch(() => getLast7DaysArticles(userId));
       if (!alive.current) return;
 
@@ -125,6 +126,7 @@ export default function DailyArticleMain({ route, navigation }) {
         setArticles(list);
         setCurrentIndex(0);
       } else {
+        // Fallback: if no articles in last 7 days, try to get today's article
         const todayRes = await safeFetch(() => getTodayArticle(userId));
         if (!alive.current) return;
         const todayArticle = todayRes?.data?.article;

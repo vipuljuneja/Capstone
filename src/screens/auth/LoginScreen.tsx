@@ -1,250 +1,170 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
-  Image,
-  Alert,
-} from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { auth } from '../../firebase';
-import Icon from 'react-native-vector-icons/FontAwesome';
-
-// Import your blob character image
-const blobCharacter = require('../../../assets/pipo/loginPipo.png');
+import { getAuthErrorMessage, validateEmail } from '../../utils/authErrors';
+import AuthCard from '../../Components/Auth/AuthCard';
+import AuthInput from '../../Components/Auth/AuthInput';
+import AuthButton from '../../Components/Auth/AuthButton';
+import { authStyles } from '../../Components/Auth/authStyles';
 
 interface LoginScreenProps {
-  onSwitchToSignup: () => void;
+  navigation?: any;
+  onSwitchToSignup?: () => void;
+  onSwitchToForgotPassword?: () => void;
 }
 
-export default function LoginScreen({ onSwitchToSignup }: LoginScreenProps) {
+export default function LoginScreen({ 
+  navigation,
+  onSwitchToSignup, 
+  onSwitchToForgotPassword 
+}: LoginScreenProps) {
+  // Handle navigation - use navigation prop if available, otherwise use callbacks
+  const handleSwitchToSignup = () => {
+    if (navigation) {
+      navigation.navigate('Signup');
+    } else if (onSwitchToSignup) {
+      onSwitchToSignup();
+    }
+  };
+
+  const handleSwitchToForgotPassword = () => {
+    if (navigation) {
+      navigation.navigate('ForgotPassword');
+    } else if (onSwitchToForgotPassword) {
+      onSwitchToForgotPassword();
+    }
+  };
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
-  const canSubmit = email.trim() !== '' && password !== '';
+  const handleEmailChange = (text: string) => {
+    setEmail(text);
+    setEmailError(null);
+    setError(null);
+  };
+
+  const handlePasswordChange = (text: string) => {
+    setPassword(text);
+    setError(null);
+  };
+
+  const handleEmailBlur = () => {
+    if (email.trim()) {
+      const validation = validateEmail(email);
+      if (!validation.isValid) {
+        setEmailError(validation.error || null);
+      }
+    }
+  };
 
   const handleLogin = async () => {
-    if (!canSubmit || loading) return;
+    setError(null);
+    setEmailError(null);
+
+    // Validate email before submission
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      setEmailError(emailValidation.error || null);
+      return;
+    }
+
+    if (!password) {
+      setError('Password is required');
+      return;
+    }
 
     setLoading(true);
-    setError(null);
-
-    let isMounted = true;
 
     try {
       console.log('🔐 Signing in...');
       await signInWithEmailAndPassword(auth, email.trim(), password);
-
-      if (!isMounted) return;
       console.log('✅ Login successful');
-
-      // Optional small delay helps prevent alert glitch on iOS
-      setTimeout(() => {
-        if (isMounted) {
-          Alert.alert('Success', 'Welcome back!');
-        }
-      }, 150);
-
+      // Navigation will be handled by AuthContext automatically
     } catch (err: any) {
       console.error('❌ Login error:', err);
-
-      if (isMounted) {
-        const message =
-          err?.message ||
-          'Failed to sign in. Please try again.';
-        setError(message);
-        Alert.alert('Error', message);
-      }
-
+      const message = getAuthErrorMessage(err);
+      setError(message);
     } finally {
-      if (isMounted) setLoading(false);
+      setLoading(false);
     }
-
-    // Cleanup guard when component unmounts
-    return () => {
-      isMounted = false;
-    };
   };
 
+  const canSubmit = email.trim() !== '' && password !== '' && !emailError && !loading;
+
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#F6EAC2', '#EEF3E7']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0.1, y: 0.5 }}
-        locations={[0.2, 0.8]}
-        style={StyleSheet.absoluteFill}
-      />
+    // <KeyboardAwareScrollView
+    //   contentContainerStyle={{ flexGrow: 1 }}
+    //   keyboardShouldPersistTaps="handled"
+    //   enableOnAndroid
+    //   extraScrollHeight={20}
+    // >
+      <AuthCard title="Welcome back" blobTopMargin={110}>
+        <AuthInput
+          icon="envelope"
+          iconSize={18}
+          value={email}
+          onChangeText={handleEmailChange}
+          onBlur={handleEmailBlur}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          placeholder="Email"
+          editable={!loading}
+          error={!!emailError}
+          testID="login-email-input"
+        />
 
-      {/* Blob Character */}
-      <View style={styles.blobContainer}>
-        <Image source={blobCharacter} style={styles.blobImage} />
-      </View>
+        {emailError && (
+          <Text style={[authStyles.helperText, authStyles.helperTextError]}>
+            {emailError}
+          </Text>
+        )}
 
-      {/* Form Card */}
-      <View style={styles.card}>
-        <Text style={styles.title}>Welcome back</Text>
+        <AuthInput
+          icon="lock"
+          iconSize={20}
+          value={password}
+          onChangeText={handlePasswordChange}
+          placeholder="Password"
+          isPassword
+          editable={!loading}
+          testID="login-password-input"
+        />
 
-        {/* Email Input */}
-        <View style={styles.inputContainer}>
-          <Icon name="envelope" size={18} color="#64748b" style={styles.inputIcon} />
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            placeholder="Email"
-            placeholderTextColor="#94a3b8"
-            style={styles.input}
-            editable={!loading}
-          />
-        </View>
+        {error && <Text style={authStyles.errorText}>{error}</Text>}
 
-        {/* Password Input */}
-        <View style={styles.inputContainer}>
-          <Icon name="lock" size={20} color="#64748b" style={styles.inputIcon} />
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Password"
-            placeholderTextColor="#94a3b8"
-            secureTextEntry
-            style={styles.input}
-            editable={!loading}
-          />
-        </View>
-
-        {error && <Text style={styles.errorText}>{error}</Text>}
-
-        <TouchableOpacity
-          onPress={handleLogin}
-          disabled={!canSubmit || loading}
-          style={[
-            styles.button,
-            (!canSubmit || loading) && styles.buttonDisabled,
-          ]}
+        <TouchableOpacity 
+          onPress={handleSwitchToForgotPassword} 
+          style={authStyles.linkButton}
+          disabled={loading}
+          testID="forgot-password-link"
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>SIGN IN</Text>
-          )}
+          <Text style={authStyles.linkSmall}>Forgot Password?</Text>
         </TouchableOpacity>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account?</Text>
-          <TouchableOpacity onPress={onSwitchToSignup} disabled={loading}>
-            <Text style={styles.link}>Sign Up</Text>
+        <AuthButton
+          title="SIGN IN"
+          onPress={handleLogin}
+          disabled={!canSubmit}
+          loading={loading}
+          testID="login-button"
+        />
+
+        <View style={authStyles.footer}>
+          <Text style={authStyles.footerText}>Don't have an account?</Text>
+          <TouchableOpacity 
+            onPress={handleSwitchToSignup} 
+            disabled={loading}
+            testID="switch-to-signup"
+          >
+            <Text style={authStyles.link}>Sign Up</Text>
           </TouchableOpacity>
         </View>
-      </View>
-    </View>
+      </AuthCard>
+    // </KeyboardAwareScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f3e8',
-  },
-  blobContainer: {
-    alignItems: 'center',
-    marginTop: 110,
-    zIndex: 1,
-    position: 'relative',
-  },
-  blobImage: {
-    width: 160,
-    height: 160,
-    resizeMode: 'contain',
-    marginBottom: -19,
-  },
-  card: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 5,
-    marginTop: -40,
-    zIndex: 2,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 24,
-    textAlign: 'center',
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 56,
-    backgroundColor: '#ffffff',
-    borderRadius: 28,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: '#1f2937',
-  },
-  button: {
-    height: 56,
-    backgroundColor: '#3b2764',
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    backgroundColor: '#94a3b8',
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  errorText: {
-    color: '#ef4444',
-    marginBottom: 16,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 24,
-    gap: 8,
-  },
-  footerText: {
-    color: '#64748b',
-    fontSize: 14,
-  },
-  link: {
-    color: '#7c3aed',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-});
