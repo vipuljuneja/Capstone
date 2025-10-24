@@ -20,6 +20,8 @@ import FullCalendar from "../Components/Notebook/FullCalendar";
 import { CalendarProvider, WeekCalendar } from "react-native-calendars";
 import AddReflectionCard from "../Components/Notebook/AddReflectionCard";
 import { useAuth } from "../contexts/AuthContext";
+import { ImageBackground } from "react-native";
+
 
 const { width: screenWidth } = Dimensions.get("window");
 const spacing = 16;
@@ -451,8 +453,10 @@ export default function NotebookScreen({ navigation }) {
       )}
 
       <View style={styles.tabContainer}>
-        <View style={styles.tabGroup}>
-          <Pressable
+        <ImageBackground
+          source={require('../../assets/Tab_mailbox.png')}
+          style={[styles.tabGroup, { overflow: 'hidden' }]}
+          imageStyle={{ borderRadius: 26 }}>  <Pressable
             style={[styles.tabButton, activeTab === "pipo" && styles.tabActive]}
             onPress={() => setActiveTab("pipo")}
           >
@@ -465,7 +469,7 @@ export default function NotebookScreen({ navigation }) {
           >
             <Text style={[styles.tabText, activeTab === "self" && styles.tabTextActive]}>Self Reflection</Text>
           </Pressable>
-        </View>
+        </ImageBackground>
       </View>
       <Modal
         visible={writerOpen}
@@ -565,7 +569,8 @@ const styles = StyleSheet.create({
   },
   tabGroup: {
     flexDirection: "row",
-    backgroundColor: "rgba(208, 217, 255, 0.8)",
+    // backgroundColor: "rgba(208, 217, 255, 0.8)",
+
     borderRadius: 26,
     padding: 4,
     width: 340,
