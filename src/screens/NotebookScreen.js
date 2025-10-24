@@ -240,7 +240,7 @@ export default function NotebookScreen({ navigation }) {
 
   const markedDates = useMemo(() => {
     const marks = {};
-    console.log(dotDates);
+    // console.log(dotDates);
     if (dotDates && typeof dotDates === "object") {
       Object.keys(dotDates).forEach((d0) => {
         const d = dayjs(d0).format("YYYY-MM-DD");
@@ -456,7 +456,9 @@ export default function NotebookScreen({ navigation }) {
         <ImageBackground
           source={require('../../assets/Tab_mailbox.png')}
           style={[styles.tabGroup, { overflow: 'hidden' }]}
-          imageStyle={{ borderRadius: 26 }}>  <Pressable
+          imageStyle={{ borderRadius: 26 }}
+          >  
+          <Pressable
             style={[styles.tabButton, activeTab === "pipo" && styles.tabActive]}
             onPress={() => setActiveTab("pipo")}
           >
