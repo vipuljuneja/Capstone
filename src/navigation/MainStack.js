@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import HomeScreen from '../screens/HomeScreen';
 import DailyArticleMain from '../screens/DailyArticleMain';
-// import LevelsScreen from '../screens/LevelsScreen.js'; 
+// import LevelsScreen from '../screens/LevelsScreen.js';
 import NotebookScreen from '../screens/NotebookScreen';
 import Last7DaysScreen from '../screens/Last7DaysScreen';
 import BookmarkedArticles from '../screens/BookmarkedArticles';
@@ -12,9 +12,20 @@ import ArticleDetail from '../screens/ArticleDetail.jsx';
 import Onboarding from '../pages/Onboarding';
 import ProfileScreen from '../screens/ProfileScreen.js';
 import ChangePasswordScreen from '../Components/ProfileSettings/ChangePasswordScreen.js';
-import Levels from '../pages/Levels/Levels.js';
-import ResultsScreen from '../pages/Levels/Results.js';
-import PipoDetailScreen from '../Components/Notebook/PipoDetailScreen'
+// import Levels from '../pages/levels/Levels.js';
+// import ResultsScreen from '../pages/levels/Results.js';
+import PipoDetailScreen from '../Components/Notebook/PipoDetailScreen';
+
+import HomeScreenLevels from '../pages/home/HomeScreen.js';
+import LevelsOptions from '../pages/home/LevelOptionsScreen.js';
+import Level1Screen from '../pages/level1/Level1Screen.js';
+import Level1IntroScreen from '../pages/level1/Level1IntroScreen';
+import Level1ResultScreen from '../pages/level1/Level1ResultScreen';
+
+import Level2NoticeScreen from '../pages/level2/Level2NoticeScreen';
+import Level2IntroScreen from '../pages/level2/Level2IntroScreen';
+import Level2Screen from '../pages/level2/Level2Screen';
+import Level2ResultScreen from '../pages/level2/Level2ResultScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -25,7 +36,11 @@ export default function MainStack() {
       screenOptions={{
         headerStyle: { backgroundColor: '#ffffff' },
         headerTintColor: '#111827',
-        headerTitleStyle: { fontWeight: '600', color: '#111827', letterSpacing: 1 },
+        headerTitleStyle: {
+          fontWeight: '600',
+          color: '#111827',
+          letterSpacing: 1,
+        },
         headerBackTitleVisible: false,
         headerShadowVisible: false,
         animation: 'slide_from_right',
@@ -57,14 +72,62 @@ export default function MainStack() {
 
       <Stack.Screen
         name="Levels"
-        component={Levels}
+        component={HomeScreenLevels}
         options={{ title: 'Practice Levels' }}
       />
 
-      <Stack.Screen
+      {/* <Stack.Screen
         name="Results"
         component={ResultsScreen}
         options={{ title: 'Results' }}
+      /> */}
+
+      <Stack.Screen
+        name="LevelOptions"
+        component={LevelsOptions}
+        options={{ title: 'LevelsOptions' }}
+      />
+
+      <Stack.Screen
+        name="Level1Screen"
+        component={Level1Screen}
+        options={{ title: 'Level1Screen' }}
+      />
+
+      <Stack.Screen
+        name="Level1IntroScreen"
+        component={Level1IntroScreen}
+        options={{ title: 'Level1IntroScreen' }}
+      />
+
+      <Stack.Screen
+        name="Level1ResultScreen"
+        component={Level1ResultScreen}
+        options={{ title: 'Level1ResultScreen' }}
+      />
+
+      <Stack.Screen
+        name="Level2NoticeScreen"
+        component={Level2NoticeScreen}
+        options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="Level2IntroScreen"
+        component={Level2IntroScreen}
+        options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="Level2Screen"
+        component={Level2Screen}
+        options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="Level2ResultScreen"
+        component={Level2ResultScreen}
+        options={{ headerShown: false }}
       />
 
       <Stack.Screen
@@ -78,11 +141,11 @@ export default function MainStack() {
         component={NotebookScreen}
         options={{ title: 'Notebook' }}
       />
-   <Stack.Screen
-  name="PipoDetail"
-  component={PipoDetailScreen}
-  options={{ title: 'Notebook detail' }}
-/>
+      <Stack.Screen
+        name="PipoDetail"
+        component={PipoDetailScreen}
+        options={{ title: 'Notebook detail' }}
+      />
       <Stack.Screen
         name="ProfileSettingScreen"
         component={ProfileSettingScreen}
@@ -106,7 +169,6 @@ export default function MainStack() {
         component={Onboarding}
         options={{ title: 'Anxiety Assessment', headerShown: false }}
       />
-
     </Stack.Navigator>
   );
 }
