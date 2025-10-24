@@ -1,6 +1,7 @@
 // src/services/api.ts
 import axios, { AxiosError } from 'axios';
 import { BACKEND_URL } from '@env';
+import { auth } from '../firebase';
 // const BACKEND_URL = 'http://10.128.252.6:3000';
 
 const API_BASE_URL = __DEV__
@@ -11,6 +12,25 @@ const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000, // Default 15 seconds
 });
+
+// Add request interceptor to attach Firebase auth token
+apiClient.interceptors.request.use(
+  async (config) => {
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        const token = await user.getIdToken();
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.error('❌ Failed to get auth token:', error);
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 type ApiSuccessEnvelope<T> = {
   success: boolean;

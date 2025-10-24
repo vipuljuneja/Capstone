@@ -9,6 +9,7 @@ import {
     Image,
     Pressable,
     ScrollView,
+    ActivityIndicator,
 } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { auth } from '../firebase';
@@ -40,6 +41,16 @@ export default function ProfileScreen({ navigation }) {
         const avatarName = mongoUser?.avatarImage || 'pipo_set';
         return avatarImages[avatarName] || avatarImages.pipo_set;
     };
+
+    // Safety check - if no user data, show loading
+    if (!mongoUser) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+                <ActivityIndicator size="large" color="#3b2764" />
+                <Text style={{ marginTop: 16, color: '#6b7280' }}>Loading profile...</Text>
+            </View>
+        );
+    }
     const items = [
         {
             title: "Change Password",
