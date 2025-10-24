@@ -14,7 +14,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import dayjs from "dayjs";
-import { getReflectionsByUser, createReflection, getReflectionDates } from "../services/api";
+import { getReflectionsByUser, createReflection, getReflectionDates, updateReflection, deleteReflection } from "../services/api";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import FullCalendar from "../Components/Notebook/FullCalendar";
 import { CalendarProvider, WeekCalendar } from "react-native-calendars";
@@ -142,16 +142,34 @@ export default function NotebookScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [dotDates, setDotDates] = useState({});
+  const [editingSelf, setEditingSelf] = useState(null);
+
 
   const isSelf = activeTab === "self";
 
   const onEditSelf = (item) => {
-    console.log("edit self reflection", item);
+    setEditingSelf({ id: item.id, title: item.title, description: item.subtitle });
+
     setWriterOpen(true);
   };
 
-  const onDeleteSelf = (item) => {
-    console.log("delete self reflection", item);
+  const onDeleteSelf = async (item) => {
+    try {
+      await deleteReflection(item.id);
+      await fetchCards();
+
+      const key = dayjs(item?.date || selectedDate).format("YYYY-MM-DD");
+      setDotDates((prev) => {
+        const curr = { ...(prev || {}) };
+        const flags = curr[key] || {};
+        delete flags.self;
+        if (!flags.pipo) delete curr[key];
+        else curr[key] = flags;
+        return curr;
+      });
+    } catch (e) {
+      console.error("Delete failed:", e);
+    }
   };
 
   const toUICard = useCallback(
@@ -274,6 +292,25 @@ export default function NotebookScreen({ navigation }) {
     }
   };
 
+  const handleUpdateReflection = async ({ title, description }) => {
+    if (!editingSelf) return;
+    try {
+      await updateReflection(editingSelf.id, { title, description, date: selectedDate, type: "self" });
+      setEditingSelf(null);
+      await fetchCards();
+
+      const key = dayjs(selectedDate).format("YYYY-MM-DD");
+      setDotDates((prev) => {
+        const curr = prev || {};
+        const existing = curr[key] || {};
+        return { ...curr, [key]: { ...existing, self: true } };
+      });
+    } catch (e) {
+      console.error("Update failed:", e);
+    }
+  };
+
+
   const onRefresh = async () => {
     setRefreshing(true);
     try {
@@ -344,26 +381,6 @@ export default function NotebookScreen({ navigation }) {
           contentContainerStyle={{ paddingTop: 12, paddingBottom: 120 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
-          {selfData.length === 0 && (
-            <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
-              <Pressable
-                onPress={() => setWriterOpen(true)}
-                style={{
-                  alignSelf: "flex-start",
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 6,
-                  backgroundColor: "#111",
-                  paddingHorizontal: 14,
-                  paddingVertical: 10,
-                  borderRadius: 20,
-                }}
-              >
-                <MaterialIcons name="edit" size={18} color="#fff" />
-                <Text style={{ color: "#fff", fontSize: 14, fontWeight: "600" }}>Write</Text>
-              </Pressable>
-            </View>
-          )}
 
           {loading && selfData.length === 0 ? (
             <View style={styles.emptyWrap}>
@@ -371,7 +388,12 @@ export default function NotebookScreen({ navigation }) {
             </View>
           ) : selfData.length === 0 ? (
             <View style={styles.emptyWrap}>
-              <Text>Take a little moment just for you.</Text>
+              <Text style={styles.emptyTextCenter}>Take a little moment just for you.</Text>
+
+              <Pressable onPress={() => setWriterOpen(true)} style={styles.writeBtn} hitSlop={12}>
+                <MaterialIcons name="edit" size={18} color="#fff" />
+                <Text style={styles.writeBtnText}>WRITE</Text>
+              </Pressable>
             </View>
           ) : (
             selfData.map((item) => (
@@ -467,12 +489,29 @@ export default function NotebookScreen({ navigation }) {
             <View style={{ padding: 16, flex: 1 }}>
               <AddReflectionCard
                 selectedDate={selectedDate}
-                onCancel={() => setWriterOpen(false)}
-                onSave={async ({ title, description }) => {
-                  await handleSaveReflection({ title, description });
+                initialTitle={editingSelf?.title}
+                initialDescription={editingSelf?.description}
+                onCancel={() => {
                   setWriterOpen(false);
+                  setEditingSelf(null);
+                }}
+                onSave={async ({ title, description }) => {
+                  try {
+                    if (editingSelf) {
+                      await handleUpdateReflection({ title, description });
+                    } else {
+                      await handleSaveReflection({ title, description });
+                    }
+                  } catch (e) {
+                    console.error("Save failed:", e);
+                  } finally {
+                    setWriterOpen(false);
+                    setEditingSelf(null);
+                  }
                 }}
               />
+
+
             </View>
           </KeyboardAvoidingView>
         </SafeAreaView>
@@ -603,4 +642,38 @@ const styles = StyleSheet.create({
     color: "#737373",
     textAlign: "center",
   },
+  emptyTextCenter: {
+    color: "#222",
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+
+  writeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#342E4E",
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    borderRadius: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.12,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 6 },
+      },
+      android: { elevation: 3 },
+    }),
+  },
+
+  writeBtnText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+
 });

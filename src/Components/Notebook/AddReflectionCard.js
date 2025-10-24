@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View, TextInput, Pressable } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 
@@ -6,11 +6,38 @@ export default function AddReflectionCard({
   selectedDate,
   onSave,
   onCancel,
+  initialTitle,
+  initialDescription,
 }) {
-  const [title, setTitle] = useState("");
-  const [desc, setDesc] = useState("");
+  const [title, setTitle] = useState(initialTitle || "");
+  const [desc, setDesc] = useState(initialDescription || "");
+  const [saving, setSaving] = useState(false);
+  const isMountedRef = useRef(true);
 
-  const canSave = title.trim().length > 0;
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
+  useEffect(() => {
+    setTitle(initialTitle || "");
+  }, [initialTitle]);
+
+  useEffect(() => {
+    setDesc(initialDescription || "");
+  }, [initialDescription]);
+
+  const canSave = title.trim().length > 0 && !saving;
+
+  const handlePressSave = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      await onSave?.({ title: title.trim(), description: desc.trim() });
+    } finally {
+      if (isMountedRef.current) setSaving(false);
+    }
+  };
 
   return (
     <View style={S.wrap}>
@@ -48,12 +75,12 @@ export default function AddReflectionCard({
           </Pressable>
         )}
         <Pressable
-          onPress={() => onSave?.({ title: title.trim(), description: desc.trim() })}
-          style={[S.btn, !canSave && S.btnDisabled]}
+          onPress={handlePressSave}
+          style={[S.btn, (!canSave) && S.btnDisabled]}
           disabled={!canSave}
         >
           <MaterialIcons name="save" size={18} color="#fff" />
-          <Text style={S.btnText}>Save</Text>
+          <Text style={S.btnText}>{saving ? "Saving…" : "Save"}</Text>
         </Pressable>
       </View>
     </View>
