@@ -13,7 +13,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import CameraDetector from '../../Components/Facial/CameraDetector';
 import VoiceORB from '../../Components/Avatar/VoiceORB';
-import AvatarGenerate from '../../Components/Avatar/AvatarGenerate';
+import AvatarGenerator from '../../Components/Avatar/AvatarGenerate';
 import AudioRecorder from '../../Components/Audio/AudioRecorder';
 
 import {
@@ -32,6 +32,7 @@ const Levels = () => {
 
   const [isRecording, setIsRecording] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
+  const [avatarReady, setAvatarReady] = useState(false);
 
   const [recorderState, setRecorderState] = useState(false);
 
@@ -49,16 +50,28 @@ const Levels = () => {
   const voiceOrbRef = useRef(null);
   const audioRecorderRef = useRef(null);
   const waveformRef = useRef(null);
-
   const [orbState, setOrbState] = useState({
     speaking: false,
     loading: false,
     idx: 0,
     totalLines: 5,
+    isInitialized: false, // ADD THIS LINE
   });
 
-  const handleStateChange = useCallback(newState => {
-    setOrbState(newState);
+  const handleStateChange = useCallback(
+    newState => {
+      setOrbState(newState);
+      // ADD THESE LINES:
+      if (newState.isInitialized && !avatarReady) {
+        setAvatarReady(true);
+      }
+    },
+    [avatarReady],
+  );
+
+  const handleAvatarInitialized = useCallback(() => {
+    console.log('✅ Avatar videos are ready!');
+    setAvatarReady(true);
   }, []);
 
   const handleTranscriptionComplete = useCallback(report => {
@@ -230,6 +243,11 @@ const Levels = () => {
   });
 
   const handleStart = async () => {
+    if (!avatarReady) {
+      console.warn('⚠️  Avatar videos are still being generated');
+      return;
+    }
+
     const hasPermission = await requestAudioPermission();
     if (!hasPermission) {
       console.log('Audio permission denied');
@@ -278,7 +296,12 @@ const Levels = () => {
 
       <View style={styles.middleSection}>
         <View style={styles.avatarPlaceholder}>
-          <VoiceORB ref={voiceOrbRef} onStateChange={handleStateChange} />
+          {/* <VoiceORB ref={voiceOrbRef} onStateChange={handleStateChange} /> */}
+          <AvatarGenerator
+            ref={voiceOrbRef}
+            onStateChange={handleStateChange}
+            onInitialized={handleAvatarInitialized} // ADD THIS PROP
+          />
         </View>
 
         <Animated.View
@@ -333,6 +356,7 @@ const Levels = () => {
         <TouchableOpacity
           style={isRecording ? styles.stopButton : styles.recordButton}
           onPress={isRecording ? handleStop : handleStart}
+          disabled={!avatarReady && !isRecording}
         >
           <Text style={styles.recordButtonText}>
             {isRecording ? (
