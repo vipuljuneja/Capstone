@@ -102,6 +102,28 @@ export const getLast7DaysArticles = async (req: Request, res: Response): Promise
     const startDate = sevenDaysAgo.toISOString().split('T')[0];
     const endDate = today.toISOString().split('T')[0];
 
+
+    const todayDateString = getTodayDateString();
+    let todayArticle = await DailyArticle.findOne({ date: todayDateString });
+    
+    if (!todayArticle) {
+      console.log('📝 No article for today found in getLast7Days, generating...');
+      const generated = await generateDailyArticle();
+      
+      todayArticle = await DailyArticle.create({
+        date: todayDateString,
+        title: generated.title,
+        content: generated.content,
+        keywords: generated.keywords,
+        readTime: generated.readTime,
+        illustrationData: {
+          character: 'blob',
+          backgroundColor: getRandomBackgroundColor()
+        }
+      });
+      console.log('✅ Today article auto-generated:', todayArticle._id);
+    }
+
     const articles = await DailyArticle.find({
       date: { $gte: startDate, $lte: endDate }
     }).sort({ date: -1 });

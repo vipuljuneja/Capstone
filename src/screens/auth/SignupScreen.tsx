@@ -1,356 +1,356 @@
-
 import React, { useState } from 'react';
-import { FlatList } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
-
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  ScrollView,
-  Image,
-} from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { auth } from '../../firebase';
 import { createUserInBackend } from '../../services/api';
-// import Icon from 'react-native-vector-icons/FontAwesome';
-
-// Import your blob character image
-// Replace with your actual blob image path
-// const blobCharacter = require('../../../assets/pip/articlePipo.png');
-
-import Icon from 'react-native-vector-icons/FontAwesome';
-import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
-
-
-const blobCharacter = require('../../../assets/pipo/loginPipo.png');
+import { 
+  getAuthErrorMessage, 
+  validateEmail, 
+  validatePassword, 
+  validateName 
+} from '../../utils/authErrors';
+import AuthCard from '../../Components/Auth/AuthCard';
+import AuthInput from '../../Components/Auth/AuthInput';
+import AuthButton from '../../Components/Auth/AuthButton';
+import { authStyles } from '../../Components/Auth/authStyles';
 
 interface SignupScreenProps {
-  onSwitchToLogin: () => void;
+  navigation?: any;
+  onSwitchToLogin?: () => void;
 }
 
-export default function SignupScreen({ onSwitchToLogin }: SignupScreenProps) {
+export default function SignupScreen({ navigation, onSwitchToLogin }: SignupScreenProps) {
+  // Handle navigation - use navigation prop if available, otherwise use callback
+  const handleSwitchToLogin = () => {
+    if (navigation) {
+      navigation.navigate('Login');
+    } else if (onSwitchToLogin) {
+      onSwitchToLogin();
+    }
+  };
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Field-specific errors
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
+  const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
+
+  const handleNameChange = (text: string) => {
+    setName(text);
+    setNameError(null);
+    setError(null);
+  };
+
+  const handleNameBlur = () => {
+    if (name.trim()) {
+      const validation = validateName(name);
+      if (!validation.isValid) {
+        setNameError(validation.error || null);
+      }
+    }
+  };
+
+  const handleEmailChange = (text: string) => {
+    setEmail(text);
+    setEmailError(null);
+    setError(null);
+  };
+
+  const handleEmailBlur = () => {
+    if (email.trim()) {
+      const validation = validateEmail(email);
+      if (!validation.isValid) {
+        setEmailError(validation.error || null);
+      }
+    }
+  };
+
+  const handlePasswordChange = (text: string) => {
+    setPassword(text);
+    setPasswordError(null);
+    setError(null);
+    
+    if (text) {
+      const validation = validatePassword(text);
+      if (!validation.isValid) {
+        setPasswordError(validation.error || null);
+        setPasswordStrength(null);
+      } else {
+        setPasswordStrength(validation.strength || null);
+      }
+    } else {
+      setPasswordStrength(null);
+    }
+
+    // Check if passwords match
+    if (confirmPassword && text !== confirmPassword) {
+      setConfirmPasswordError('Passwords do not match');
+    } else {
+      setConfirmPasswordError(null);
+    }
+  };
+
+  const handleConfirmPasswordChange = (text: string) => {
+    setConfirmPassword(text);
+    
+    if (text && password && text !== password) {
+      setConfirmPasswordError('Passwords do not match');
+    } else {
+      setConfirmPasswordError(null);
+    }
+    
+    setError(null);
+  };
+
+  const handleSignup = async () => {
+    setError(null);
+    setNameError(null);
+    setEmailError(null);
+    setPasswordError(null);
+    setConfirmPasswordError(null);
+
+    // Validate all fields
+    const nameValidation = validateName(name);
+    const emailValidation = validateEmail(email);
+    const passwordValidation = validatePassword(password);
+
+    let hasError = false;
+
+    if (!nameValidation.isValid) {
+      setNameError(nameValidation.error || null);
+      hasError = true;
+    }
+
+    if (!emailValidation.isValid) {
+      setEmailError(emailValidation.error || null);
+      hasError = true;
+    }
+
+    if (!passwordValidation.isValid) {
+      setPasswordError(passwordValidation.error || null);
+      hasError = true;
+    }
+
+    if (password !== confirmPassword) {
+      setConfirmPasswordError('Passwords do not match');
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    setLoading(true);
+    let firebaseUser = null;
+
+    try {
+      console.log('📝 Creating Firebase user...');
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password
+      );
+
+      firebaseUser = userCredential.user;
+      console.log('✅ Firebase user created:', firebaseUser.uid);
+
+      console.log('📝 Creating MongoDB user...');
+      await createUserInBackend({
+        authUid: firebaseUser.uid,
+        email: email.trim(),
+        name: name.trim(),
+      });
+
+      console.log('✅ MongoDB user created successfully.');
+      // Navigation will be handled by AuthContext automatically
+
+    } catch (err: any) {
+      console.error('❌ Signup error:', err);
+
+      // Rollback if Firebase user was created but backend failed
+      if (firebaseUser) {
+        try {
+          console.log('🔄 Rolling back Firebase user...');
+          await firebaseUser.delete();
+          console.log('✅ Firebase user deleted (rollback successful)');
+        } catch (deleteErr) {
+          console.error('❌ Rollback failed:', deleteErr);
+        }
+      }
+
+      const message = getAuthErrorMessage(err);
+      setError(message);
+
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const canSubmit =
     name.trim() !== '' &&
     email.trim() !== '' &&
     password !== '' &&
     confirmPassword !== '' &&
-    password === confirmPassword;
+    password === confirmPassword &&
+    !nameError &&
+    !emailError &&
+    !passwordError &&
+    !confirmPasswordError &&
+    !loading;
 
- const handleSignup = async () => {
-  if (!canSubmit || loading) return;
-
-  setLoading(true);
-  setError(null);
-
-  let isMounted = true; 
-  let firebaseUser = null;
-
-  try {
-    console.log('📝 Creating Firebase user...');
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      email.trim(),
-      password
-    );
-
-    if (!isMounted) return;
-    firebaseUser = userCredential.user;
-    console.log('✅ Firebase user created:', firebaseUser.uid);
-
-    console.log('📝 Creating MongoDB user...');
-    await createUserInBackend({
-      authUid: firebaseUser.uid,
-      email: email.trim(),
-      name: name.trim(),
-    });
-
-    if (!isMounted) return;
-    console.log('✅ MongoDB user created successfully.');
-
-    // Optional small delay helps prevent alert glitch on iOS
-    setTimeout(() => {
-      if (isMounted) {
-        Alert.alert('Success', 'Account created successfully!');
-      }
-    }, 150);
-
-
-
-  } catch (err: any) {
-    console.error('❌ Signup error:', err);
-
-    // Rollback if Firebase user was created but backend failed
-    if (firebaseUser) {
-      try {
-        console.log('🔄 Rolling back Firebase user...');
-        await firebaseUser.delete();
-        console.log('✅ Firebase user deleted (rollback successful)');
-      } catch (deleteErr) {
-        console.error('❌ Rollback failed:', deleteErr);
-      }
-    }
-
-    if (isMounted) {
-      const message =
-        err?.message ||
-        'Account creation failed. Please try again.';
-      setError(message);
-      Alert.alert('Error', message);
-    }
-
-  } finally {
-    if (isMounted) setLoading(false);
-  }
-
-  // Cleanup guard when component unmounts
-  return () => {
-    isMounted = false;
-  };
-};
-
-
- return (
-  // <KeyboardAvoidingView
-  //   style={styles.container}
-  //   behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-  // >
-   
-
+  return (
     // <KeyboardAwareScrollView
-    //   contentContainerStyle={styles.scrollContent}
+    //   contentContainerStyle={{ flexGrow: 1 }}
     //   keyboardShouldPersistTaps="handled"
-
-    //   // extraScrollHeight={40}
+    //   enableOnAndroid
+    //   extraScrollHeight={20}
     // >
-<View style={styles.container}>
-     <LinearGradient
-      colors={['#F6EAC2', '#EEF3E7']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0.1, y: 0.5 }}
-      locations={[0.2, 0.8]}
-      style={StyleSheet.absoluteFill}
-    />
+      <AuthCard title="Sign up" blobTopMargin={110}>
+        <AuthInput
+          icon="user"
+          iconSize={20}
+          value={name}
+          onChangeText={handleNameChange}
+          onBlur={handleNameBlur}
+          placeholder="Name"
+          editable={!loading}
+          error={!!nameError}
+          testID="signup-name-input"
+        />
 
-    
+        {nameError && (
+          <Text style={[authStyles.helperText, authStyles.helperTextError]}>
+            {nameError}
+          </Text>
+        )}
 
-      <View style={styles.blobContainer}>
-        <Image source={blobCharacter} style={styles.blobImage} />
-        
-      </View>
+        <AuthInput
+          icon="envelope"
+          iconSize={18}
+          value={email}
+          onChangeText={handleEmailChange}
+          onBlur={handleEmailBlur}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          placeholder="Email"
+          editable={!loading}
+          error={!!emailError}
+          testID="signup-email-input"
+        />
 
-      {/* Form Card */}
-      <View style={styles.card}>
-        <Text style={styles.title}>Sign up</Text>
+        {emailError && (
+          <Text style={[authStyles.helperText, authStyles.helperTextError]}>
+            {emailError}
+          </Text>
+        )}
 
-        {/* Name Input */}
-        <View style={styles.inputContainer}>
-          <Icon name="user" size={20} color="#64748b" style={styles.inputIcon} />
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="Name"
-            placeholderTextColor="#94a3b8"
-            style={styles.input}
-            editable={!loading}
-          />
-        </View>
+        <AuthInput
+          icon="lock"
+          iconSize={20}
+          value={password}
+          onChangeText={handlePasswordChange}
+          placeholder="Password"
+          isPassword
+          editable={!loading}
+          error={!!passwordError}
+          testID="signup-password-input"
+        />
 
-        {/* Email Input */}
-        <View style={styles.inputContainer}>
-          <Icon name="envelope" size={18} color="#64748b" style={styles.inputIcon} />
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            placeholder="Email"
-            placeholderTextColor="#94a3b8"
-            style={styles.input}
-            editable={!loading}
-          />
-        </View>
+        {passwordError && (
+          <Text style={[authStyles.helperText, authStyles.helperTextError]}>
+            {passwordError}
+          </Text>
+        )}
 
-        {/* Password Input */}
-        <View style={styles.inputContainer}>
-          <Icon name="lock" size={20} color="#64748b" style={styles.inputIcon} />
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Password"
-            placeholderTextColor="#94a3b8"
-            secureTextEntry
-            style={styles.input}
-            editable={!loading}
-          />
-        </View>
+        {password && !passwordError && passwordStrength && (
+          <>
+            <View style={authStyles.passwordStrengthContainer}>
+              <View
+                style={[
+                  authStyles.passwordStrengthBar,
+                  authStyles.passwordStrengthBarFilled,
+                  passwordStrength === 'weak' && authStyles.passwordStrengthBarWeak,
+                  passwordStrength === 'medium' && authStyles.passwordStrengthBarMedium,
+                  passwordStrength === 'strong' && authStyles.passwordStrengthBarStrong,
+                ]}
+              />
+              <View
+                style={[
+                  authStyles.passwordStrengthBar,
+                  (passwordStrength === 'medium' || passwordStrength === 'strong') &&
+                    authStyles.passwordStrengthBarFilled,
+                  passwordStrength === 'medium' && authStyles.passwordStrengthBarMedium,
+                  passwordStrength === 'strong' && authStyles.passwordStrengthBarStrong,
+                ]}
+              />
+              <View
+                style={[
+                  authStyles.passwordStrengthBar,
+                  passwordStrength === 'strong' &&
+                    authStyles.passwordStrengthBarFilled &&
+                    authStyles.passwordStrengthBarStrong,
+                ]}
+              />
+            </View>
+            <Text style={authStyles.passwordStrengthText}>
+              Password strength: {passwordStrength}
+            </Text>
+          </>
+        )}
 
-        {/* Confirm Password */}
-        <View style={styles.inputContainer}>
-          <Icon name="lock" size={20} color="#64748b" style={styles.inputIcon} />
-          <TextInput
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            placeholder="Confirm Password"
-            placeholderTextColor="#94a3b8"
-            secureTextEntry
-            style={styles.input}
-            editable={!loading}
-          />
-        </View>
+        <AuthInput
+          icon="lock"
+          iconSize={20}
+          value={confirmPassword}
+          onChangeText={handleConfirmPasswordChange}
+          placeholder="Confirm Password"
+          isPassword
+          editable={!loading}
+          error={!!confirmPasswordError}
+          testID="signup-confirm-password-input"
+        />
 
-        {error && <Text style={styles.errorText}>{error}</Text>}
+        {confirmPasswordError && (
+          <Text style={[authStyles.helperText, authStyles.helperTextError]}>
+            {confirmPasswordError}
+          </Text>
+        )}
 
-        <View style={styles.termsContainer}>
-          <Text style={styles.termsText}>
+        {error && <Text style={authStyles.errorText}>{error}</Text>}
+
+        <View style={authStyles.termsContainer}>
+          <Text style={authStyles.termsText}>
             By signing up, you agree to our{' '}
-            <Text style={styles.link}>Terms of Use</Text> and{' '}
-            <Text style={styles.link}>Privacy Policy</Text>
+            <Text style={authStyles.link}>Terms of Use</Text> and{' '}
+            <Text style={authStyles.link}>Privacy Policy</Text>
           </Text>
         </View>
 
-        <TouchableOpacity
+        <AuthButton
+          title="SIGN UP"
           onPress={handleSignup}
-          disabled={!canSubmit || loading}
-          style={[
-            styles.button,
-            (!canSubmit || loading) && styles.buttonDisabled,
-          ]}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>SIGN UP</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-      </View>
+          disabled={!canSubmit}
+          loading={loading}
+          testID="signup-button"
+        />
 
-
-
-);
-
+        <View style={authStyles.footer}>
+          <Text style={authStyles.footerText}>Already have an account?</Text>
+          <TouchableOpacity 
+            onPress={handleSwitchToLogin} 
+            disabled={loading}
+            testID="switch-to-login"
+          >
+            <Text style={authStyles.link}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </AuthCard>
+    // </KeyboardAwareScrollView>
+  );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f3e8',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingBottom: 40,
-  },
-  blobContainer: {
-    alignItems: 'center',
-    marginTop: 210,
-    zIndex: 1, // blob sits behind the card
-    position: 'relative',
-  },
-  blobBackground: {
-    width: 200,
-    height: 200,
-  
-  },
-  blobImage: {
-    width: 160,
-    height: 160,
-    resizeMode: 'contain',
-    marginBottom: -19,
-  },
-card: {
-  flex: 1, // allow it to fill vertical space
-  backgroundColor: '#fff',
-  borderTopLeftRadius: 32,
-  borderTopRightRadius: 32,
-  paddingVertical: 32,
-  paddingHorizontal: 24,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: -4 },
-  shadowOpacity: 0.05,
-  shadowRadius: 10,
-  elevation: 5,
-  marginTop: -40, // keeps blob overlapping
-  zIndex: 2,
-},
-
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 24,
-    textAlign: 'center',
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 56,
-    backgroundColor: '#ffffff',
-    borderRadius: 28,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: '#1f2937',
-  },
-  termsContainer: {
-    marginTop: 8,
-    marginBottom: 24,
-  },
-  termsText: {
-    fontSize: 13,
-    color: '#64748b',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  link: {
-    color: '#7c3aed',
-    fontWeight: '600',
-  },
-  button: {
-    height: 56,
-    backgroundColor: '#3b2764',
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonDisabled: {
-    backgroundColor: '#94a3b8',
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  errorText: {
-    color: '#ef4444',
-    marginBottom: 16,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-});
