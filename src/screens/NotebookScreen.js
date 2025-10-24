@@ -190,16 +190,23 @@ export default function NotebookScreen({ navigation }) {
     try {
       const dates = await getReflectionDates(userId, { startDate, endDate });
       const next = {};
-      (Array.isArray(dates) ? dates : []).forEach((d) => {
-        const ds = d?.date;
-        if (typeof ds === "string" && ds.length >= 10) next[ds] = true;
+      (Array.isArray(dates) ? dates : []).forEach((row) => {
+        const ds = dayjs(row?.date).format("YYYY-MM-DD");
+        const t = String(row?.type || "").toLowerCase();
+        if (!ds) return;
+        if (!next[ds]) next[ds] = {};
+        if (t === "self") next[ds].self = true;
+        if (t === "pipo") next[ds].pipo = true;
       });
       setDotDates(next);
+
     } catch (e) {
       console.error("Get reflection dates failed:", e);
       setDotDates({});
     }
   }, [userId, selectedDate]);
+
+
 
   useEffect(() => {
     fetchDots();
@@ -209,13 +216,24 @@ export default function NotebookScreen({ navigation }) {
     fetchCards();
   }, [fetchCards]);
 
+
+
   const markedDates = useMemo(() => {
     const marks = {};
+    console.log(dotDates);
     if (dotDates && typeof dotDates === "object") {
-      Object.keys(dotDates).forEach((d) => {
-        marks[d] = { marked: true, dotColor: "#111" };
+      Object.keys(dotDates).forEach((d0) => {
+        const d = dayjs(d0).format("YYYY-MM-DD");
+        const flags = dotDates[d0] || {};
+        const dots = [];
+        if (flags.pipo) dots.push({ key: "pipo", color: "#E53935", selectedDotColor: "#E53935" });
+        if (flags.self) dots.push({ key: "self", color: "#1E88E5", selectedDotColor: "#1E88E5" });
+        if (dots.length > 0) {
+          marks[d] = { ...(marks[d] || {}), dots };
+        }
       });
     }
+
     marks[selectedDate] = {
       ...(marks[selectedDate] || {}),
       selected: true,
@@ -224,6 +242,8 @@ export default function NotebookScreen({ navigation }) {
     };
     return marks;
   }, [dotDates, selectedDate]);
+
+
 
   const handleSaveReflection = async ({ title, description }) => {
     if (!userId) return;
@@ -243,7 +263,12 @@ export default function NotebookScreen({ navigation }) {
         type: "self",
       });
       await fetchCards();
-      setDotDates((prev) => ({ ...(prev || {}), [selectedDate]: true }));
+      setDotDates((prev) => {
+        const curr = prev || {};
+        const existing = curr[selectedDate] || {};
+        return { ...curr, [selectedDate]: { ...existing, self: true } };
+      });
+
     } catch (e) {
       console.error("Create reflection failed:", e);
     }
@@ -301,6 +326,7 @@ export default function NotebookScreen({ navigation }) {
         <WeekCalendar
           firstDay={1}
           markedDates={markedDates}
+          markingType="multi-dot"
           allowShadow={false}
           style={styles.weekCalendar}
           onDayPress={(d) => setSelectedDate(d.dateString)}
