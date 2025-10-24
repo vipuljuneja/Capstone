@@ -11,12 +11,20 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
   try {
     const { authUid, email, name, profile } = req.body;
 
+    // Validate required fields
+    if (!authUid || !email || !name) {
+      res.status(400).json({ error: 'authUid, email, and name are required' });
+      return;
+    }
+
+    // Check if user already exists
     const existingUser = await User.findOne({ authUid });
     if (existingUser) {
       res.status(400).json({ error: 'User already exists' });
       return;
     }
 
+    // Create new user
     const user = await User.create({
       authUid,
       email,
@@ -26,8 +34,10 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       achievements: []
     });
 
+    console.log('✅ User created in MongoDB:', user._id);
     res.status(201).json({ success: true, data: user });
   } catch (error: any) {
+    console.error('❌ Error creating user:', error);
     res.status(500).json({ error: error.message });
   }
 };

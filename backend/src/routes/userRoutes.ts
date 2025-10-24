@@ -11,7 +11,10 @@ import {
 
 const router = express.Router();
 
-router.post('/', verifyFirebaseToken, createUser);
+// User creation doesn't require auth (happens during signup)
+router.post('/', createUser);
+
+// All other user routes require authentication
 router.get('/:authUid', verifyFirebaseToken, getUserByAuthUid);
 router.put('/:authUid/profile', verifyFirebaseToken, updateUserProfile);
 router.patch('/:authUid/streak', verifyFirebaseToken, updateUserStreak);

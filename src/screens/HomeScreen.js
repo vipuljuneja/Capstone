@@ -54,6 +54,16 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  // Safety check - if no user data, show loading
+  if (!mongoUser) {
+    return (
+      <View style={[S.wrap, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#3b2764" />
+        <Text style={{ marginTop: 16, color: '#6b7280' }}>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={S.wrap}>
       {/* Scrollable content */}
