@@ -41,6 +41,11 @@ export default function AuthCard({
       </View>
 
       <View style={[styles.card, style]}>
+        {/* Left Paw */}
+        <View style={styles.leftPaw} />
+        {/* Right Paw */}
+        <View style={styles.rightPaw} />
+        
         <Text style={styles.title}>{title}</Text>
         {children}
       </View>
@@ -59,10 +64,10 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   blobImage: {
-    width: 160,
-    height: 160,
+    width: 200,
+    height: 200,
     resizeMode: 'contain',
-    marginBottom: -19,
+    marginBottom: -40,
   },
   card: {
     flex: 1,
@@ -87,6 +92,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingTop: 10,
     paddingBottom: 10,
+  },
+  leftPaw: {
+    position: 'absolute',
+    top: -10,
+    left: '39%',
+    width: 30,
+    height: 25,
+    borderRadius: 20,
+    backgroundColor: '#EC7CFF',
+    zIndex: 3,
+  },
+  rightPaw: {
+    position: 'absolute',
+    top: -10,
+    right: '52%',
+    width: 30,
+    height: 25,
+    borderRadius: 20,
+    backgroundColor: '#EC7CFF',
+    zIndex: 3,
   },
 });
 
