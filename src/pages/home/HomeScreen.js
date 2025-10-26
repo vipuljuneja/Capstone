@@ -1,4 +1,3 @@
-// src/screens/home/HomeScreen.js
 import React, { useState } from 'react';
 import {
   View,
@@ -6,12 +5,22 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Image,
+  Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+
+import NotebookIcon from '../../../assets/icons/notebook.svg';
+import MailboxIcon from '../../../assets/icons/mailbox.svg';
+import MicIcon from '../../../assets/icons/mic.svg';
+import ProfileIcon from '../../../assets/icons/profile.svg';
+import EllipseIcon from '../../../assets/icons/ellipse3d.svg';
 
 export default function HomeScreen() {
   const [visible, setVisible] = useState(false);
   const navigation = useNavigation();
+  const screenWidth = Dimensions.get('window').width;
+  const screenHeight = Dimensions.get('window').height;
 
   const scenarios = [
     {
@@ -36,16 +45,41 @@ export default function HomeScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.icon}>📖</Text>
-        <Text style={styles.icon}>📦</Text>
-        <View style={styles.profile}>
-          <Text>😊</Text>
+        <View style={styles.headerIcon}>
+          <TouchableOpacity
+            style={{
+              backgroundColor: 'orange',
+              padding: 16,
+              borderRadius: '50%',
+            }}
+          >
+            <NotebookIcon width={32} height={32} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{
+              backgroundColor: 'orange',
+              padding: 16,
+              borderRadius: '50%',
+            }}
+          >
+            <MailboxIcon width={32} height={32} />
+          </TouchableOpacity>
+        </View>
+        <View>
+          <TouchableOpacity
+            style={{
+              backgroundColor: 'orange',
+              padding: 16,
+              borderRadius: '50%',
+            }}
+          >
+            <ProfileIcon width={32} height={32} />
+          </TouchableOpacity>
         </View>
       </View>
 
       {/* Content */}
       <View style={styles.content}>
-        {/* Scenarios - Always rendered, hidden with opacity */}
         <View
           style={[
             styles.scenariosWrapper,
@@ -75,12 +109,13 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
-        {/* Character - Always rendered, changes size */}
-        <View style={visible ? styles.characterSmall : styles.character}>
-          <Text style={visible ? { fontSize: 50 } : { fontSize: 70 }}>💧</Text>
-        </View>
+        {/* Character */}
+        <Image
+          source={require('../../../assets/pipo_set.png')}
+          style={{ height: screenHeight * 0.4 }}
+        />
 
-        {/* Close Button - Always rendered, hidden with opacity */}
+        {/* Close Button */}
         <TouchableOpacity
           style={[styles.close, { opacity: visible ? 1 : 0 }]}
           onPress={() => setVisible(false)}
@@ -90,7 +125,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Mic Button - Always rendered, hidden with opacity */}
+      {/* Mic Button */}
       <View
         style={[
           styles.micWrapper,
@@ -98,11 +133,23 @@ export default function HomeScreen() {
         ]}
       >
         <TouchableOpacity
-          style={styles.mic}
+          style={{
+            borderColor: 'blue',
+            // borderWidth: 1,
+            padding: 16,
+            borderRadius: '50%',
+          }}
           onPress={() => setVisible(true)}
           disabled={visible}
         >
-          <Text style={{ fontSize: 28 }}>🎤</Text>
+          <View
+            style={{
+              backgroundColor: 'orange',
+              width: 100,
+              height: 100,
+              borderRadius: '50%',
+            }}
+          ></View>
         </TouchableOpacity>
       </View>
     </View>
@@ -117,18 +164,15 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 15,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  headerIcon: {
+    flexDirection: 'row',
+    gap: 16,
   },
   icon: {
-    fontSize: 28,
-  },
-  profile: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#B8A4E8',
-    justifyContent: 'center',
-    alignItems: 'center',
+    fontSize: 32,
   },
   content: {
     flex: 1,
@@ -214,5 +258,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  startImage: {
+    width: 200,
+    height: 200,
   },
 });

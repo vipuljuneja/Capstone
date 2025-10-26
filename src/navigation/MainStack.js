@@ -73,7 +73,7 @@ export default function MainStack() {
       <Stack.Screen
         name="Levels"
         component={HomeScreenLevels}
-        options={{ title: 'Practice Levels' }}
+        options={{ title: 'Practice Levels', headerShown: false }}
       />
 
       {/* <Stack.Screen
