@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, ScrollView, Image } from 'react-native';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  ScrollView,
+  Image,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -14,10 +22,10 @@ export default function HomeScreen({ navigation }) {
   useFocusEffect(
     React.useCallback(() => {
       refreshMongoUser();
-    }, [])
+    }, []),
   );
 
-  const getSeverityBadgeStyle = (level) => {
+  const getSeverityBadgeStyle = level => {
     const styles = {
       LOW: { bg: '#dcfce7', text: '#166534' },
       MILD: { bg: '#fef3c7', text: '#92400e' },
@@ -31,7 +39,7 @@ export default function HomeScreen({ navigation }) {
     pipo_set: require('../../assets/pipo_set.png'),
     bro_set: require('../../assets/bro_set.png'),
     cherry_set: require('../../assets/cherry_set.png'),
-    mshrom_set: require('../../assets/mshrom_set.png')
+    mshrom_set: require('../../assets/mshrom_set.png'),
   };
 
   const getUserAvatar = () => {
@@ -57,7 +65,9 @@ export default function HomeScreen({ navigation }) {
   // Safety check - if no user data, show loading
   if (!mongoUser) {
     return (
-      <View style={[S.wrap, { justifyContent: 'center', alignItems: 'center' }]}>
+      <View
+        style={[S.wrap, { justifyContent: 'center', alignItems: 'center' }]}
+      >
         <ActivityIndicator size="large" color="#3b2764" />
         <Text style={{ marginTop: 16, color: '#6b7280' }}>Loading...</Text>
       </View>
@@ -80,13 +90,13 @@ export default function HomeScreen({ navigation }) {
             <View
               style={[
                 S.severityBadge,
-                { backgroundColor: getSeverityBadgeStyle(severityLevel).bg }
+                { backgroundColor: getSeverityBadgeStyle(severityLevel).bg },
               ]}
             >
               <Text
                 style={[
                   S.severityText,
-                  { color: getSeverityBadgeStyle(severityLevel).text }
+                  { color: getSeverityBadgeStyle(severityLevel).text },
                 ]}
               >
                 Anxiety Level: {severityLevel}
@@ -97,7 +107,9 @@ export default function HomeScreen({ navigation }) {
 
         <View style={S.menu}>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Article', { userId: user?.uid })}
+            onPress={() =>
+              navigation.navigate('Article', { userId: user?.uid })
+            }
             style={S.card}
           >
             <Text style={S.icon}>📰</Text>
@@ -107,7 +119,10 @@ export default function HomeScreen({ navigation }) {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.navigate('Levels')} style={S.card}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Levels')}
+            style={S.card}
+          >
             <Text style={S.icon}>🎯</Text>
             <View style={S.cardBody}>
               <Text style={S.title}>Practice Levels</Text>
@@ -116,7 +131,9 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => navigation.navigate('Last7Days', { userId: user?.uid })}
+            onPress={() =>
+              navigation.navigate('Last7Days', { userId: user?.uid })
+            }
             style={S.card}
           >
             <Text style={S.icon}>🗓️</Text>
@@ -126,7 +143,10 @@ export default function HomeScreen({ navigation }) {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.navigate('Notebook')} style={S.card}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Notebook')}
+            style={S.card}
+          >
             <Text style={S.icon}>📓</Text>
             <View style={S.cardBody}>
               <Text style={S.title}>Notebook</Text>
@@ -134,7 +154,10 @@ export default function HomeScreen({ navigation }) {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.navigate('Onboarding')} style={S.card}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Onboarding')}
+            style={S.card}
+          >
             <Text style={S.icon}>🧠</Text>
             <View style={S.cardBody}>
               <Text style={S.title}>Anxiety Assessment</Text>
@@ -142,7 +165,10 @@ export default function HomeScreen({ navigation }) {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.navigate('BookmarkedArticles')} style={S.card}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('BookmarkedArticles')}
+            style={S.card}
+          >
             <Icon name="bookmark" size={32} color="#38bdf8" style={S.icon} />
             <View style={S.cardBody}>
               <Text style={S.title}>Bookmarked Articles</Text>
@@ -150,7 +176,10 @@ export default function HomeScreen({ navigation }) {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={S.card}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Profile')}
+            style={S.card}
+          >
             <Text style={S.icon}>⚙️</Text>
             <View style={S.cardBody}>
               <Text style={S.title}>Profile Settings</Text>
@@ -167,7 +196,11 @@ export default function HomeScreen({ navigation }) {
           style={[S.logout, signingOut && S.disabled]}
           disabled={signingOut}
         >
-          {signingOut ? <ActivityIndicator color="#fff" /> : <Text style={S.logoutTxt}>Log Out</Text>}
+          {signingOut ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={S.logoutTxt}>Log Out</Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -190,7 +223,12 @@ const S = StyleSheet.create({
     resizeMode: 'contain',
     marginBottom: 16,
   },
-  welcome: { fontSize: 28, fontWeight: '700', color: '#0f172a', marginBottom: 8 },
+  welcome: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 8,
+  },
   email: { fontSize: 14, color: '#6b7280', marginBottom: 12 },
   severityBadge: {
     paddingHorizontal: 16,
@@ -240,5 +278,10 @@ const S = StyleSheet.create({
     elevation: 4,
   },
   disabled: { opacity: 0.6 },
-  logoutTxt: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 1 },
+  logoutTxt: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
 });
