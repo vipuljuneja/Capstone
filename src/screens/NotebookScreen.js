@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
   SafeAreaView,
   View,
@@ -12,6 +12,7 @@ import {
   Modal,
   KeyboardAvoidingView,
   ActivityIndicator,
+  Image
 } from "react-native";
 import dayjs from "dayjs";
 import { getReflectionsByUser, createReflection, getReflectionDates, updateReflection, deleteReflection } from "../services/api";
@@ -91,6 +92,97 @@ const SR = StyleSheet.create({
   },
 });
 
+function SupportModal({ visible, onClose, onGoSupport }) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={M.backdrop}>
+        <View style={M.card}>
+          <Pressable onPress={onClose} hitSlop={12} style={M.close}>
+            <MaterialIcons name="close" size={24} color="#111" />
+          </Pressable>
+
+            <Image source={require('../../assets/pipo-heart.png')} style={M.illust} resizeMode="contain" />
+          
+          <Text style={M.bodyLine}>It sounds like you might be in pain.</Text>
+          <Text style={M.bodyLine}>You don’t have to face this alone.</Text>
+          <Text style={[M.bodyLine, { marginBottom: 22 }]}>Help is available right now.</Text>
+
+          <Pressable onPress={onGoSupport} style={M.primary}>
+            <Text style={M.primaryText}>GO SUPPORT</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const M = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  card: {
+    width: "88%",
+    maxWidth: 360,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    paddingHorizontal: 24,
+    paddingTop: 28,
+    paddingBottom: 24,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.15,
+        shadowRadius: 20,
+        shadowOffset: { width: 0, height: 8 },
+      },
+      android: { elevation: 8 },
+    }),
+  },
+  close: { position: "absolute", top: 14, right: 14 },
+  illust: {
+    width: 120,
+    height: 120,
+    alignSelf: "center",
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  illustFallback: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#EDE7FF",
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  bodyLine: {
+    fontSize: 16,
+    lineHeight: 22,
+    color: "#222",
+    textAlign: "center",
+  },
+  primary: {
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#342E4E",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 6,
+  },
+  primaryText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+});
+
 function SelfReflectionCard({ title, description, onEdit, onDelete }) {
   return (
     <View style={SR.card}>
@@ -139,6 +231,9 @@ export default function NotebookScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState("pipo");
   const [fullCalendarVisible, setFullCalendarVisible] = useState(false);
   const [writerOpen, setWriterOpen] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false); 
+  const goingToSupportRef = useRef(false);
+
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -457,7 +552,7 @@ export default function NotebookScreen({ navigation }) {
           source={require('../../assets/Tab_mailbox.png')}
           style={[styles.tabGroup, { overflow: 'hidden' }]}
           imageStyle={{ borderRadius: 26 }}
-          >  
+        >
           <Pressable
             style={[styles.tabButton, activeTab === "pipo" && styles.tabActive]}
             onPress={() => setActiveTab("pipo")}
@@ -515,6 +610,9 @@ export default function NotebookScreen({ navigation }) {
                     setEditingSelf(null);
                   }
                 }}
+                onHarmfulDetected={() => {
+                  setShowSupportModal(true);
+                }}
               />
 
 
@@ -522,6 +620,22 @@ export default function NotebookScreen({ navigation }) {
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
+      <SupportModal
+        visible={showSupportModal}
+        onClose={() => setShowSupportModal(false)}
+        onGoSupport={() => {
+          if (goingToSupportRef.current) return;       
+          goingToSupportRef.current = true;
+
+          setShowSupportModal(false);
+
+          requestAnimationFrame(() => {
+            navigation.navigate("EmotionalSupport");   
+            setTimeout(() => { goingToSupportRef.current = false; }, 300);
+          });
+        }}
+      />
+
     </SafeAreaView>
   );
 }

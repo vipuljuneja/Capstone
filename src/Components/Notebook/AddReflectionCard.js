@@ -2,12 +2,24 @@ import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View, TextInput, Pressable } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 
+const HARMFUL_WORDS = [
+  "suicide","kill myself","end my life","want to die","self harm","self-harm",
+  "hurt myself","cut myself","i can't go on","i cant go on","no reason to live",
+  "take my life","ending it","depressed","hopeless","worthless"
+].map(s => s.toLowerCase());
+
+const looksHarmful = (title, desc) => {
+  const t = `${title || ""} ${desc || ""}`.toLowerCase();
+  return HARMFUL_WORDS.some(k => t.includes(k));
+};
+
 export default function AddReflectionCard({
   selectedDate,
   onSave,
   onCancel,
   initialTitle,
   initialDescription,
+  onHarmfulDetected,
 }) {
   const [title, setTitle] = useState(initialTitle || "");
   const [desc, setDesc] = useState(initialDescription || "");
@@ -19,13 +31,8 @@ export default function AddReflectionCard({
     return () => { isMountedRef.current = false; };
   }, []);
 
-  useEffect(() => {
-    setTitle(initialTitle || "");
-  }, [initialTitle]);
-
-  useEffect(() => {
-    setDesc(initialDescription || "");
-  }, [initialDescription]);
+  useEffect(() => { setTitle(initialTitle || ""); }, [initialTitle]);
+  useEffect(() => { setDesc(initialDescription || ""); }, [initialDescription]);
 
   const canSave = title.trim().length > 0 && !saving;
 
@@ -34,6 +41,10 @@ export default function AddReflectionCard({
     setSaving(true);
     try {
       await onSave?.({ title: title.trim(), description: desc.trim() });
+
+      if (looksHarmful(title, desc)) {
+        onHarmfulDetected?.(); 
+      }
     } finally {
       if (isMountedRef.current) setSaving(false);
     }
