@@ -16,9 +16,9 @@ import { useAuth } from '../contexts/AuthContext';
 
 // --- Blob assets ---
 import articlePipo from '../../assets/pipo/articlePipo.png';
-import blobGreen from '../../assets/pipo/7e242616b3d529a8f8dd05da34e0e0b8dd136422.png';
-import blobPurple from '../../assets/pipo/344558bb23e53e1ac26836f1d40539906baf4962.png';
-import blobYellow from '../../assets/pipo/b5e3eb6900aac55a95604b1d8fd9eb36dab05d2f.png';
+const blobGreen = require('../../assets/pipo/pipo-hi.png');
+const blobPurple = require('../../assets/pipo/pipo-coffee.png');
+const blobYellow = require('../../assets/pipo/pipo-job.png');
 
 const blobImages = [articlePipo, blobGreen, blobPurple, blobYellow];
 const pastelColors = [
@@ -33,7 +33,7 @@ const pastelColors = [
 
 // --- Card component ---
 const BookmarkedCard = ({ article, onPress, onRemoveBookmark }) => {
-  const formatDate = (dateString) => {
+  const formatDate = dateString => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       month: 'long',
@@ -70,7 +70,7 @@ const BookmarkedCard = ({ article, onPress, onRemoveBookmark }) => {
 
         <View style={styles.cardRightSection}>
           <Pressable
-            onPress={(e) => {
+            onPress={e => {
               e.stopPropagation();
               onRemoveBookmark(article);
             }}
@@ -92,10 +92,7 @@ const BookmarkedCard = ({ article, onPress, onRemoveBookmark }) => {
   );
 };
 
-export default function BookmarkedArticles({
-  navigation,
-  onSelectArticle,
-}) {
+export default function BookmarkedArticles({ navigation, onSelectArticle }) {
   const { user } = useAuth();
   const userId = user?.uid;
   const [articles, setArticles] = useState([]);
@@ -107,7 +104,7 @@ export default function BookmarkedArticles({
     fetchBookmarkedArticles(userId);
   }, [userId]);
 
-  const fetchBookmarkedArticles = async (id) => {
+  const fetchBookmarkedArticles = async id => {
     try {
       setLoading(true);
       const response = await getUserBookmarkedArticles(id);
@@ -128,17 +125,17 @@ export default function BookmarkedArticles({
     }
   };
 
-  const handleRemoveBookmark = async (article) => {
+  const handleRemoveBookmark = async article => {
     try {
       if (!userId) return;
       await removeBookmark(userId, article._id);
-      setArticles((prev) => prev.filter((a) => a._id !== article._id));
+      setArticles(prev => prev.filter(a => a._id !== article._id));
     } catch (error) {
       console.error('Error removing bookmark:', error);
     }
   };
 
-  const handleSelectArticle = (article) => {
+  const handleSelectArticle = article => {
     if (onSelectArticle) {
       onSelectArticle(article);
       return;
@@ -149,8 +146,8 @@ export default function BookmarkedArticles({
     }
   };
 
-  const filteredArticles = articles.filter((a) =>
-    a.title?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredArticles = articles.filter(a =>
+    a.title?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   if (loading) {
@@ -174,7 +171,12 @@ export default function BookmarkedArticles({
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <Icon name="search" size={18} color="#9ca3af" style={{ marginRight: 8 }} />
+        <Icon
+          name="search"
+          size={18}
+          color="#9ca3af"
+          style={{ marginRight: 8 }}
+        />
         <TextInput
           placeholder="Search"
           placeholderTextColor="#9ca3af"
@@ -187,7 +189,7 @@ export default function BookmarkedArticles({
       {/* Bookmarked Articles List */}
       <FlatList
         data={filteredArticles}
-        keyExtractor={(item) => item._id}
+        keyExtractor={item => item._id}
         renderItem={({ item }) => (
           <BookmarkedCard
             article={item}
@@ -272,7 +274,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  cardContent: { 
+  cardContent: {
     flex: 1,
     justifyContent: 'space-between',
     paddingRight: 8,
@@ -315,8 +317,8 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     paddingRight: 8,
   },
-  cardMeta: { 
-    fontSize: 12, 
+  cardMeta: {
+    fontSize: 12,
     color: '#6b7280',
     marginTop: 4,
   },
@@ -328,7 +330,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 8,
   },
-  cardImage: { 
+  cardImage: {
     width: '100%',
     height: '100%',
   },

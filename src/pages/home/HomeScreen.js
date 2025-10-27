@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,18 +9,41 @@ import {
   Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../../contexts/AuthContext';
+import LinearGradient from 'react-native-linear-gradient';
 
 import NotebookIcon from '../../../assets/icons/notebook.svg';
 import MailboxIcon from '../../../assets/icons/mailbox.svg';
-import MicIcon from '../../../assets/icons/mic.svg';
 import ProfileIcon from '../../../assets/icons/profile.svg';
-import EllipseIcon from '../../../assets/icons/ellipse3d.svg';
+import CloseIcon from '../../../assets/icons/close.svg';
+
+import CircularIconButton from '../../Components/UI/button/CircularIconButton';
+import AnimatedRippleButton from '../../Components/UI/button/AnimatedRippleButton';
+
+import SceneCard from '../../Components/UI/card/SceneCard';
+
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  interpolate,
+  Extrapolate,
+} from 'react-native-reanimated';
 
 export default function HomeScreen() {
   const [visible, setVisible] = useState(false);
   const navigation = useNavigation();
+
+  const { user } = useAuth();
+
   const screenWidth = Dimensions.get('window').width;
   const screenHeight = Dimensions.get('window').height;
+
+  const contentProgress = useSharedValue(0);
+
+  useEffect(() => {
+    contentProgress.value = withTiming(visible ? 1 : 0, { duration: 400 });
+  }, [visible]);
 
   const scenarios = [
     {
@@ -41,117 +64,157 @@ export default function HomeScreen() {
     });
   };
 
+  const contentAnimStyle = useAnimatedStyle(() => ({
+    opacity: contentProgress.value,
+    position: contentProgress.value === 0 ? 'absolute' : 'absolute',
+    top: '10%',
+    left: 0,
+    right: 0,
+    // bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    pointerEvents: contentProgress.value === 0 ? 'none' : 'auto',
+  }));
+
+  const characterAnimStyle = useAnimatedStyle(() => {
+    const size = interpolate(
+      contentProgress.value,
+      [0, 1],
+      [screenHeight * 0.4, screenHeight * 0.25],
+      Extrapolate.CLAMP,
+    );
+    return {
+      width: size,
+      height: size,
+      transform: [
+        {
+          translateY: interpolate(
+            contentProgress.value,
+            [0, 1],
+            [0, screenHeight * 0.18],
+            Extrapolate.CLAMP,
+          ),
+        },
+      ],
+    };
+  });
+
+  const startAnimStyle = useAnimatedStyle(() => ({
+    opacity: 1 - contentProgress.value,
+    transform: [{ scale: 1 - 0.2 * contentProgress.value }],
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: visible ? 'none' : 'auto',
+  }));
+
+  const closeAnimStyle = useAnimatedStyle(() => ({
+    opacity: contentProgress.value,
+    transform: [{ scale: 0.7 + 0.3 * contentProgress.value }],
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: visible ? 'auto' : 'none',
+  }));
+
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerIcon}>
-          <TouchableOpacity
-            style={{
-              backgroundColor: 'orange',
-              padding: 16,
-              borderRadius: '50%',
-            }}
-          >
-            <NotebookIcon width={32} height={32} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={{
-              backgroundColor: 'orange',
-              padding: 16,
-              borderRadius: '50%',
-            }}
-          >
-            <MailboxIcon width={32} height={32} />
-          </TouchableOpacity>
-        </View>
-        <View>
-          <TouchableOpacity
-            style={{
-              backgroundColor: 'orange',
-              padding: 16,
-              borderRadius: '50%',
-            }}
-          >
-            <ProfileIcon width={32} height={32} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Content */}
-      <View style={styles.content}>
-        <View
-          style={[
-            styles.scenariosWrapper,
-            { opacity: visible ? 1 : 0, height: visible ? 180 : 0 },
-          ]}
-        >
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            pointerEvents={visible ? 'auto' : 'none'}
-          >
-            {scenarios.map(item => (
-              <View key={item.id} style={styles.card}>
-                <View style={styles.cardEmoji}>
-                  <Text style={{ fontSize: 24 }}>{item.emoji}</Text>
-                </View>
-                <Text style={styles.cardTitle}>{item.title}</Text>
-                <Text style={styles.cardDesc}>{item.desc}</Text>
-                <TouchableOpacity
-                  style={styles.button}
-                  onPress={() => handlePractice(item)}
-                >
-                  <Text style={styles.buttonText}>PRACTICE</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Character */}
-        <Image
-          source={require('../../../assets/pipo_set.png')}
-          style={{ height: screenHeight * 0.4 }}
-        />
-
-        {/* Close Button */}
-        <TouchableOpacity
-          style={[styles.close, { opacity: visible ? 1 : 0 }]}
-          onPress={() => setVisible(false)}
-          disabled={!visible}
-        >
-          <Text style={{ fontSize: 18 }}>✕</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Mic Button */}
-      <View
-        style={[
-          styles.micWrapper,
-          { opacity: visible ? 0 : 1, height: visible ? 0 : 'auto' },
-        ]}
+      <LinearGradient
+        colors={['#C7DFFF', '#EEF3E7', '#FFFFFF']}
+        locations={[0, 0.5, 1]}
+        style={{ flex: 1 }}
       >
-        <TouchableOpacity
-          style={{
-            borderColor: 'blue',
-            // borderWidth: 1,
-            padding: 16,
-            borderRadius: '50%',
-          }}
-          onPress={() => setVisible(true)}
-          disabled={visible}
-        >
-          <View
-            style={{
-              backgroundColor: 'orange',
-              width: 100,
-              height: 100,
-              borderRadius: '50%',
-            }}
-          ></View>
-        </TouchableOpacity>
-      </View>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerIcon}>
+            <CircularIconButton
+              style={{ padding: 24 }}
+              onPress={() => {
+                navigation.navigate('Article', { userId: user?.uid });
+              }}
+            >
+              <NotebookIcon width={32} height={32} />
+            </CircularIconButton>
+            <CircularIconButton
+              style={{ padding: 24 }}
+              onPress={() => navigation.navigate('Notebook')}
+            >
+              <MailboxIcon width={32} height={32} />
+            </CircularIconButton>
+          </View>
+          <View>
+            <CircularIconButton
+              style={{ padding: 24 }}
+              onPress={() => navigation.navigate('Profile')}
+            >
+              <ProfileIcon width={32} height={32} />
+            </CircularIconButton>
+          </View>
+        </View>
+
+        {/* Content */}
+        <View style={styles.content}>
+          <Animated.View style={[styles.scenariosWrapper, contentAnimStyle]}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              pointerEvents={visible ? 'auto' : 'none'}
+            >
+              {scenarios.map(item => (
+                <SceneCard
+                  key={item.id}
+                  iconSource={require('../../../assets/pipo/pipo-coffee.png')}
+                  sceneNumber={item.id}
+                  title={item.title}
+                  onPress={() => {
+                    handlePractice(item);
+                  }}
+                />
+              ))}
+            </ScrollView>
+          </Animated.View>
+
+          {/* Character */}
+          <Animated.Image
+            source={require('../../../assets/pipo_set.png')}
+            style={[characterAnimStyle, { resizeMode: 'contain' }]}
+          />
+        </View>
+
+        {/* Bottom Buttons `*/}
+        <View style={styles.micWrapper}>
+          <Animated.View style={startAnimStyle}>
+            <AnimatedRippleButton
+              size={160}
+              diskSize={80}
+              rippleColor="rgba(113,99,168,0.5)"
+              onPress={() => setVisible(true)}
+              disabled={visible}
+            >
+              <Image
+                source={require('../../../assets/icons/purple-button.png')}
+                style={{ width: 80, height: 80, borderRadius: 50 }}
+                resizeMode="cover"
+              />
+            </AnimatedRippleButton>
+          </Animated.View>
+          <Animated.View style={closeAnimStyle}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setVisible(false)}
+              disabled={!visible}
+            >
+              <CloseIcon width={24} height={24} />
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </LinearGradient>
     </View>
   );
 }
@@ -159,7 +222,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E8F4F8',
   },
   header: {
     flexDirection: 'row',
@@ -178,37 +240,15 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 16,
   },
   scenariosWrapper: {
-    marginBottom: 15,
+    marginBottom: 24,
     overflow: 'hidden',
+    width: '100%',
+    minHeight: 250,
   },
-  card: {
-    width: 230,
-    margin: 8,
-    padding: 15,
-    backgroundColor: 'white',
-    borderRadius: 15,
-  },
-  cardEmoji: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#E8E8F8',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 6,
-  },
-  cardDesc: {
-    fontSize: 11,
-    color: '#666',
-    marginBottom: 10,
-  },
+
   button: {
     backgroundColor: '#4A4458',
     paddingVertical: 10,
@@ -220,47 +260,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 13,
   },
-  character: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: '#D4C4F8',
-    justifyContent: 'center',
-    alignItems: 'center',
-    margin: 20,
-  },
-  characterSmall: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#D4C4F8',
-    justifyContent: 'center',
-    alignItems: 'center',
-    margin: 10,
-  },
-  close: {
-    width: 45,
-    height: 45,
-    borderRadius: 23,
-    backgroundColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  micWrapper: {
-    alignItems: 'center',
-    paddingBottom: 30,
-  },
-  mic: {
+  closeButton: {
     width: 60,
     height: 60,
     borderRadius: 30,
     backgroundColor: 'white',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+    marginBottom: 52,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
   },
-  startImage: {
-    width: 200,
-    height: 200,
+  micWrapper: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    minHeight: 100,
+    flex: 0,
+    position: 'relative',
+    height: 100,
   },
 });
