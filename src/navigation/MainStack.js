@@ -15,6 +15,7 @@ import ChangePasswordScreen from '../Components/ProfileSettings/ChangePasswordSc
 // import Levels from '../pages/levels/Levels.js';
 // import ResultsScreen from '../pages/levels/Results.js';
 import PipoDetailScreen from '../Components/Notebook/PipoDetailScreen';
+import EmotionalSupportScreen from '../screens/EmotionalSupportScreen.js';
 
 import HomeScreenLevels from '../pages/home/HomeScreen.js';
 import LevelsOptions from '../pages/home/LevelOptionsScreen.js';
@@ -56,6 +57,15 @@ export default function MainStack() {
         name="Article"
         component={DailyArticleMain}
         options={{ title: 'Daily Article' }}
+      />
+
+      <Stack.Screen
+        name="EmotionalSupport"
+        component={EmotionalSupportScreen}
+        options={{
+          title: 'Emotional Support',
+          headerBackTitleVisible: false,
+        }}
       />
 
       <Stack.Screen
