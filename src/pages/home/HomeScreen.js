@@ -21,6 +21,7 @@ import CircularIconButton from '../../Components/UI/button/CircularIconButton';
 import AnimatedRippleButton from '../../Components/UI/button/AnimatedRippleButton';
 
 import SceneCard from '../../Components/UI/card/SceneCard';
+import scenarioService from '../../services/scenarioService';
 
 import Animated, {
   useSharedValue,
@@ -32,6 +33,8 @@ import Animated, {
 
 export default function HomeScreen() {
   const [visible, setVisible] = useState(false);
+  const [scenarios, setScenarios] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
 
   const { user } = useAuth();
@@ -45,22 +48,37 @@ export default function HomeScreen() {
     contentProgress.value = withTiming(visible ? 1 : 0, { duration: 400 });
   }, [visible]);
 
-  const scenarios = [
-    {
-      id: 1,
-      title: 'Ordering Coffee',
-      desc: 'Practice ordering drinks',
-      emoji: '☕',
-    },
-    { id: 2, title: 'Restaurant', desc: 'Order food confidently', emoji: '🍽️' },
-    { id: 3, title: 'Shopping', desc: 'Shopping conversations', emoji: '🛍️' },
-  ];
+  // Load scenarios from API
+  useEffect(() => {
+    const loadScenarios = async () => {
+      try {
+        setLoading(true);
+        const fetchedScenarios = await scenarioService.getPublishedScenarios();
+        console.log('Fetched scenarios:', fetchedScenarios.length, fetchedScenarios);
+        setScenarios(fetchedScenarios);
+      } catch (error) {
+        console.error('Failed to load scenarios:', error);
+        // Fallback scenarios will be used automatically by the service
+        setScenarios([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadScenarios();
+  }, []);
+
+  // Log when scenarios state updates
+  useEffect(() => {
+    console.log('Scenarios state:', scenarios.length, scenarios);
+  }, [scenarios]);
 
   const handlePractice = scenario => {
     navigation.navigate('LevelOptions', {
       scenarioTitle: scenario.title,
       scenarioEmoji: scenario.emoji,
-      scenarioId: scenario.id,
+      scenarioId: scenario._id, // Use MongoDB _id instead of custom id
+      scenarioDescription: scenario.description,
     });
   };
 
@@ -166,17 +184,27 @@ export default function HomeScreen() {
               showsHorizontalScrollIndicator={false}
               pointerEvents={visible ? 'auto' : 'none'}
             >
-              {scenarios.map(item => (
-                <SceneCard
-                  key={item.id}
-                  iconSource={require('../../../assets/pipo/pipo-coffee.png')}
-                  sceneNumber={item.id}
-                  title={item.title}
-                  onPress={() => {
-                    handlePractice(item);
-                  }}
-                />
-              ))}
+              {loading ? (
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.loadingText}>Loading scenarios...</Text>
+                </View>
+              ) : scenarios.length > 0 ? (
+                scenarios.map(item => (
+                  <SceneCard
+                    key={item._id}
+                    iconSource={require('../../../assets/pipo/pipo-coffee.png')}
+                    sceneNumber={item.id}
+                    title={item.title}
+                    onPress={() => {
+                      handlePractice(item);
+                    }}
+                  />
+                ))
+              ) : (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>No scenarios available</Text>
+                </View>
+              )}
             </ScrollView>
           </Animated.View>
 
@@ -279,5 +307,27 @@ const styles = StyleSheet.create({
     flex: 0,
     position: 'relative',
     height: 100,
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 200,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
+  errorContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 200,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#999',
+    textAlign: 'center',
   },
 });

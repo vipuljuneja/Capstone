@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as controllers from '../controllers/controllers';
+import simpleScenarioRoutes from './simpleScenarioRoutes';
 
 const router = Router();
 
@@ -59,28 +60,6 @@ router.get('/assessment-responses/user/:userId', controllers.getUserAssessmentRe
 
 // GET /api/assessment-responses/user/:userId/latest - Get latest response for user
 router.get('/assessment-responses/user/:userId/latest', controllers.getLatestAssessmentResponse);
-
-// ============================================
-// SCENARIO ROUTES
-// ============================================
-
-// POST /api/scenarios - Create new scenario
-router.post('/scenarios', controllers.createScenario);
-
-// GET /api/scenarios - Get all scenarios (with optional status filter)
-router.get('/scenarios', controllers.getAllScenarios);
-
-// GET /api/scenarios/published - Get only published scenarios
-router.get('/scenarios/published', controllers.getPublishedScenarios);
-
-// GET /api/scenarios/:id - Get scenario by ID
-router.get('/scenarios/:id', controllers.getScenarioById);
-
-// PUT /api/scenarios/:id - Update scenario
-router.put('/scenarios/:id', controllers.updateScenario);
-
-// DELETE /api/scenarios/:id - Delete scenario and cascade related data
-router.delete('/scenarios/:id', controllers.deleteScenario);
 
 // ============================================
 // LEVEL PROMPT ROUTES
@@ -244,5 +223,12 @@ router.put('/reflections/:reflectionId', controllers.updateReflection);
 
 // DELETE /api/reflections/:reflectionId - Delete reflection
 router.delete('/reflections/:reflectionId', controllers.deleteReflection);
+
+// ============================================
+// SCENARIO ROUTES (SIMPLE)
+// ============================================
+
+// Mount simple scenario routes
+router.use('/scenarios', simpleScenarioRoutes);
 
 export default router;

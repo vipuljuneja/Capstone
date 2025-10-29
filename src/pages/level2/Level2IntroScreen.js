@@ -11,12 +11,14 @@ const Level2IntroScreen = () => {
     levelTitle = 'Real Talk',
     scenarioTitle = 'Ordering Coffee',
     scenarioDescription = 'Time to go all in! Combine voice and facial expressions like a pro.',
+    scenarioId,
   } = route.params || {};
 
   const handleStart = () => {
     navigation.navigate('Level2Screen', {
       levelNumber,
       scenarioTitle,
+      scenarioId,
     });
   };
 

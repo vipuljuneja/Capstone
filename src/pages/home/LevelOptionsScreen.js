@@ -7,9 +7,25 @@ import {
   ScrollView,
   StyleSheet,
 } from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
+import { fetchAndLogUserCards } from '../../services/sessionSaver';
 
 export default function LevelOptionsScreen({ route, navigation }) {
-  const { scenarioTitle, scenarioEmoji } = route.params;
+  const { scenarioTitle, scenarioEmoji, scenarioId, scenarioDescription } = route.params;
+  
+  // Use the actual scenario ID from the API instead of hardcoded fallback
+  const finalScenarioId = scenarioId || '507f1f77bcf86cd799439011';
+  const { mongoUser } = useAuth();
+
+  // Test function to manually fetch cards
+  const testFetchCards = async () => {
+    if (mongoUser?._id) {
+      console.log('🧪 TESTING CARD FETCH...');
+      await fetchAndLogUserCards(mongoUser._id);
+    } else {
+      console.log('❌ No user ID available for testing');
+    }
+  };
 
   const levels = [
     {
@@ -51,6 +67,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
         levelTitle: level.title.split(' ').slice(0, 2).join(' '), // "Level 2"
         scenarioTitle: scenarioTitle,
         scenarioEmoji: scenarioEmoji,
+        scenarioId: finalScenarioId,
       });
     } else {
       // Level 1 goes directly to intro
@@ -59,6 +76,8 @@ export default function LevelOptionsScreen({ route, navigation }) {
         levelTitle: level.title.split(' ').slice(0, 2).join(' '),
         scenarioTitle: scenarioTitle,
         scenarioEmoji: scenarioEmoji,
+        scenarioId: finalScenarioId,
+        scenarioDescription: scenarioDescription,
       });
     }
   };
@@ -74,7 +93,12 @@ export default function LevelOptionsScreen({ route, navigation }) {
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{scenarioTitle}</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity
+          onPress={testFetchCards}
+          style={styles.testButton}
+        >
+          <Text style={styles.testButtonText}>🃏</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Timeline with Levels */}
@@ -170,6 +194,16 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 28,
     color: '#333',
+  },
+  testButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  testButtonText: {
+    fontSize: 20,
+    color: '#8b5cf6',
   },
   headerTitle: {
     fontSize: 20,

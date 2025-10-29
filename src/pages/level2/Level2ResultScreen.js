@@ -1,5 +1,5 @@
 // src/screens/levels/Level2ResultScreen.js
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,17 +8,33 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSessionSaver } from '../../services/sessionSaver';
 
 const Level2ResultScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const { mongoUser } = useAuth();
+  const { isSaving, savedSessionId, saveError, saveSession } = useSessionSaver();
 
-  const { transcriptionResults = [], facialAnalysisResults = [] } =
-    route.params || {};
+  const { 
+    transcriptionResults = [], 
+    facialAnalysisResults = [],
+    scenarioId,
+    scenarioTitle,
+    scenarioEmoji 
+  } = route.params || {};
+
+  // Use consistent ObjectId fallback for all scenarios
+  const finalScenarioId = '507f1f77bcf86cd799439011';
 
   console.log('📊 Level2 Results received:', {
     transcription: transcriptionResults.length,
     facial: facialAnalysisResults.length,
+    scenarioId: scenarioId,
+    finalScenarioId: finalScenarioId,
+    scenarioTitle: scenarioTitle,
+    scenarioEmoji: scenarioEmoji
   });
 
   // Calculate audio metrics
@@ -80,6 +96,50 @@ const Level2ResultScreen = () => {
   const audioMetrics = calculateAudioMetrics();
   const facialMetrics = calculateFacialMetrics();
 
+  // Auto-save session when component mounts
+  useEffect(() => {
+    const autoSaveSession = async () => {
+      // Skip if already saved or missing required data
+      if (savedSessionId) {
+        console.log('⏭️ Session already saved, skipping...');
+        return;
+      }
+
+      if (!mongoUser?._id) {
+        console.warn('⚠️ Cannot save session: User not logged in');
+        return;
+      }
+
+      if (!finalScenarioId) {
+        console.warn('⚠️ Cannot save session: Scenario ID not provided');
+        return;
+      }
+
+      if (!transcriptionResults || transcriptionResults.length === 0) {
+        console.warn('⚠️ Cannot save session: No transcription results');
+        return;
+      }
+
+      try {
+        console.log('💾 Auto-saving Level 2 session...');
+        
+        await saveSession({
+          userId: mongoUser._id,
+          scenarioId: finalScenarioId,
+          level: 2,
+          transcriptionResults: transcriptionResults,
+          facialAnalysisResults: facialAnalysisResults, // Include facial analysis for Level 2
+        });
+
+        console.log('✅ Level 2 session saved successfully');
+      } catch (error) {
+        console.error('❌ Failed to save Level 2 session:', error);
+      }
+    };
+
+    autoSaveSession();
+  }, []); // Empty dependency array to run only once
+
   // Generate audio feedback
   const generatePaceFeedback = () => {
     if (audioMetrics.avgWpm < 100) {
@@ -129,8 +189,6 @@ const Level2ResultScreen = () => {
   };
 
   const handleNextLevel = () => {
-    const { scenarioTitle, scenarioEmoji } = route.params || {};
-
     navigation.navigate('LevelOptions', {
       scenarioTitle: scenarioTitle || 'Ordering Coffee',
       scenarioEmoji: scenarioEmoji || '☕',
@@ -264,6 +322,23 @@ const Level2ResultScreen = () => {
               {facialMetrics.avgEyeContact}/100
             </Text>
           </View>
+          
+          {/* Session Save Status */}
+          <View style={styles.statsRow}>
+            <Text style={styles.statsLabel}>Session status:</Text>
+            <Text style={[
+              styles.statsValue,
+              { color: savedSessionId ? '#10b981' : isSaving ? '#f59e0b' : '#ef4444' }
+            ]}>
+              {savedSessionId ? 'Saved ✓' : isSaving ? 'Saving...' : 'Not saved'}
+            </Text>
+          </View>
+          
+          {saveError && (
+            <View style={styles.errorRow}>
+              <Text style={styles.errorText}>Save failed: {saveError}</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -342,6 +417,17 @@ const styles = StyleSheet.create({
   },
   statsLabel: { fontSize: 15, color: '#666' },
   statsValue: { fontSize: 15, fontWeight: 'bold', color: '#6B5B95' },
+  errorRow: {
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: '#fef2f2',
+    borderRadius: 6,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#dc2626',
+    textAlign: 'center',
+  },
   bottomButtons: { flexDirection: 'row', padding: 20, gap: 15 },
   retryButton: {
     flex: 1,

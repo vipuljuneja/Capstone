@@ -20,6 +20,7 @@ const { width, height } = Dimensions.get('window');
 const Level2Screen = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const { scenarioTitle, scenarioId } = route.params || {};
 
   const [isRecording, setIsRecording] = useState(false);
   const [avatarReady, setAvatarReady] = useState(false);
@@ -197,7 +198,7 @@ const Level2Screen = () => {
 
     const currentState = avatarRef.current?.getState();
     console.log('Current avatar state before navigation:', currentState);
-    const { scenarioTitle, scenarioEmoji } = route.params || {};
+    const { scenarioEmoji } = route.params || {};
 
     navigation.navigate('Level2ResultScreen', {
       totalQuestions: currentState?.totalLines || 5,
@@ -205,6 +206,7 @@ const Level2Screen = () => {
       facialAnalysisResults: facialAnalysisResultsRef.current,
       scenarioTitle: scenarioTitle || 'Ordering Coffee',
       scenarioEmoji: scenarioEmoji || '☕',
+      scenarioId: scenarioId,
     });
     console.log('Navigation triggered');
   }, [navigation, route.params]);

@@ -1,5 +1,5 @@
 // src/screens/levels/Level1ResultScreen.js
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,32 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSessionSaver } from '../../services/sessionSaver';
 
 const Level1ResultScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const { mongoUser } = useAuth();
+  const { isSaving, savedSessionId, saveError, saveSession } = useSessionSaver();
 
-  const { transcriptionResults = [] } = route.params || {};
+  const { 
+    transcriptionResults = [],
+    scenarioId,
+    scenarioTitle,
+    scenarioEmoji 
+  } = route.params || {};
 
-  console.log('📊 Results screen received:', transcriptionResults);
+  // Use the actual scenario ID from navigation params
+  const finalScenarioId = scenarioId || '507f1f77bcf86cd799439011';
+
+  console.log('📊 Results screen received:', {
+    transcriptionResults: transcriptionResults.length,
+    scenarioId: scenarioId,
+    finalScenarioId: finalScenarioId,
+    scenarioTitle: scenarioTitle,
+    scenarioEmoji: scenarioEmoji
+  });
 
   // Calculate average metrics from all recordings
   const calculateMetrics = () => {
@@ -55,6 +73,50 @@ const Level1ResultScreen = () => {
 
   const metrics = calculateMetrics();
 
+  // Auto-save session when component mounts
+  useEffect(() => {
+    const autoSaveSession = async () => {
+      // Skip if already saved or missing required data
+      if (savedSessionId) {
+        console.log('⏭️ Session already saved, skipping...');
+        return;
+      }
+
+      if (!mongoUser?._id) {
+        console.warn('⚠️ Cannot save session: User not logged in');
+        return;
+      }
+
+      if (!finalScenarioId) {
+        console.warn('⚠️ Cannot save session: Scenario ID not provided');
+        return;
+      }
+
+      if (!transcriptionResults || transcriptionResults.length === 0) {
+        console.warn('⚠️ Cannot save session: No transcription results');
+        return;
+      }
+
+      try {
+        console.log('💾 Auto-saving Level 1 session...');
+        
+        await saveSession({
+          userId: mongoUser._id,
+          scenarioId: finalScenarioId,
+          level: 1,
+          transcriptionResults: transcriptionResults,
+          // No facial analysis for Level 1
+        });
+
+        console.log('✅ Level 1 session saved successfully');
+      } catch (error) {
+        console.error('❌ Failed to save Level 1 session:', error);
+      }
+    };
+
+    autoSaveSession();
+  }, []); // Empty dependency array to run only once
+
   // Generate feedback based on actual data
   const generatePaceFeedback = () => {
     if (metrics.avgWpm < 100) {
@@ -87,9 +149,6 @@ const Level1ResultScreen = () => {
   };
 
   const handleNextLevel = () => {
-    // Get the scenario info from route params if available
-    const { scenarioTitle, scenarioEmoji } = route.params || {};
-
     navigation.navigate('LevelOptions', {
       scenarioTitle: scenarioTitle || 'Ordering Coffee',
       scenarioEmoji: scenarioEmoji || '☕',
@@ -186,6 +245,23 @@ const Level1ResultScreen = () => {
             <Text style={styles.statsLabel}>Total pauses:</Text>
             <Text style={styles.statsValue}>{metrics.totalPauses}</Text>
           </View>
+          
+          {/* Session Save Status */}
+          <View style={styles.statsRow}>
+            <Text style={styles.statsLabel}>Session status:</Text>
+            <Text style={[
+              styles.statsValue,
+              { color: savedSessionId ? '#10b981' : isSaving ? '#f59e0b' : '#ef4444' }
+            ]}>
+              {savedSessionId ? 'Saved ✓' : isSaving ? 'Saving...' : 'Not saved'}
+            </Text>
+          </View>
+          
+          {saveError && (
+            <View style={styles.errorRow}>
+              <Text style={styles.errorText}>Save failed: {saveError}</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -310,6 +386,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: 'bold',
     color: '#6B5B95',
+  },
+  errorRow: {
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: '#fef2f2',
+    borderRadius: 6,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#dc2626',
+    textAlign: 'center',
   },
   bottomButtons: {
     flexDirection: 'row',

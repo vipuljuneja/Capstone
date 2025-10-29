@@ -312,7 +312,7 @@ export const createCompleteSession = async (req: Request, res: Response): Promis
     if (!mongoose.Types.ObjectId.isValid(scenarioId)) {
       res.status(400).json({ 
         error: `Invalid scenarioId format: "${scenarioId}". Must be a valid MongoDB ObjectId (24 character hex string).`,
-        hint: 'Please pass a real scenario ID from your Levels component, not "default-scenario"'
+        hint: 'Please pass a valid ObjectId for scenarioId'
       });
       return;
     }

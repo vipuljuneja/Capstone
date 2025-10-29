@@ -2,7 +2,7 @@ export * from './achievementController';
 export * from './userController';
 export * from './assessmentTemplateController';
 export * from './assessmentController';
-export * from './scenarioController';
+export * from './simpleScenarioController';
 export * from './levelPromptController';
 export * from './mediaJobController';
 export * from './practiceSessionController';

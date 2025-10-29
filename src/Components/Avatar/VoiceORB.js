@@ -23,17 +23,20 @@ const DEEPGRAM_API_KEY = TTS_API_KEY;
 const DG_MODEL = 'aura-2-thalia-en';
 
 const VoiceOrb = forwardRef((props, ref) => {
-  const { onStateChange } = props; // Get the callback prop
+  const { onStateChange, lines } = props; // Accept dynamic lines
 
   const LINES = useMemo(
-    () => [
-      'Hello, how are you?',
-      'Take a deep breath and relax.',
-      "You're doing great—keep going.",
-      'Tell me about your day so far.',
-      'Thanks for practicing with me.',
-    ],
-    [],
+    () => {
+      if (Array.isArray(lines) && lines.length > 0) return lines;
+      return [
+        'Hello, how are you?',
+        'Take a deep breath and relax.',
+        "You're doing great—keep going.",
+        'Tell me about your day so far.',
+        'Thanks for practicing with me.',
+      ];
+    },
+    [lines],
   );
 
   const [idx, setIdx] = useState(0);

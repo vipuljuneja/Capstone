@@ -17,6 +17,7 @@ const Level2NoticeScreen = () => {
     levelTitle = 'Face Time',
     scenarioTitle = 'Ordering Coffee',
     scenarioEmoji = '☕',
+    scenarioId,
   } = route.params || {};
 
   const handleGotIt = () => {
@@ -25,6 +26,7 @@ const Level2NoticeScreen = () => {
       levelTitle,
       scenarioTitle,
       scenarioEmoji,
+      scenarioId,
     });
   };
 

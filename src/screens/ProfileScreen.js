@@ -14,9 +14,24 @@ import {
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { auth } from '../firebase';
 
-
 export default function ProfileScreen({ navigation }) {
     const { mongoUser, refreshMongoUser } = useAuth();
+
+    const getFirebaseToken = async () => {
+        try {
+            const user = auth.currentUser;
+            if (user) {
+                const token = await user.getIdToken();
+                console.log('🔥 Firebase Token:', token);
+                alert(`Token copied to console!\n\nFirst 50 chars: ${token.substring(0, 50)}...`);
+            } else {
+                alert('No user logged in');
+            }
+        } catch (error) {
+            console.error('Error getting token:', error);
+            alert('Error getting token: ' + error.message);
+        }
+    };
     const images = {
         set_lock: require("../../assets/set_lock.png"),
         set_PP: require("../../assets/set_PP.png"),
@@ -57,6 +72,15 @@ export default function ProfileScreen({ navigation }) {
             desc: "Update your password safely",
             icon: images.set_lock,
             onPress: () => navigation && navigation.navigate?.("ChangePasswordScreen"),
+        },
+    ];
+
+    const debug = [
+        {
+            title: "Get Firebase Token",
+            desc: "Copy token to console for API testing",
+            icon: images.set_lock, // Using existing icon
+            onPress: getFirebaseToken,
         },
     ];
 
@@ -102,6 +126,14 @@ export default function ProfileScreen({ navigation }) {
             <View style={S.section}>
                 <Text style={S.sectionTitle}>Profile Setting</Text>
                 {items.map((it, i) => (
+                    <OptionRow key={i} {...it} />
+                ))}
+            </View>
+
+            {/* Debug Section */}
+            <View style={S.section}>
+                <Text style={S.sectionTitle}>Debug</Text>
+                {debug.map((it, i) => (
                     <OptionRow key={i} {...it} />
                 ))}
             </View>

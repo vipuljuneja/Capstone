@@ -1,8 +1,9 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import VoiceOrb from '../../Components/Avatar/VoiceORB';
 import AudioRecorder from '../../Components/Audio/AudioRecorder';
 import AudioWaveform from '../../Components/Audio/AudioWaveform';
+import scenarioService from '../../services/scenarioService';
 
 import { useNavigation, useRoute } from '@react-navigation/native';
 
@@ -10,6 +11,8 @@ const Level1Screen = () => {
   const navigation = useNavigation();
   const [isRecording, setIsRecording] = useState(false);
   const [transcriptionResults, setTranscriptionResults] = useState([]);
+  const [scenarioData, setScenarioData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const voiceOrbRef = useRef(null);
   const audioRecorderRef = useRef(null);
@@ -18,6 +21,7 @@ const Level1Screen = () => {
   const transcriptionPromiseRef = useRef(null);
 
   const route = useRoute();
+  const { scenarioTitle, scenarioId } = route.params || {};
 
   const [orbState, setOrbState] = useState({
     speaking: false,
@@ -25,6 +29,33 @@ const Level1Screen = () => {
     idx: 0,
     totalLines: 5,
   });
+
+  // Load scenario data on component mount
+  useEffect(() => {
+    const loadScenarioData = async () => {
+      try {
+        setLoading(true);
+        if (scenarioId) {
+          const scenario = await scenarioService.getScenarioById(scenarioId);
+          setScenarioData(scenario);
+          
+          // Update orb state with actual question count
+          const questionCount = scenario?.level1?.questions?.length || 5;
+          setOrbState(prev => ({
+            ...prev,
+            totalLines: questionCount
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to load scenario data:', error);
+        // Keep default state if loading fails
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadScenarioData();
+  }, [scenarioId]);
 
   const handleStateChange = useCallback(newState => {
     console.log('📥 Level1 received state:', newState);
@@ -182,13 +213,14 @@ const Level1Screen = () => {
         const finalResults = transcriptionResultsRef.current;
         console.log('📤 Navigating with results:', finalResults);
 
-        const { scenarioTitle, scenarioEmoji } = route.params || {};
+        const { scenarioEmoji } = route.params || {};
 
         navigation.navigate('Level1ResultScreen', {
           totalQuestions: currentState.totalLines,
           transcriptionResults: finalResults,
           scenarioTitle: scenarioTitle || 'Ordering Coffee',
           scenarioEmoji: scenarioEmoji || '☕',
+          scenarioId: scenarioId,
         });
       };
 
@@ -200,6 +232,24 @@ const Level1Screen = () => {
   }, [navigation, isRecording]);
 
   const isLastQuestion = orbState.idx === orbState.totalLines - 1;
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={styles.backButton}>←</Text>
+          </TouchableOpacity>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: '0%' }]} />
+          </View>
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading scenario...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -221,7 +271,11 @@ const Level1Screen = () => {
 
       {/* Voice Orb in Center */}
       <View style={styles.middleSection}>
-        <VoiceOrb ref={voiceOrbRef} onStateChange={handleStateChange} />
+        <VoiceOrb
+          ref={voiceOrbRef}
+          onStateChange={handleStateChange}
+          lines={(scenarioData?.level1?.questions || []).map(q => q.text)}
+        />
       </View>
 
       {/* Waveform */}
@@ -351,6 +405,17 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.5,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'white',
+  },
+  loadingText: {
+    fontSize: 18,
+    color: '#666',
+    textAlign: 'center',
   },
 });
 

@@ -65,7 +65,7 @@ export type BackendUser = {
   name: string;
   avatarImage?: string;
   profile?: {
-    severityLevel?: string;
+    severityLevel?: 'Minimal' | 'Mild' | 'Moderate' | 'Severe';
     focusHints?: string[];
   };
   [key: string]: unknown;
@@ -83,10 +83,7 @@ export const createUserInBackend = async (userData: {
         authUid: userData.authUid,
         email: userData.email,
         name: userData.name,
-        profile: {
-          severityLevel: 'MODERATE',
-          focusHints: [],
-        },
+        // Allow backend defaults for profile (severityLevel defaults to 'Moderate')
       },
     );
 
@@ -124,7 +121,7 @@ export const getUserByAuthUid = async (
 
 export const updateSeverityLevel = async (
   authUid: string,
-  severityLevel: 'LOW' | 'MILD' | 'MODERATE' | 'HIGH',
+  severityLevel: 'Minimal' | 'Mild' | 'Moderate' | 'Severe',
 ): Promise<BackendUser> => {
   try {
     const { data } = await apiClient.put<ApiSuccessEnvelope<BackendUser>>(
@@ -150,7 +147,7 @@ export const updateUserProfile = async (
     name?: string;
     avatarImage?: string;
     profile?: {
-      severityLevel?: 'LOW' | 'MILD' | 'MODERATE' | 'HIGH';
+      severityLevel?: 'Minimal' | 'Mild' | 'Moderate' | 'Severe';
       focusHints?: string[];
     };
   },
@@ -657,3 +654,137 @@ export const createPipoNoteFromSession = async (
     throw error;
   }
 };
+
+// ============================================
+// SIMPLE SCENARIO API
+// ============================================
+
+export interface SimpleScenario {
+  _id: string;
+  id: number;
+  title: string;
+  description: string;
+  emoji: string;
+  level1: {
+    questions: Array<{
+      order: number;
+      text: string;
+      videoUrl: string;
+    }>;
+  };
+  level2: {
+    questions: Array<{
+      order: number;
+      text: string;
+      videoUrl: string;
+    }>;
+  };
+  level3: {
+    questions: Array<{
+      order: number;
+      text: string;
+      videoUrl: string;
+    }>;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Get all scenarios
+ */
+export const getAllScenarios = async (): Promise<SimpleScenario[]> => {
+  try {
+    const response = await apiClient.get<ApiSuccessEnvelope<SimpleScenario[]>>('/scenarios');
+    
+    if (!response.data?.success || !response.data?.data) {
+      throw new Error('Failed to fetch scenarios');
+    }
+
+    return response.data.data;
+  } catch (error: any) {
+    console.error('❌ Failed to fetch scenarios:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+/**
+ * Get scenario by ID
+ */
+export const getScenarioById = async (id: string | number): Promise<SimpleScenario> => {
+  try {
+    const response = await apiClient.get<ApiSuccessEnvelope<SimpleScenario>>(`/scenarios/${id}`);
+    
+    if (!response.data?.success || !response.data?.data) {
+      throw new Error('Failed to fetch scenario');
+    }
+
+    return response.data.data;
+  } catch (error: any) {
+    console.error(`❌ Failed to fetch scenario ${id}:`, error.response?.data || error.message);
+    throw error;
+  }
+};
+
+/**
+ * Initialize default scenarios
+ */
+export const initializeDefaultScenarios = async (): Promise<SimpleScenario[]> => {
+  try {
+    const response = await apiClient.post<ApiSuccessEnvelope<SimpleScenario[]>>('/scenarios/initialize');
+    
+    if (!response.data?.success || !response.data?.data) {
+      throw new Error('Failed to initialize default scenarios');
+    }
+
+    return response.data.data;
+  } catch (error: any) {
+    console.error('❌ Failed to initialize default scenarios:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+/**
+ * Update scenario questions for specific level
+ */
+export const updateScenarioQuestions = async (
+  id: string | number,
+  level: 'level1' | 'level2' | 'level3',
+  questions: Array<{
+    order: number;
+    text: string;
+    videoUrl: string;
+  }>
+): Promise<SimpleScenario> => {
+  try {
+    const response = await apiClient.put<ApiSuccessEnvelope<SimpleScenario>>(
+      `/scenarios/${id}/questions`,
+      { level, questions }
+    );
+    
+    if (!response.data?.success || !response.data?.data) {
+      throw new Error('Failed to update scenario questions');
+    }
+
+    return response.data.data;
+  } catch (error: any) {
+    console.error(`❌ Failed to update scenario ${id} questions:`, error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// Convenience helpers for specific levels
+export const updateLevel1Questions = async (
+  id: string | number,
+  questions: Array<{ order: number; text: string; videoUrl: string }>
+) => updateScenarioQuestions(id, 'level1', questions);
+
+export const updateLevel2Questions = async (
+  id: string | number,
+  questions: Array<{ order: number; text: string; videoUrl: string }>
+) => updateScenarioQuestions(id, 'level2', questions);
+
+export const updateLevel3Questions = async (
+  id: string | number,
+  questions: Array<{ order: number; text: string; videoUrl: string }>
+) => updateScenarioQuestions(id, 'level3', questions);
