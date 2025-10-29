@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, Pressable, StyleSheet, Alert } from "react-native";
+import { View, Text, Pressable, StyleSheet, Alert , Image} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import QuestionCard from "../Components/Onboarding/QuestionCard";
 import { updateSeverityLevel } from "../services/api";
@@ -10,14 +10,41 @@ import { useAuth } from "../contexts/AuthContext";
 
 
 const questionList = [
-  "I feel uncomfortable speaking in a small group or meeting.",
-  "Meeting new people for the first time makes me uneasy.",
-  "Eating or drinking in public makes me self-conscious.",
-  "Giving a formal speech or presentation worries me.",
-  "Being the center of attention makes me uncomfortable.",
-  "I worry about saying the wrong thing in conversation.",
-  "Handling returns or customer service interactions stresses me.",
-  "Attending a social gathering or party makes me anxious.",
+  "I avoid certain social situations because I’m afraid of embarrassing myself.",
+  "My heart races or I overthink before speaking in front of others.",
+  "I criticize myself harshly after social interactions.",
+  "I find it hard to relax or fall asleep after a party or social event.",
+  "I worry for a long time, replaying what I said or did.",
+];
+
+const SLIDES = [
+  {
+    key: "data",
+    title: "Your data is safe",
+    desc:
+      "PIP uses your voice and video data to personalize AI feedback and help you grow.\n\n" +
+      "Your information stays secure and is never shared without your consent.",
+    image: require("../../assets/pipo/pipo-onboard2.png"),
+    cta: "NEXT",
+  },
+  {
+    key: "notClinical",
+    title: "PIP is a self-help tool",
+    desc:
+      "PIP focuses on learning and self-growth. It’s not a replacement for clinical therapy.\n\n" +
+      "For persistent conditions or neurodivergent concerns, please consult a qualified professional.",
+    image: require("../../assets/pipo/pipo-onboard1.png"),
+    cta: "NEXT",
+  },
+  {
+    key: "questionIntro",
+    title: "Let’s take a quick self-check",
+    desc:
+      "This is a safe space for self-discovery, not a diagnosis. If discomfort persists or affects daily life, " +
+      "consider reaching out to a mental-health professional.",
+    image: require("../../assets/pipo/loginPipo.png"),
+    cta: "START",
+  },
 ];
 
 function getSummary(responses) {
@@ -25,19 +52,21 @@ function getSummary(responses) {
   const avg = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : 0;
 
   if (avg < 1.5)
-    return { label: "LOW", title: "You’re feeling steady", message: "Great baseline!" };
+    return { label: "Minimal", title: "Little to no social anxiety symptoms. ", message: "You’re doing great! Keep nurturing your confidence." };
   if (avg < 2.5)
-    return { label: "MILD", title: "Just a few butterflies", message: "Totally normal." };
+    return { label: "Mild", title: "Some anxiety in specific social situations.", message: "Seems like you’ve got a bit on your mind" };
   if (avg < 3.5)
-    return { label: "MODERATE", title: "Seems like you’ve got a bit on your mind", message: "We’ll move forward together." };
-  return { label: "HIGH", title: "Carrying a lot right now", message: "We’ll go gently step by step." };
+    return { label: "Moderate", title: "Noticeable distress or avoidance.", message: "Sometimes things can be overwhelming." };
+  return { label: "Severe", title: "Frequent, intense anxiety affecting daily life.", message: "That sounds tough but you are not alone!" };
 }
 
 export default function Onboarding() {
   const { user } = useAuth();
-  const [phase, setPhase] = useState("intro"); 
+  const [phase, setPhase] = useState("slides");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [responses, setResponses] = useState(Array(questionList.length).fill(null));
+  const [slideIndex, setSlideIndex] = useState(0);
+
   const navigation = useNavigation(); 
 
   const selected = responses[currentIndex];
@@ -127,20 +156,61 @@ export default function Onboarding() {
     }
   };
 
-  if (phase === "intro") {
+  // if (phase === "intro") {
+  //   return (
+  //     <View style={S.container}>
+  //       <Pressable onPress={skipAll} style={S.skip}>
+  //         <Text style={S.skipText}>SKIP</Text>
+  //       </Pressable>
+  //       <View style={S.center}>
+  //         <Text style={S.title}>A quick self-check before you start</Text>
+  //         <Text style={S.desc}>
+  //           See how you are feeling with different situations to unlock your confidence.
+  //         </Text>
+  //       </View>
+  //       <Pressable onPress={startQuestions} style={S.startBtn}>
+  //         <Text style={S.startText}>START</Text>
+  //       </Pressable>
+  //     </View>
+  //   );
+  // }
+  if (phase === "slides") {
+    const slide = SLIDES[slideIndex];
+    const onPrimary = () => {
+      if (slideIndex < SLIDES.length - 1) {
+        setSlideIndex(i => i + 1);
+      } else {
+        setPhase("questions"); 
+      }
+    };
+
     return (
       <View style={S.container}>
         <Pressable onPress={skipAll} style={S.skip}>
           <Text style={S.skipText}>SKIP</Text>
         </Pressable>
+
         <View style={S.center}>
-          <Text style={S.title}>A quick self-check before you start</Text>
-          <Text style={S.desc}>
-            See how you are feeling with different situations to unlock your confidence.
-          </Text>
+          {
+            <Image source={slide.image} style={{ width: 180, height: 180, marginBottom: 16 }} resizeMode="contain" />
+          }
+
+          
+          <View style={S.dotsRow}>
+            {SLIDES.map((_, i) => (
+              <View
+                key={i}
+                style={[S.dot, i === slideIndex ? S.dotActive : null]}
+              />
+            ))}
+          </View>
+
+          <Text style={S.title}>{slide.title}</Text>
+          <Text style={S.desc}>{slide.desc}</Text>
         </View>
-        <Pressable onPress={startQuestions} style={S.startBtn}>
-          <Text style={S.startText}>START</Text>
+
+        <Pressable onPress={onPrimary} style={S.startBtn}>
+          <Text style={S.startText}>{slide.cta}</Text>
         </Pressable>
       </View>
     );
@@ -152,8 +222,9 @@ export default function Onboarding() {
       <View style={S.container}>
         <View style={S.center}>
           <Text style={S.badge}>{label}</Text>
-          <Text style={S.title}>{title}</Text>
-          <Text style={S.desc}>{message}</Text>
+          <Text style={S.title}>{message}</Text>
+          {/* <Text style={S.desc}>{message}</Text> */}
+          <Text style={S.desc}> {"\n"} Let’s move forward together {"\n"} One step at a time.</Text>
         </View>
         <Pressable onPress={handleFinish} style={S.startBtn}>
           <Text style={S.startText}>LET’S GO!</Text>
@@ -230,4 +301,7 @@ const S = StyleSheet.create({
   },
   startText: { color: "#fff", fontWeight: "700", letterSpacing: 1 },
   disabled: { opacity: 0.3 },
+  dotsRow: { flexDirection: "row", gap: 8, marginBottom: 4, marginTop: 4 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#d1d5db" },
+  dotActive: { width: 22, borderRadius: 5, backgroundColor: "#4b5563" },
 });
