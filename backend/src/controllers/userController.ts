@@ -29,7 +29,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       authUid,
       email,
       name,
-      profile: profile || { severityLevel: 'MODERATE', focusHints: [] },
+      profile: profile || { severityLevel: 'Moderate', focusHints: [] },
       streak: { current: 0, longest: 0, lastActiveAt: null },
       achievements: []
     });
@@ -95,9 +95,9 @@ export const updateSeverityLevel = async (req: Request, res: Response): Promise<
       return;
     }
 
-    const validLevels = ['LOW', 'MILD', 'MODERATE', 'HIGH'];
+    const validLevels = ['Minimal', 'Mild', 'Moderate', 'Severe'];
     if (!validLevels.includes(severityLevel)) {
-      res.status(400).json({ error: 'Invalid severity level. Must be one of: LOW, MILD, MODERATE, HIGH' });
+      res.status(400).json({ error: 'Invalid severity level. Must be one of: Minimal, Mild, Moderate, Severe' });
       return;
     }
 

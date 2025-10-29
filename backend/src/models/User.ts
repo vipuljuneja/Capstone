@@ -6,7 +6,7 @@ export interface IUser extends Document {
   name: string;
   avatarImage?: string; // Stores the avatar name (e.g., 'pipo_set', 'bro_set', 'cherry_set')
   profile: {
-    severityLevel: 'LOW' | 'MILD' | 'MODERATE' | 'HIGH';
+    severityLevel: 'Minimal' | 'Mild' | 'Moderate' | 'Severe';
     focusHints: string[];
   };
   streak: {
@@ -47,8 +47,8 @@ const UserSchema: Schema = new Schema(
     profile: {
       severityLevel: {
         type: String,
-        enum: ['LOW', 'MILD', 'MODERATE', 'HIGH'],
-        default: 'MODERATE'
+        enum: ['Minimal', 'Mild', 'Moderate', 'Severe'],
+        default: 'Moderate'
       },
       focusHints: {
         type: [String],
