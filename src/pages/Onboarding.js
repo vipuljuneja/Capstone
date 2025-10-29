@@ -47,6 +47,8 @@ const SLIDES = [
   },
 ];
 
+const ONBOARDING_FLAG_PREFIX = "onboardingCompleted:";
+
 function getSummary(responses) {
   const valid = responses.filter(v => typeof v === "number");
   const avg = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : 0;
@@ -69,6 +71,32 @@ export default function Onboarding() {
 
   const navigation = useNavigation(); 
 
+  const markOnboardingComplete = async () => {
+    if (!user?.uid) {
+      return;
+    }
+
+    try {
+      await AsyncStorage.setItem(
+        `${ONBOARDING_FLAG_PREFIX}${user.uid}`,
+        'true',
+      );
+    } catch (storageError) {
+      console.warn('Failed to persist onboarding completion flag', storageError);
+    }
+  };
+
+  const exitToHome = () => {
+    requestAnimationFrame(() => {
+      navigation.navigate('Home');
+    });
+  };
+
+  const completeAndExit = async () => {
+    await markOnboardingComplete();
+    exitToHome();
+  };
+
   const selected = responses[currentIndex];
   const progress = (currentIndex + (selected ? 1 : 0)) / questionList.length;
 
@@ -80,16 +108,14 @@ export default function Onboarding() {
       console.log("Onboarding skipped:", filled);
       await AsyncStorage.setItem("surveyResponses", JSON.stringify(filled));
       
-      // Update with default MODERATE severity level
       if (user?.uid) {
         await updateSeverityLevel(user.uid, 'MODERATE');
         console.log("✅ Severity level set to MODERATE (skipped)");
       }
-      
-      navigation.goBack();
     } catch (error) {
       console.error("❌ Error in skipAll:", error);
-      navigation.goBack();
+    } finally {
+      await completeAndExit();
     }
   };
 
@@ -126,6 +152,7 @@ export default function Onboarding() {
       if (user?.uid) {
         await updateSeverityLevel(user.uid, summary.label);
         console.log("✅ Severity level updated:", summary.label);
+        await markOnboardingComplete();
         
         Alert.alert(
           "Assessment Complete! 🎉",
@@ -133,13 +160,13 @@ export default function Onboarding() {
           [
             {
               text: "Let's Start!",
-              onPress: () => navigation.goBack()
+              onPress: () => exitToHome()
             }
           ]
         );
       } else {
         console.warn("⚠️ No user found, skipping backend update");
-        navigation.goBack();
+        exitToHome();
       }
     } catch (error) {
       console.error("❌ Error updating severity level:", error);
@@ -149,7 +176,7 @@ export default function Onboarding() {
         [
           {
             text: "OK",
-            onPress: () => navigation.goBack()
+            onPress: () => exitToHome()
           }
         ]
       );
@@ -305,3 +332,4 @@ const S = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#d1d5db" },
   dotActive: { width: 22, borderRadius: 5, backgroundColor: "#4b5563" },
 });
+

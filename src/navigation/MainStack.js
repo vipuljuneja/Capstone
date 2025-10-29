@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { ActivityIndicator, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import HomeScreen from '../screens/HomeScreen';
 import DailyArticleMain from '../screens/DailyArticleMain';
@@ -28,12 +30,72 @@ import Level2IntroScreen from '../pages/level2/Level2IntroScreen';
 import Level2Screen from '../pages/level2/Level2Screen';
 import Level2ResultScreen from '../pages/level2/Level2ResultScreen';
 
+import { useAuth } from '../contexts/AuthContext';
+
 const Stack = createNativeStackNavigator();
+const ONBOARDING_FLAG_PREFIX = 'onboardingCompleted:';
 
 export default function MainStack() {
+  const { user } = useAuth();
+  const [initialRoute, setInitialRoute] = useState('Home');
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const determineInitialRoute = async () => {
+      if (!user?.uid) {
+        if (isMounted) {
+          setInitialRoute('Home');
+          setCheckingOnboarding(false);
+        }
+        return;
+      }
+
+      try {
+        const stored = await AsyncStorage.getItem(
+          `${ONBOARDING_FLAG_PREFIX}${user.uid}`,
+        );
+        if (isMounted) {
+          setInitialRoute(stored ? 'Home' : 'Onboarding');
+        }
+      } catch (error) {
+        console.warn('Failed to read onboarding status', error);
+        if (isMounted) {
+          setInitialRoute('Onboarding');
+        }
+      } finally {
+        if (isMounted) {
+          setCheckingOnboarding(false);
+        }
+      }
+    };
+
+    determineInitialRoute();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.uid]);
+
+  if (checkingOnboarding) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#f5f5f0',
+        }}
+      >
+        <ActivityIndicator size="large" color="#22c55e" />
+      </View>
+    );
+  }
+
   return (
     <Stack.Navigator
-      initialRouteName="Home"
+      initialRouteName={initialRoute}
       screenOptions={{
         headerStyle: { backgroundColor: '#ffffff' },
         headerTintColor: '#111827',
@@ -47,11 +109,11 @@ export default function MainStack() {
         animation: 'slide_from_right',
       }}
     >
-      <Stack.Screen
+      {/* <Stack.Screen
         name="Home"
         component={HomeScreen}
         options={{ title: 'Home' }}
-      />
+      /> */}
 
       <Stack.Screen
         name="Article"
@@ -81,7 +143,7 @@ export default function MainStack() {
       />
 
       <Stack.Screen
-        name="Levels"
+        name="Home"
         component={HomeScreenLevels}
         options={{ title: 'Practice Levels', headerShown: false }}
       />
@@ -182,3 +244,4 @@ export default function MainStack() {
     </Stack.Navigator>
   );
 }
+
