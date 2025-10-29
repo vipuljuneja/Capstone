@@ -29,6 +29,30 @@ const spacing = 16;
 const cardWidth = (screenWidth - spacing * 2 - spacing) / 2;
 const today = dayjs().format("YYYY-MM-DD");
 
+const MOTIVATION_TITLES = [
+  "You trusted yourself a little more today",
+  "You showed up — and that’s brave",
+  "You faced the moment with courage",
+  "You’re learning to breathe through it",
+  "You chose progress over fear",
+  "One more step toward your confident self",
+  "You spoke with strength today",
+  "You turned anxiety into action",
+  "You took control — not fear",
+  "You’re becoming your own supporter",
+  "Growth feels scary — and you did it anyway",
+  "Your voice mattered today",
+  "Courage whispered, and you listened",
+  "You’re turning discomfort into power",
+  "A small victory, a huge step forward"
+];
+function getRandomElement(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+const Motivation = getRandomElement(MOTIVATION_TITLES)
+
+
+
 const SR = StyleSheet.create({
   card: {
     backgroundColor: "#FFFFFF",
@@ -215,10 +239,10 @@ function PipoCard({ title, subtitle, index, onPress }) {
         <View style={styles.pipoBlob} />
       </View>
       <Text style={styles.pipoTitle} numberOfLines={2}>
-        {title}
+        {Motivation}
       </Text>
       <Text style={styles.pipoSubtitle} numberOfLines={1}>
-        {subtitle}
+        {title}
       </Text>
     </Pressable>
   );
@@ -532,6 +556,7 @@ export default function NotebookScreen({ navigation }) {
                     navigation.navigate("PipoDetail", {
                       pipo: {
                         id: item.id,
+                        Motivation: Motivation,
                         title: item.title,
                         subtitle: item.subtitle,
                         dateISO: selectedDate,

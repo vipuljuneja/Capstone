@@ -33,18 +33,18 @@ export default function PipoDetailScreen({ route, navigation }) {
         </Text>
 
         <Text style={{ textAlign: "center", fontSize: 20, fontWeight: "700", color: "#1A1A1A", marginBottom: 10 }}>
-          {pipo.title}
+          {pipo.Motivation}
         </Text>
 
         <View style={{ alignSelf: "center", backgroundColor: "#E6E0FF", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8, marginBottom: 20 }}>
           <Text style={{ color: "#4B3EA3", fontWeight: "600", fontSize: 13 }}>
-            {pipo.subtitle}
+            {pipo.title}
           </Text>
         </View>
 
         {/* Long message */}
         <Text style={{ fontSize: 14, lineHeight: 22, color: "#333", marginBottom: 16 }}>
-          {pipo.longText || "Hi there, it’s me, Pipo! … (put your dynamic message here)."}
+          {pipo.subtitle || "Hi there, it’s me, Pipo! … (put your dynamic message here)."}
         </Text>
       </ScrollView>
     </SafeAreaView>
