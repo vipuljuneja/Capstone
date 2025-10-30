@@ -10,12 +10,16 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSessionSaver } from '../../services/sessionSaver';
+import { unlockLevel, getProgressForScenario } from '../../services/api';
+import { ActivityIndicator } from 'react-native';
 
 const Level1ResultScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { mongoUser } = useAuth();
   const { isSaving, savedSessionId, saveError, saveSession } = useSessionSaver();
+  const [checkingNext, setCheckingNext] = useState(true);
+  const [nextLevelUnlocked, setNextLevelUnlocked] = useState(false);
 
   const { 
     transcriptionResults = [],
@@ -25,7 +29,7 @@ const Level1ResultScreen = () => {
   } = route.params || {};
 
   // Use the actual scenario ID from navigation params
-  const finalScenarioId = scenarioId || '507f1f77bcf86cd799439011';
+  const finalScenarioId = scenarioId; // must be passed; no fallback
 
   console.log('📊 Results screen received:', {
     transcriptionResults: transcriptionResults.length,
@@ -34,6 +38,38 @@ const Level1ResultScreen = () => {
     scenarioTitle: scenarioTitle,
     scenarioEmoji: scenarioEmoji
   });
+
+  // Poll progress to enable Next Level only when unlocked
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      if (!mongoUser?._id || !finalScenarioId) {
+        setCheckingNext(false);
+        return;
+      }
+      try {
+        setCheckingNext(true);
+        let attempts = 0;
+        const maxAttempts = 8; // ~4s total
+        while (!cancelled && attempts < maxAttempts) {
+          const progress = await getProgressForScenario(mongoUser._id, finalScenarioId);
+          const unlocked = Boolean(progress?.levels?.['2']?.unlockedAt);
+          if (unlocked) {
+            setNextLevelUnlocked(true);
+            break;
+          }
+          attempts += 1;
+          await new Promise(r => setTimeout(r, 500));
+        }
+      } catch (e) {
+        // ignore, keep disabled
+      } finally {
+        if (!cancelled) setCheckingNext(false);
+      }
+    };
+    check();
+    return () => { cancelled = true };
+  }, [mongoUser?._id, finalScenarioId]);
 
   // Calculate average metrics from all recordings
   const calculateMetrics = () => {
@@ -109,6 +145,15 @@ const Level1ResultScreen = () => {
         });
 
         console.log('✅ Level 1 session saved successfully');
+
+        // Unlock Level 2
+        try {
+          await unlockLevel(mongoUser._id, finalScenarioId, 2);
+          console.log('🔓 Level 2 unlocked');
+          setNextLevelUnlocked(true);
+        } catch (e) {
+          console.warn('⚠️ Failed to unlock Level 2 (non-fatal):', e?.message || e);
+        }
       } catch (error) {
         console.error('❌ Failed to save Level 1 session:', error);
       }
@@ -152,6 +197,7 @@ const Level1ResultScreen = () => {
     navigation.navigate('LevelOptions', {
       scenarioTitle: scenarioTitle || 'Ordering Coffee',
       scenarioEmoji: scenarioEmoji || '☕',
+      scenarioId: finalScenarioId,
     });
   };
 
@@ -159,7 +205,11 @@ const Level1ResultScreen = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate('LevelOptions')}>
+        <TouchableOpacity onPress={() => navigation.navigate('LevelOptions', { 
+          scenarioTitle: scenarioTitle || 'Ordering Coffee',
+          scenarioEmoji: scenarioEmoji || '☕',
+          scenarioId: finalScenarioId,
+        })}>
           <Text style={styles.backButton}>←</Text>
         </TouchableOpacity>
       </View>
@@ -271,8 +321,12 @@ const Level1ResultScreen = () => {
           <Text style={styles.retryButtonText}>RETRY</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.nextButton} onPress={handleNextLevel}>
-          <Text style={styles.nextButtonText}>NEXT LEVEL</Text>
+        <TouchableOpacity style={[styles.nextButton, { opacity: nextLevelUnlocked ? 1 : 0.6 }]} onPress={handleNextLevel} disabled={!nextLevelUnlocked}>
+          {checkingNext ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.nextButtonText}>NEXT LEVEL</Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>

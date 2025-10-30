@@ -32,12 +32,7 @@ const Level2NoticeScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Back Button */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>←</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Navigation header handles back; remove in-screen back */}
 
       <View style={styles.content}>
         {/* Title Section */}
