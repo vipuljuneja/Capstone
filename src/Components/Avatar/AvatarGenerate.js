@@ -25,19 +25,9 @@ const AVATAR_IMAGE_URL =
 const { width } = Dimensions.get('window');
 
 const AvatarGenerator = forwardRef((props, ref) => {
-  const { onStateChange, onInitialized } = props;
+  const { onStateChange, onInitialized, lines = [] } = props;
 
-  // Define questions similar to VoiceOrb's LINES
-  const QUESTIONS = useMemo(
-    () => [
-      'Hello, how are you?',
-      'Take a deep breath and relax.',
-      // 'You're doing great—keep going.',
-      // 'Tell me about your day so far.',
-      // 'Thanks for practicing with me.',
-    ],
-    [],
-  );
+  const QUESTIONS = lines;
 
   const [idx, setIdx] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -102,6 +92,10 @@ const AvatarGenerator = forwardRef((props, ref) => {
       });
     }
   }, [speaking, loading, idx, isInitialized, onStateChange, QUESTIONS.length]);
+
+  useEffect(() => {
+    initializeVideos();
+  }, [QUESTIONS]);
 
   // Notify parent when initialization completes
   useEffect(() => {
@@ -174,11 +168,6 @@ const AvatarGenerator = forwardRef((props, ref) => {
     }
     throw new Error('Timed out waiting for video (4 minutes)');
   };
-
-  // Initialize all videos on component mount
-  useEffect(() => {
-    initializeVideos();
-  }, []); // Run once on mount
 
   // Initialize all videos (generate them in background)
   const initializeVideos = async () => {
