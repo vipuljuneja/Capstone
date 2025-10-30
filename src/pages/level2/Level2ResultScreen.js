@@ -1,5 +1,5 @@
 // src/screens/levels/Level2ResultScreen.js
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,8 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSessionSaver } from '../../services/sessionSaver';
-import { unlockLevel } from '../../services/api';
+import { unlockLevel, getProgressForScenario } from '../../services/api';
+import { ActivityIndicator } from 'react-native';
 
 // Utility helpers for analysis and feedback
 const getPaceFeedback = avgWpm => {
@@ -116,6 +117,8 @@ const Level2ResultScreen = () => {
     scenarioEmoji,
   } = route.params || {};
 
+  const finalScenarioId = scenarioId; // must be provided
+
   // Calculate transcript metrics
   const avgWpm = getAvgScore(transcriptionResults, ['wpm']);
   const totalFillers = transcriptionResults.reduce(
@@ -142,7 +145,7 @@ const Level2ResultScreen = () => {
 
   // Auto-save session when component mounts
   useEffect(() => {
-    const finalScenarioId = '507f1f77bcf86cd799439011';
+    const finalScenarioId = scenarioId;
     const autoSaveSession = async () => {
       if (savedSessionId) return;
       if (!mongoUser?._id) return;
@@ -170,6 +173,40 @@ const Level2ResultScreen = () => {
     };
     autoSaveSession();
   }, []);
+
+  // Enable NEXT LEVEL only when level 3 is unlocked
+  const [checkingNext, setCheckingNext] = useState(true);
+  const [nextLevelUnlocked, setNextLevelUnlocked] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      if (!mongoUser?._id) { setCheckingNext(false); return; }
+      const finalScenarioId = scenarioId;
+      if (!finalScenarioId) { setCheckingNext(false); return; }
+      try {
+        setCheckingNext(true);
+        let attempts = 0;
+        const maxAttempts = 10; // ~5s
+        while (!cancelled && attempts < maxAttempts) {
+          const progress = await getProgressForScenario(mongoUser._id, finalScenarioId);
+          const unlocked = Boolean(progress?.levels?.['3']?.unlockedAt);
+          if (unlocked) {
+            setNextLevelUnlocked(true);
+            break;
+          }
+          attempts += 1;
+          await new Promise(r => setTimeout(r, 500));
+        }
+      } catch (e) {
+        // ignore
+      } finally {
+        if (!cancelled) setCheckingNext(false);
+      }
+    };
+    check();
+    return () => { cancelled = true };
+  }, [mongoUser?._id]);
 
   // Page logic
   return (
@@ -259,15 +296,21 @@ const Level2ResultScreen = () => {
           <Text style={styles.retryButtonText}>RETRY</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.nextButton}
+          style={[styles.nextButton, { opacity: nextLevelUnlocked ? 1 : 0.6 }]}
+          disabled={!nextLevelUnlocked}
           onPress={() =>
             navigation.navigate('LevelOptions', {
               scenarioTitle,
               scenarioEmoji,
+              scenarioId: finalScenarioId,
             })
           }
         >
-          <Text style={styles.nextButtonText}>NEXT LEVEL</Text>
+          {checkingNext ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.nextButtonText}>NEXT LEVEL</Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>

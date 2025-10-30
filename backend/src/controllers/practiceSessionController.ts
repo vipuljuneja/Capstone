@@ -5,8 +5,10 @@ import Scenario from '../models/Scenario';
 import { 
   generateAIFeedbackCards, 
   generatePipoNote, 
-  prepareSessionDataForAI 
+  prepareSessionDataForAI,
+  generateNextLevelQuestions
 } from '../services/practiceSessionAIService';
+import UserScenarioOverrides from '../models/UserScenarioOverrides';
 
 /**
  * Helper function to generate AI feedback cards from facial analysis
@@ -200,6 +202,38 @@ export const completeSession = async (req: Request, res: Response): Promise<void
       }
 
       await progress.save();
+    }
+
+    // Generate and save personalized next-level questions after completion (if applicable)
+    const nextLevel = session.level < 3 ? (session.level + 1) as 2 | 3 : null;
+    if (nextLevel) {
+      try {
+        // Prepare minimal AI data from updated session
+        const scenarioTitle = (session as any).scenarioId?.title || 'Practice';
+        const aiData = prepareSessionDataForAI(session, scenarioTitle);
+        const nextQuestions = await generateNextLevelQuestions({ ...aiData, nextLevel } as any);
+        if (nextQuestions && nextQuestions.length > 0) {
+          const levelKey = nextLevel === 2 ? 'level2' : 'level3';
+          const update: any = {};
+          update[levelKey] = { questions: nextQuestions };
+          const saved = await UserScenarioOverrides.findOneAndUpdate(
+            { userId: session.userId, scenarioId: session.scenarioId },
+            { $set: update },
+            { new: true, upsert: true }
+          );
+          console.log('💾 Saved personalized next-level questions (completeSession)', {
+            userId: session.userId,
+            scenarioId: session.scenarioId,
+            nextLevel,
+            count: nextQuestions.length,
+            preview: nextQuestions.slice(0, 2)
+          });
+        } else {
+          console.log('ℹ️ No next-level questions generated in completeSession.');
+        }
+      } catch (e: any) {
+        console.error('⚠️ Failed to generate/save next-level questions (completeSession):', e.message);
+      }
     }
 
     res.json({ success: true, data: session });
@@ -437,6 +471,36 @@ export const createCompleteSession = async (req: Request, res: Response): Promis
       }
 
       await progress.save();
+    }
+
+    // If there is a next level (2 or 3), generate personalized questions and save
+    const nextLevel = level < 3 ? (level + 1) as 2 | 3 : null;
+    if (nextLevel) {
+      try {
+        const aiForNext = { ...aiData, nextLevel } as any;
+        const nextQuestions = await generateNextLevelQuestions(aiForNext);
+        if (nextQuestions && nextQuestions.length > 0) {
+          const levelKey = nextLevel === 2 ? 'level2' : 'level3';
+          const update: any = {};
+          update[levelKey] = { questions: nextQuestions };
+          const saved = await UserScenarioOverrides.findOneAndUpdate(
+            { userId, scenarioId },
+            { $set: update },
+            { new: true, upsert: true }
+          );
+          console.log('💾 Saved personalized next-level questions', {
+            userId,
+            scenarioId,
+            nextLevel,
+            count: nextQuestions.length,
+            preview: nextQuestions.slice(0, 2)
+          });
+        } else {
+          console.log('ℹ️ No next-level questions generated. Skipping save.');
+        }
+      } catch (e: any) {
+        console.error('⚠️ Failed to generate/save next-level questions:', e.message);
+      }
     }
 
     // Create Pipo note with AI-generated content

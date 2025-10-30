@@ -1,5 +1,5 @@
 // src/screens/scenarios/LevelOptionsScreen.js
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,14 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
+import { signOut } from 'firebase/auth';
+import { auth } from '../../firebase';
 import { fetchAndLogUserCards } from '../../services/sessionSaver';
-import { getProgressForScenario, initializeProgress } from '../../services/api';
+import { useFocusEffect } from '@react-navigation/native';
+import { getProgressForScenario, initializeProgress, getUserLevelQuestions } from '../../services/api';
 
 export default function LevelOptionsScreen({ route, navigation }) {
-  const { scenarioTitle, scenarioEmoji, scenarioId, scenarioDescription } = route.params;
-  
-  // Use the actual scenario ID from the API instead of hardcoded fallback
-  const finalScenarioId = scenarioId || '507f1f77bcf86cd799439011';
+  const { scenarioTitle, scenarioEmoji, scenarioId, scenarioDescription } = route.params || {};
   const { mongoUser } = useAuth();
   const [locks, setLocks] = useState({ level2Locked: true, level3Locked: true });
   const userId = mongoUser?._id;
@@ -30,30 +30,57 @@ export default function LevelOptionsScreen({ route, navigation }) {
     }
   };
 
-  useEffect(() => {
-    let mounted = true;
-    const ensureProgress = async () => {
-      if (!userId || !finalScenarioId) return;
-      try {
-        let progress = await getProgressForScenario(userId, finalScenarioId);
+  const ensureInFlightRef = useRef(false);
+
+  const ensureProgress = useCallback(async () => {
+    if (!userId || !scenarioId) return;
+    if (ensureInFlightRef.current) return;
+    ensureInFlightRef.current = true;
+    try {
+      let attempts = 0;
+      const maxAttempts = 6; // ~3s total with 500ms delay
+      while (attempts < maxAttempts) {
+        let progress = await getProgressForScenario(userId, scenarioId);
         if (!progress) {
-          // Initialize so level 1 is unlocked by default
-          progress = await initializeProgress(userId, finalScenarioId);
+          try {
+            progress = await initializeProgress(userId, scenarioId);
+          } catch (e) {
+            const msg = e?.response?.data?.error || e?.message || '';
+            // If another call created it first, ignore and refetch
+            if (typeof msg === 'string' && msg.includes('E11000 duplicate key')) {
+              progress = await getProgressForScenario(userId, scenarioId);
+            } else {
+              throw e;
+            }
+          }
         }
-        if (!mounted) return;
+
         const level2Unlocked = Boolean(progress.levels?.['2']?.unlockedAt);
         const level3Unlocked = Boolean(progress.levels?.['3']?.unlockedAt);
         setLocks({ level2Locked: !level2Unlocked, level3Locked: !level3Unlocked });
-      } catch (e) {
-        // Keep defaults if any error
-        if (mounted) setLocks({ level2Locked: true, level3Locked: true });
+
+        // If unlocked or we were just checking, break; else wait and retry (handles race after save)
+        if (level2Unlocked || level3Unlocked) break;
+        attempts += 1;
+        await new Promise(r => setTimeout(r, 500));
       }
-    };
+    } catch (e) {
+      setLocks({ level2Locked: true, level3Locked: true });
+    } finally {
+      ensureInFlightRef.current = false;
+    }
+  }, [userId, scenarioId]);
+
+  useEffect(() => {
     ensureProgress();
-    return () => {
-      mounted = false;
-    };
-  }, [userId, finalScenarioId]);
+  }, [ensureProgress]);
+
+  useFocusEffect(
+    useCallback(() => {
+      // Refresh locks when screen comes into focus (after returning from results)
+      ensureProgress();
+    }, [ensureProgress])
+  );
 
   const levels = useMemo(() => ([
     {
@@ -85,8 +112,21 @@ export default function LevelOptionsScreen({ route, navigation }) {
     },
   ]), [locks]);
 
-  const handleLevelPress = level => {
+  const handleLevelPress = async level => {
     if (level.isLocked) return;
+
+    // Console log questions for this level before navigating
+    try {
+      if (userId && finalScenarioId) {
+        const levelKey = level.id === 1 ? 'level1' : level.id === 2 ? 'level2' : 'level3';
+        const data = await getUserLevelQuestions(userId, scenarioId, levelKey);
+        console.log(`🧾 Questions for ${levelKey}:`, data?.questions || []);
+      } else {
+        console.log('ℹ️ Missing userId or scenarioId; skipping question fetch/log');
+      }
+    } catch (e) {
+      console.log('⚠️ Failed to fetch questions for logging:', e?.message || e);
+    }
 
     // Level 2 requires camera notice first
     if (level.id === 2) {
@@ -95,7 +135,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
         levelTitle: level.title.split(' ').slice(0, 2).join(' '), // "Level 2"
         scenarioTitle: scenarioTitle,
         scenarioEmoji: scenarioEmoji,
-        scenarioId: finalScenarioId,
+        scenarioId: scenarioId,
       });
     } else {
       // Level 1 goes directly to intro
@@ -104,7 +144,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
         levelTitle: level.title.split(' ').slice(0, 2).join(' '),
         scenarioTitle: scenarioTitle,
         scenarioEmoji: scenarioEmoji,
-        scenarioId: finalScenarioId,
+        scenarioId: scenarioId,
         scenarioDescription: scenarioDescription,
       });
     }
@@ -122,10 +162,18 @@ export default function LevelOptionsScreen({ route, navigation }) {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{scenarioTitle}</Text>
         <TouchableOpacity
-          onPress={testFetchCards}
+          onPress={async () => {
+            try {
+              console.log('🔐 Logging out...');
+              await signOut(auth);
+              console.log('✅ Signed out');
+            } catch (e) {
+              console.log('❌ Sign out error:', e?.message || e);
+            }
+          }}
           style={styles.testButton}
         >
-          <Text style={styles.testButtonText}>🃏</Text>
+          <Text style={styles.testButtonText}>🚪</Text>
         </TouchableOpacity>
       </View>
 

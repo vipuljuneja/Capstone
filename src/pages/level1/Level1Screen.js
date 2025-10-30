@@ -136,12 +136,13 @@ const Level1Screen = () => {
     const transcriptionPromise = new Promise(resolve => {
       transcriptionPromiseRef.current = { resolve };
 
+      // Timeout after 30 seconds
       setTimeout(() => {
         if (transcriptionPromiseRef.current) {
           transcriptionPromiseRef.current.resolve(null);
           transcriptionPromiseRef.current = null;
         }
-      }, 5000); // Reduced timeout
+      }, 30000);
     });
 
     if (audioRecorderRef.current) {
@@ -187,14 +188,14 @@ const Level1Screen = () => {
           const transcriptionPromise = new Promise(resolve => {
             transcriptionPromiseRef.current = { resolve };
 
-            // Timeout after 15 seconds
+            // Timeout after 30 seconds
             setTimeout(() => {
               if (transcriptionPromiseRef.current) {
                 console.warn('⚠️ Transcription timeout, navigating anyway');
                 transcriptionPromiseRef.current.resolve(null);
                 transcriptionPromiseRef.current = null;
               }
-            }, 15000);
+            }, 30000);
           });
 
           if (audioRecorderRef.current) {
@@ -210,7 +211,12 @@ const Level1Screen = () => {
 
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        const finalResults = transcriptionResultsRef.current;
+        let finalResults = transcriptionResultsRef.current;
+        if (!finalResults || finalResults.length === 0) {
+          // If we timed out just before the transcript landed, give it a brief grace window
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          finalResults = transcriptionResultsRef.current;
+        }
         console.log('📤 Navigating with results:', finalResults);
 
         const { scenarioEmoji } = route.params || {};

@@ -871,3 +871,47 @@ export const updateLevel3Questions = async (
   id: string | number,
   questions: Array<{ order: number; text: string; videoUrl: string }>
 ) => updateScenarioQuestions(id, 'level3', questions);
+
+// ============================================
+// USER-SPECIFIC SCENARIO QUESTIONS
+// ============================================
+
+export const getUserLevelQuestions = async (
+  userId: string,
+  scenarioId: string,
+  level: 'level1' | 'level2' | 'level3'
+): Promise<{ questions: Array<{ order: number; text: string; videoUrl: string }> }> => {
+  try {
+    const response = await apiClient.get<ApiSuccessEnvelope<{ questions: any[] }>>(
+      `/users/${userId}/scenarios/${scenarioId}/levels/${level}/questions`
+    );
+    if (!response.data?.success || !response.data?.data) {
+      throw new Error('Failed to fetch questions');
+    }
+    return response.data.data as any;
+  } catch (error: any) {
+    console.error('❌ Failed to get user level questions:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+export const setUserLevelQuestions = async (
+  userId: string,
+  scenarioId: string,
+  level: 'level2' | 'level3',
+  questions: Array<{ order: number; text: string; videoUrl: string }>
+): Promise<void> => {
+  try {
+    const response = await apiClient.put<ApiSuccessEnvelope<unknown>>(
+      `/users/${userId}/scenarios/${scenarioId}/levels/${level}/questions`,
+      { questions }
+    );
+    if (!response.data?.success) {
+      throw new Error('Failed to save personalized questions');
+    }
+    console.log('✅ Saved personalized questions', { userId, scenarioId, level, count: questions.length });
+  } catch (error: any) {
+    console.error('❌ Failed to set user level questions:', error.response?.data || error.message);
+    throw error;
+  }
+};
