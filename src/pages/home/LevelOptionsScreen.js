@@ -54,6 +54,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
             }
           }
         }
+        
 
         const level2Unlocked = Boolean(progress.levels?.['2']?.unlockedAt);
         const level3Unlocked = Boolean(progress.levels?.['3']?.unlockedAt);
