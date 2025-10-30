@@ -15,12 +15,41 @@ import CameraDetector from '../../Components/Facial/CameraDetector';
 import AudioRecorder from '../../Components/Audio/AudioRecorder';
 import AudioWaveform from '../../Components/Audio/AudioWaveform';
 
+import scenarioService from '../../services/scenarioService';
+
 const { width, height } = Dimensions.get('window');
 
 const Level2Screen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { scenarioTitle, scenarioId } = route.params || {};
+
+  //Scenario States
+  const [scenarioData, setScenarioData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  //Fetch Scenario Data
+  useEffect(() => {
+    const loadScenarioData = async () => {
+      try {
+        setLoading(true);
+        if (scenarioId) {
+          const scenario = await scenarioService.getScenarioById(scenarioId);
+          setScenarioData(scenario);
+
+          // Update orb state with question count from loaded data
+          const questionCount = scenario?.level2?.questions?.length || 5;
+          setOrbState(prev => ({ ...prev, totalLines: questionCount }));
+        }
+      } catch (error) {
+        console.error('Failed to load scenario data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadScenarioData();
+  }, [scenarioId]);
 
   const [isRecording, setIsRecording] = useState(false);
   const [avatarReady, setAvatarReady] = useState(false);
@@ -200,15 +229,23 @@ const Level2Screen = () => {
     console.log('Current avatar state before navigation:', currentState);
     const { scenarioEmoji } = route.params || {};
 
-    navigation.navigate('Level2ResultScreen', {
-      totalQuestions: currentState?.totalLines || 5,
-      transcriptionResults: transcriptionResultsRef.current,
-      facialAnalysisResults: facialAnalysisResultsRef.current,
-      scenarioTitle: scenarioTitle || 'Ordering Coffee',
-      scenarioEmoji: scenarioEmoji || '☕',
-      scenarioId: scenarioId,
-    });
-    console.log('Navigation triggered');
+    console.log(
+      'Here My Data',
+      transcriptionResultsRef.current,
+      facialAnalysisResultsRef.current,
+    );
+
+    setTimeout(() => {
+      navigation.navigate('Level2ResultScreen', {
+        totalQuestions: currentState?.totalLines || 5,
+        transcriptionResults: transcriptionResultsRef.current,
+        facialAnalysisResults: facialAnalysisResultsRef.current,
+        scenarioTitle: scenarioTitle || 'Ordering Coffee',
+        scenarioEmoji: scenarioEmoji || '☕',
+        scenarioId: scenarioId,
+      });
+      console.log('Navigation triggered');
+    }, 10000);
   }, [navigation, route.params]);
 
   // Start recording and processing
@@ -305,7 +342,7 @@ const Level2Screen = () => {
                 transcriptionPromiseRef.current.resolve(null);
                 transcriptionPromiseRef.current = null;
               }
-            }, 15000);
+            }, 5000);
           });
 
           if (audioRecorderRef.current) {
@@ -340,6 +377,14 @@ const Level2Screen = () => {
 
   const isLastQuestion = orbState.idx === orbState.totalLines - 1;
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading scenario...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Header with Progress */}
@@ -364,6 +409,9 @@ const Level2Screen = () => {
           ref={avatarRef}
           onStateChange={handleStateChange}
           onInitialized={handleAvatarInitialized}
+          lines={(scenarioData?.level2?.questions || [])
+            .map(q => q.text)
+            .slice(0, 1)}
         />
 
         {/* Draggable Camera Overlay */}

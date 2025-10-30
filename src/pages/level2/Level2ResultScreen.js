@@ -1,5 +1,5 @@
 // src/screens/levels/Level2ResultScreen.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,205 +11,166 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSessionSaver } from '../../services/sessionSaver';
 
+// Utility helpers for analysis and feedback
+const getPaceFeedback = avgWpm => {
+  if (avgWpm < 100) {
+    return 'Your speaking pace is very calm and steady! This gives listeners time to absorb your words.';
+  }
+  if (avgWpm < 150) {
+    return 'Sometimes your words come out quickly, which is very common. Taking an extra breath before speaking can help your pace feel even calmer. You’re leveling up bit by bit!';
+  }
+  return 'You speak quite quickly! Try to slow down a bit – taking pauses can help your listener follow along better.';
+};
+
+const getToneFeedback = transcriptionResults => {
+  // Use more advanced tone analysis if available; fallback to generic
+  return "I loved how calm your voice sounded! Maybe next time, try sprinkling in a little up-and-down melody. It'll make your words sparkle even more.";
+};
+
+const getFillerFeedback = (totalFillers, usedWords) => {
+  if (totalFillers === 0) {
+    return "Excellent work! You didn't use any filler words. Your speech was clear and confident!";
+  }
+  if (totalFillers <= 3) {
+    return `You used some '${usedWords.join(
+      "', '",
+    )}' and that happens to everyone. If you'd like, try a soft pause instead. Pauses can feel peaceful and give your listener a moment to lean in.`;
+  }
+  return `You used several fillers such as '${usedWords.join(
+    "', '",
+  )}'. Try pausing briefly when you need to gather your thoughts.`;
+};
+
+const getPauseFeedback = totalPauses => {
+  if (totalPauses === 0) {
+    return 'Try adding some natural pauses to give your listener time to process.';
+  }
+  return 'Your flow feels warm and steady. A quick pause now and then can make your speech shine.';
+};
+
+const getEyeContactFeedback = eyeContactScore => {
+  if (eyeContactScore >= 70) {
+    return 'Excellent eye contact! You maintained great focus, which shows confidence and connection.';
+  }
+  if (eyeContactScore >= 40) {
+    return 'You looked around a few times. Try focusing on one spot or the person you’re talking to next time. With a little practice, it’ll feel easier and more natural.';
+  }
+  return "Try to look at the camera more often! Eye contact helps build trust and shows you're engaged.";
+};
+
+const getExpressionFeedback = smileScore => {
+  if (smileScore >= 70) {
+    return 'Your smile felt so genuine. Keeping your face relaxed helped you appear calm and approachable. You’re doing wonderfully here. Just keep letting your natural warmth come through.';
+  }
+  if (smileScore >= 40) {
+    return 'Nice work with your expressions! Try smiling a bit more naturally - it helps make your message more engaging.';
+  }
+  return 'Remember to smile occasionally! A warm expression helps your listener feel more comfortable and engaged.';
+};
+
+const getPostureFeedback = postureScore => {
+  if (postureScore >= 70) {
+    return 'Your steady head position projected confidence and authority.';
+  }
+  return 'Try to keep a balanced, upright posture. It signals self-assurance.';
+};
+
+const getUsedFillerWords = transcriptionResults => {
+  const wordSet = new Set();
+  transcriptionResults.forEach(r => {
+    if (r.fillerWords && Array.isArray(r.fillerWords)) {
+      r.fillerWords.forEach(f => {
+        wordSet.add(f.word);
+      });
+    }
+  });
+  return Array.from(wordSet);
+};
+
+const getAvgScore = (arr, path) => {
+  let total = 0;
+  let count = 0;
+  arr.forEach(item => {
+    const value = path.reduce((obj, key) => obj?.[key], item);
+    if (typeof value === 'number') {
+      total += value;
+      count += 1;
+    }
+  });
+  return count ? Math.round(total / count) : 0;
+};
+
 const Level2ResultScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { mongoUser } = useAuth();
-  const { isSaving, savedSessionId, saveError, saveSession } = useSessionSaver();
+  const { isSaving, savedSessionId, saveError, saveSession } =
+    useSessionSaver();
 
-  const { 
-    transcriptionResults = [], 
+  const {
+    transcriptionResults = [],
     facialAnalysisResults = [],
     scenarioId,
     scenarioTitle,
-    scenarioEmoji 
+    scenarioEmoji,
   } = route.params || {};
 
-  // Use consistent ObjectId fallback for all scenarios
-  const finalScenarioId = '507f1f77bcf86cd799439011';
-
-  console.log('📊 Level2 Results received:', {
-    transcription: transcriptionResults.length,
-    facial: facialAnalysisResults.length,
-    scenarioId: scenarioId,
-    finalScenarioId: finalScenarioId,
-    scenarioTitle: scenarioTitle,
-    scenarioEmoji: scenarioEmoji
-  });
-
-  // Calculate audio metrics
-  const calculateAudioMetrics = () => {
-    if (transcriptionResults.length === 0) {
-      return { avgWpm: 0, totalFillers: 0, totalPauses: 0 };
-    }
-
-    const totalWpm = transcriptionResults.reduce(
-      (sum, r) => sum + (r.wpm || 0),
-      0,
-    );
-    const totalFillers = transcriptionResults.reduce(
-      (sum, r) => sum + (r.fillerWordCount || 0),
-      0,
-    );
-    const totalPauses = transcriptionResults.reduce(
-      (sum, r) => sum + (r.pauseCount || 0),
-      0,
-    );
-
-    return {
-      avgWpm: Math.round(totalWpm / transcriptionResults.length),
-      totalFillers,
-      totalPauses,
-    };
-  };
+  // Calculate transcript metrics
+  const avgWpm = getAvgScore(transcriptionResults, ['wpm']);
+  const totalFillers = transcriptionResults.reduce(
+    (sum, r) => sum + (r.fillerWordCount || 0),
+    0,
+  );
+  const usedFillerWords = getUsedFillerWords(transcriptionResults);
+  const totalPauses = transcriptionResults.reduce(
+    (sum, r) => sum + (r.pauseCount || 0),
+    0,
+  );
 
   // Calculate facial metrics
-  const calculateFacialMetrics = () => {
-    if (facialAnalysisResults.length === 0) {
-      return {
-        avgSmileScore: 0,
-        avgEyeContact: 0,
-        avgEngagement: 0,
-      };
-    }
-
-    const totalSmile = facialAnalysisResults.reduce(
-      (sum, r) => sum + (r.smileScore || 0),
-      0,
-    );
-    const totalEyeContact = facialAnalysisResults.reduce(
-      (sum, r) => sum + (r.eyeContactScore || 0),
-      0,
-    );
-    const totalEngagement = facialAnalysisResults.reduce(
-      (sum, r) => sum + (r.engagementScore || 0),
-      0,
-    );
-
-    return {
-      avgSmileScore: Math.round(totalSmile / facialAnalysisResults.length),
-      avgEyeContact: Math.round(totalEyeContact / facialAnalysisResults.length),
-      avgEngagement: Math.round(totalEngagement / facialAnalysisResults.length),
-    };
-  };
-
-  const audioMetrics = calculateAudioMetrics();
-  const facialMetrics = calculateFacialMetrics();
+  // Use summary, and fallback to scores if present
+  const avgEyeContact = getAvgScore(facialAnalysisResults, [
+    'scores',
+    'eyeContact',
+  ]);
+  const avgSmile = getAvgScore(facialAnalysisResults, [
+    'scores',
+    'expressiveness',
+  ]);
+  const avgPosture = getAvgScore(facialAnalysisResults, ['scores', 'posture']);
 
   // Auto-save session when component mounts
   useEffect(() => {
+    const finalScenarioId = '507f1f77bcf86cd799439011';
     const autoSaveSession = async () => {
-      // Skip if already saved or missing required data
-      if (savedSessionId) {
-        console.log('⏭️ Session already saved, skipping...');
-        return;
-      }
-
-      if (!mongoUser?._id) {
-        console.warn('⚠️ Cannot save session: User not logged in');
-        return;
-      }
-
-      if (!finalScenarioId) {
-        console.warn('⚠️ Cannot save session: Scenario ID not provided');
-        return;
-      }
-
-      if (!transcriptionResults || transcriptionResults.length === 0) {
-        console.warn('⚠️ Cannot save session: No transcription results');
-        return;
-      }
-
+      if (savedSessionId) return;
+      if (!mongoUser?._id) return;
+      if (!finalScenarioId) return;
+      if (!transcriptionResults || transcriptionResults.length === 0) return;
       try {
-        console.log('💾 Auto-saving Level 2 session...');
-        
         await saveSession({
           userId: mongoUser._id,
           scenarioId: finalScenarioId,
           level: 2,
-          transcriptionResults: transcriptionResults,
-          facialAnalysisResults: facialAnalysisResults, // Include facial analysis for Level 2
+          transcriptionResults,
+          facialAnalysisResults,
         });
-
-        console.log('✅ Level 2 session saved successfully');
       } catch (error) {
-        console.error('❌ Failed to save Level 2 session:', error);
+        // Save error handled in state
       }
     };
-
     autoSaveSession();
-  }, []); // Empty dependency array to run only once
+  }, []);
 
-  // Generate audio feedback
-  const generatePaceFeedback = () => {
-    if (audioMetrics.avgWpm < 100) {
-      return 'Your speaking pace is very calm and steady! This gives listeners time to absorb your words.';
-    } else if (audioMetrics.avgWpm < 150) {
-      return 'Sometimes your words come out quickly, which is very common. Taking an extra breath before speaking can help your pace feel even calmer.';
-    } else {
-      return 'You speak quite quickly! Try to slow down a bit - taking pauses can help your listener follow along better.';
-    }
-  };
-
-  const generateFillerFeedback = () => {
-    if (audioMetrics.totalFillers === 0) {
-      return "Excellent work! You didn't use any filler words. Your speech was clear and confident!";
-    } else if (audioMetrics.totalFillers <= 3) {
-      return `You used ${audioMetrics.totalFillers} filler word${
-        audioMetrics.totalFillers > 1 ? 's' : ''
-      } like 'um' or 'like'. Try replacing them with brief pauses instead!`;
-    } else {
-      return `You used ${audioMetrics.totalFillers} filler words during your practice. Try replacing them with brief pauses!`;
-    }
-  };
-
-  // Generate facial feedback
-  const generateFacialFeedback = () => {
-    if (facialMetrics.avgSmileScore >= 70) {
-      return 'Your smile was warm and genuine! It really helps connect with your listener and shows confidence.';
-    } else if (facialMetrics.avgSmileScore >= 40) {
-      return 'Nice work with your expressions! Try smiling a bit more naturally - it helps make your message more engaging.';
-    } else {
-      return 'Remember to smile occasionally! A warm expression helps your listener feel more comfortable and engaged.';
-    }
-  };
-
-  const generateEyeContactFeedback = () => {
-    if (facialMetrics.avgEyeContact >= 70) {
-      return 'Excellent eye contact! You maintained great focus, which shows confidence and connection.';
-    } else if (facialMetrics.avgEyeContact >= 40) {
-      return 'Good effort with eye contact! Try to maintain it a bit more consistently to show engagement.';
-    } else {
-      return "Try to look at the camera more often! Eye contact helps build trust and shows you're engaged.";
-    }
-  };
-
-  const handleRetry = () => {
-    navigation.navigate('Level2IntroScreen');
-  };
-
-  const handleNextLevel = () => {
-    navigation.navigate('LevelOptions', {
-      scenarioTitle: scenarioTitle || 'Ordering Coffee',
-      scenarioEmoji: scenarioEmoji || '☕',
-    });
-  };
-
+  // Page logic
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate('LevelOptions')}>
-          <Text style={styles.backButton}>←</Text>
-        </TouchableOpacity>
-      </View>
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Character and Title */}
+        {/* Mascot & Title */}
         <View style={styles.topSection}>
           <View style={styles.characterContainer}>
             <Text style={styles.characterEmoji}>💧</Text>
@@ -217,138 +178,86 @@ const Level2ResultScreen = () => {
           <Text style={styles.title}>That was smooth!</Text>
         </View>
 
-        {/* Audio Feedback Card */}
-        <View style={styles.feedbackCard}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardHeaderIcon}>🎙️</Text>
-            <Text style={styles.cardHeaderText}>Your voice</Text>
-          </View>
-
-          {/* Pace Section */}
-          <View style={styles.feedbackSection}>
+        {/* Voice Feedback Card */}
+        <View style={styles.voiceCard}>
+          <Text style={styles.cardHeader}>
+            <Text style={styles.cardHeaderIcon}>🎙️</Text> Your voice
+          </Text>
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>PACE</Text>
-            <Text style={styles.sectionMetric}>
-              Average: {audioMetrics.avgWpm} words per minute
-            </Text>
-            <Text style={styles.sectionText}>{generatePaceFeedback()}</Text>
+            <Text style={styles.sectionText}>{getPaceFeedback(avgWpm)}</Text>
           </View>
-
-          {/* Filler Words Section */}
-          <View style={styles.feedbackSection}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>TONE</Text>
+            <Text style={styles.sectionText}>
+              {getToneFeedback(transcriptionResults)}
+            </Text>
+          </View>
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>FILLER WORDS</Text>
-            <Text style={styles.sectionMetric}>
-              Total: {audioMetrics.totalFillers} filler
-              {audioMetrics.totalFillers !== 1 ? 's' : ''}
+            <Text style={styles.sectionText}>
+              {getFillerFeedback(totalFillers, usedFillerWords)}
             </Text>
-            <Text style={styles.sectionText}>{generateFillerFeedback()}</Text>
           </View>
-
-          {/* Pauses Section */}
-          <View style={styles.feedbackSection}>
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>PAUSES</Text>
-            <Text style={styles.sectionMetric}>
-              Total: {audioMetrics.totalPauses} pause
-              {audioMetrics.totalPauses !== 1 ? 's' : ''}
-            </Text>
             <Text style={styles.sectionText}>
-              {audioMetrics.totalPauses === 0
-                ? 'Try adding some natural pauses to give your listener time to process.'
-                : 'Good use of pauses! They help make your speech more natural.'}
+              {getPauseFeedback(totalPauses)}
             </Text>
           </View>
         </View>
 
-        {/* Facial Analysis Card */}
-        <View style={[styles.feedbackCard, { backgroundColor: '#FFF9E6' }]}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardHeaderIcon}>😊</Text>
-            <Text style={styles.cardHeaderText}>Your expressions</Text>
-          </View>
-
-          {/* Smile Section */}
-          <View style={styles.feedbackSection}>
-            <Text style={styles.sectionTitle}>SMILE & WARMTH</Text>
-            <Text style={styles.sectionMetric}>
-              Score: {facialMetrics.avgSmileScore}/100
-            </Text>
-            <Text style={styles.sectionText}>{generateFacialFeedback()}</Text>
-          </View>
-
-          {/* Eye Contact Section */}
-          <View style={styles.feedbackSection}>
+        {/* Expressions Feedback Card */}
+        <View style={styles.expressionCard}>
+          <Text style={styles.cardHeader}>
+            <Text style={styles.cardHeaderIcon}>😊</Text> Your Expressions
+          </Text>
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>EYE CONTACT</Text>
-            <Text style={styles.sectionMetric}>
-              Score: {facialMetrics.avgEyeContact}/100
-            </Text>
             <Text style={styles.sectionText}>
-              {generateEyeContactFeedback()}
+              {getEyeContactFeedback(avgEyeContact)}
             </Text>
           </View>
-
-          {/* Engagement Section */}
-          <View style={styles.feedbackSection}>
-            <Text style={styles.sectionTitle}>ENGAGEMENT</Text>
-            <Text style={styles.sectionMetric}>
-              Score: {facialMetrics.avgEngagement}/100
-            </Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>EXPRESSIONS</Text>
             <Text style={styles.sectionText}>
-              {facialMetrics.avgEngagement >= 70
-                ? 'Great energy and presence! You looked engaged and confident throughout.'
-                : 'Try to show more animation in your expressions - it helps convey enthusiasm!'}
+              {getExpressionFeedback(avgSmile)}
             </Text>
           </View>
-        </View>
-
-        {/* Summary Stats */}
-        <View style={styles.statsCard}>
-          <Text style={styles.statsTitle}>Session Summary</Text>
-          <View style={styles.statsRow}>
-            <Text style={styles.statsLabel}>Questions completed:</Text>
-            <Text style={styles.statsValue}>{transcriptionResults.length}</Text>
-          </View>
-          <View style={styles.statsRow}>
-            <Text style={styles.statsLabel}>Average WPM:</Text>
-            <Text style={styles.statsValue}>{audioMetrics.avgWpm}</Text>
-          </View>
-          <View style={styles.statsRow}>
-            <Text style={styles.statsLabel}>Smile score:</Text>
-            <Text style={styles.statsValue}>
-              {facialMetrics.avgSmileScore}/100
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>POSTURE</Text>
+            <Text style={styles.sectionText}>
+              {getPostureFeedback(avgPosture)}
             </Text>
           </View>
-          <View style={styles.statsRow}>
-            <Text style={styles.statsLabel}>Eye contact:</Text>
-            <Text style={styles.statsValue}>
-              {facialMetrics.avgEyeContact}/100
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              Facial expressions vary across cultures and personalities. These
+              insights are based on general patterns. Take what feels right for
+              you. If you’re neurodivergent, we recommend you seek extra
+              guidance from a professional.
             </Text>
           </View>
-          
-          {/* Session Save Status */}
-          <View style={styles.statsRow}>
-            <Text style={styles.statsLabel}>Session status:</Text>
-            <Text style={[
-              styles.statsValue,
-              { color: savedSessionId ? '#10b981' : isSaving ? '#f59e0b' : '#ef4444' }
-            ]}>
-              {savedSessionId ? 'Saved ✓' : isSaving ? 'Saving...' : 'Not saved'}
-            </Text>
-          </View>
-          
-          {saveError && (
-            <View style={styles.errorRow}>
-              <Text style={styles.errorText}>Save failed: {saveError}</Text>
-            </View>
-          )}
         </View>
       </ScrollView>
 
-      {/* Bottom Buttons */}
+      {/* Bottom navigation buttons */}
       <View style={styles.bottomButtons}>
-        <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => navigation.navigate('Level2IntroScreen')}
+        >
           <Text style={styles.retryButtonText}>RETRY</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity style={styles.nextButton} onPress={handleNextLevel}>
+        <TouchableOpacity
+          style={styles.nextButton}
+          onPress={() =>
+            navigation.navigate('LevelOptions', {
+              scenarioTitle,
+              scenarioEmoji,
+            })
+          }
+        >
           <Text style={styles.nextButtonText}>NEXT LEVEL</Text>
         </TouchableOpacity>
       </View>
@@ -358,82 +267,61 @@ const Level2ResultScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: { paddingHorizontal: 20, paddingVertical: 15 },
-  backButton: { fontSize: 28, color: '#333' },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 20 },
-  topSection: { alignItems: 'center', marginBottom: 30 },
+  topSection: { alignItems: 'center', marginBottom: 20 },
   characterContainer: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     backgroundColor: '#FFF9E6',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   characterEmoji: { fontSize: 80 },
-  title: { fontSize: 32, fontWeight: 'bold', color: '#333' },
-  feedbackCard: {
-    backgroundColor: '#E8F4FF',
-    borderRadius: 20,
-    padding: 25,
-    marginBottom: 15,
+  title: { fontSize: 28, fontWeight: 'bold', color: '#333', marginBottom: 16 },
+  voiceCard: {
+    backgroundColor: '#e9f3fe',
+    borderRadius: 18,
+    padding: 22,
+    marginBottom: 20,
   },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  cardHeaderIcon: { fontSize: 24, marginRight: 10 },
-  cardHeaderText: { fontSize: 20, fontWeight: 'bold', color: '#333' },
-  feedbackSection: { marginBottom: 20 },
+  expressionCard: {
+    backgroundColor: '#f3edf9',
+    borderRadius: 18,
+    padding: 22,
+    marginBottom: 20,
+  },
+  cardHeader: {
+    fontSize: 19,
+    fontWeight: '600',
+    marginBottom: 16,
+    color: '#333',
+  },
+  cardHeaderIcon: { fontSize: 21, marginRight: 8 },
+  section: { marginBottom: 15 },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 4,
     letterSpacing: 0.5,
   },
-  sectionMetric: {
-    fontSize: 13,
-    color: '#6B5B95',
-    fontWeight: '600',
-    marginBottom: 8,
-  },
   sectionText: { fontSize: 15, color: '#666', lineHeight: 22 },
-  statsCard: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 20,
+  footer: {
+    marginTop: 6,
+    borderTopWidth: 1,
+    borderColor: '#eee',
+    paddingTop: 10,
   },
-  statsTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  statsLabel: { fontSize: 15, color: '#666' },
-  statsValue: { fontSize: 15, fontWeight: 'bold', color: '#6B5B95' },
-  errorRow: {
-    marginTop: 8,
-    padding: 8,
-    backgroundColor: '#fef2f2',
-    borderRadius: 6,
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#dc2626',
-    textAlign: 'center',
-  },
-  bottomButtons: { flexDirection: 'row', padding: 20, gap: 15 },
+  footerText: { color: '#888', fontSize: 12, lineHeight: 17 },
+  bottomButtons: { flexDirection: 'row', padding: 20, gap: 14 },
   retryButton: {
     flex: 1,
     backgroundColor: 'white',
     borderRadius: 25,
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#6B5B95',
@@ -448,7 +336,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#6B5B95',
     borderRadius: 25,
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: 'center',
   },
   nextButtonText: {
