@@ -1,5 +1,5 @@
 // src/screens/scenarios/LevelOptionsScreen.js
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchAndLogUserCards } from '../../services/sessionSaver';
+import { getProgressForScenario, initializeProgress } from '../../services/api';
 
 export default function LevelOptionsScreen({ route, navigation }) {
   const { scenarioTitle, scenarioEmoji, scenarioId, scenarioDescription } = route.params;
@@ -16,6 +17,8 @@ export default function LevelOptionsScreen({ route, navigation }) {
   // Use the actual scenario ID from the API instead of hardcoded fallback
   const finalScenarioId = scenarioId || '507f1f77bcf86cd799439011';
   const { mongoUser } = useAuth();
+  const [locks, setLocks] = useState({ level2Locked: true, level3Locked: true });
+  const userId = mongoUser?._id;
 
   // Test function to manually fetch cards
   const testFetchCards = async () => {
@@ -27,7 +30,32 @@ export default function LevelOptionsScreen({ route, navigation }) {
     }
   };
 
-  const levels = [
+  useEffect(() => {
+    let mounted = true;
+    const ensureProgress = async () => {
+      if (!userId || !finalScenarioId) return;
+      try {
+        let progress = await getProgressForScenario(userId, finalScenarioId);
+        if (!progress) {
+          // Initialize so level 1 is unlocked by default
+          progress = await initializeProgress(userId, finalScenarioId);
+        }
+        if (!mounted) return;
+        const level2Unlocked = Boolean(progress.levels?.['2']?.unlockedAt);
+        const level3Unlocked = Boolean(progress.levels?.['3']?.unlockedAt);
+        setLocks({ level2Locked: !level2Unlocked, level3Locked: !level3Unlocked });
+      } catch (e) {
+        // Keep defaults if any error
+        if (mounted) setLocks({ level2Locked: true, level3Locked: true });
+      }
+    };
+    ensureProgress();
+    return () => {
+      mounted = false;
+    };
+  }, [userId, finalScenarioId]);
+
+  const levels = useMemo(() => ([
     {
       id: 1,
       title: 'Level 1 Voice Check',
@@ -43,7 +71,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
       description:
         'Practice both voice and facial expressions at your own pace with Pipo',
       emoji: '😊',
-      isLocked: false,
+      isLocked: locks.level2Locked,
       bgColor: '#FFF9C4',
     },
     {
@@ -52,10 +80,10 @@ export default function LevelOptionsScreen({ route, navigation }) {
       description:
         'Time to go all in. Combine voice and facial and expressions like a pro.',
       emoji: '💬',
-      isLocked: true,
+      isLocked: locks.level3Locked,
       bgColor: '#C8E6C9',
     },
-  ];
+  ]), [locks]);
 
   const handleLevelPress = level => {
     if (level.isLocked) return;

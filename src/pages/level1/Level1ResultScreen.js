@@ -10,6 +10,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSessionSaver } from '../../services/sessionSaver';
+import { unlockLevel } from '../../services/api';
 
 const Level1ResultScreen = () => {
   const navigation = useNavigation();
@@ -109,6 +110,14 @@ const Level1ResultScreen = () => {
         });
 
         console.log('✅ Level 1 session saved successfully');
+
+        // Unlock Level 2
+        try {
+          await unlockLevel(mongoUser._id, finalScenarioId, 2);
+          console.log('🔓 Level 2 unlocked');
+        } catch (e) {
+          console.warn('⚠️ Failed to unlock Level 2 (non-fatal):', e?.message || e);
+        }
       } catch (error) {
         console.error('❌ Failed to save Level 1 session:', error);
       }

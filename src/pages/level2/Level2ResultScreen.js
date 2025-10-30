@@ -10,6 +10,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSessionSaver } from '../../services/sessionSaver';
+import { unlockLevel } from '../../services/api';
 
 // Utility helpers for analysis and feedback
 const getPaceFeedback = avgWpm => {
@@ -155,6 +156,14 @@ const Level2ResultScreen = () => {
           transcriptionResults,
           facialAnalysisResults,
         });
+
+        // Unlock Level 3
+        try {
+          await unlockLevel(mongoUser._id, finalScenarioId, 3);
+          console.log('🔓 Level 3 unlocked');
+        } catch (e) {
+          console.warn('⚠️ Failed to unlock Level 3 (non-fatal):', e?.message || e);
+        }
       } catch (error) {
         // Save error handled in state
       }
