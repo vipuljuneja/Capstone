@@ -277,7 +277,13 @@ Context:
 - Transcript (what they said): "${transcriptText.slice(0, 3000)}"
 
 Guidelines:
-- Make the questions slightly more advanced than previous level.
+- Voice and Perspective: Choose the role that naturally asks the user questions, based on scenario:
+  - If it's a service setting (e.g., Restaurant, Café, Coffee, Shopping): write as STAFF addressing the user (customer).
+  - If it's an Interview (e.g., Interview, Job, Hiring): write as the INTERVIEWER addressing the candidate.
+  - Otherwise: write as a FACILITATOR guiding the user.
+- Use "you" to refer to the user. Do NOT flip the roles into the user asking questions.
+- Preferred patterns: Service → "Would you like...", "Do you prefer..."; Interview → "Can you tell me...", "How did you...", "What would you..."; Facilitator → "Could you try...", "Tell me about...".
+- Make the questions slightly more advanced than the previous level.
 - Keep each question short and natural.
 - Avoid repeating their exact words; build on their intent.
 - Include a videoUrl placeholder like "${scenarioTitle.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_level${nextLevel}_q{n}.mp4".

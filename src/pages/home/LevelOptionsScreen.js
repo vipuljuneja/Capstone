@@ -118,7 +118,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
 
     // Console log questions for this level before navigating
     try {
-      if (userId && finalScenarioId) {
+      if (userId && scenarioId) {
         const levelKey = level.id === 1 ? 'level1' : level.id === 2 ? 'level2' : 'level3';
         const data = await getUserLevelQuestions(userId, scenarioId, levelKey);
         console.log(`🧾 Questions for ${levelKey}:`, data?.questions || []);
@@ -159,7 +159,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <Text style={styles.backButtonText}>←</Text>
+
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{scenarioTitle}</Text>
         <TouchableOpacity

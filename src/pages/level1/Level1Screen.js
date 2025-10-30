@@ -243,9 +243,6 @@ const Level1Screen = () => {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backButton}>←</Text>
-          </TouchableOpacity>
           <View style={styles.progressBar}>
             <View style={[styles.progressFill, { width: '0%' }]} />
           </View>
@@ -261,10 +258,6 @@ const Level1Screen = () => {
     <View style={styles.container}>
       {/* Header with Progress */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>←</Text>
-        </TouchableOpacity>
-
         <View style={styles.progressBar}>
           <View
             style={[
