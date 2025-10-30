@@ -11,6 +11,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import LinearGradient from 'react-native-linear-gradient';
+import supabase from '../../services/supabaseClient';
 
 import NotebookIcon from '../../../assets/icons/notebook.svg';
 import MailboxIcon from '../../../assets/icons/mailbox.svg';
@@ -30,6 +31,12 @@ import Animated, {
   interpolate,
   Extrapolate,
 } from 'react-native-reanimated';
+
+const emojiMap = {
+  'Ordering Coffee': require('../../../assets/pipo/pipo-coffee.png'),
+  Connecting: require('../../../assets/pipo/pipo-hi.png'),
+  'Job Interview': require('../../../assets/pipo/pipo-job.png'),
+};
 
 export default function HomeScreen() {
   const [visible, setVisible] = useState(false);
@@ -54,7 +61,11 @@ export default function HomeScreen() {
       try {
         setLoading(true);
         const fetchedScenarios = await scenarioService.getPublishedScenarios();
-        console.log('Fetched scenarios:', fetchedScenarios.length, fetchedScenarios);
+        console.log(
+          'Fetched scenarios:',
+          fetchedScenarios.length,
+          fetchedScenarios,
+        );
         setScenarios(fetchedScenarios);
       } catch (error) {
         console.error('Failed to load scenarios:', error);
@@ -72,6 +83,35 @@ export default function HomeScreen() {
   useEffect(() => {
     console.log('Scenarios state:', scenarios.length, scenarios);
   }, [scenarios]);
+
+  useEffect(() => {
+    testDownload();
+  }, []);
+
+  const testDownload = async () => {
+    console.log('🧪 TESTING FILE DOWNLOAD...');
+    try {
+      const filePath = '1.mp4';
+      const { data, error } = await supabase.storage
+        .from('videos')
+        .download(filePath);
+
+      if (error) {
+        console.error('Error downloading file:', error.message);
+        return;
+      }
+      console.log('File downloaded successfully:', data);
+
+      // To prove you have the file blob, print blob size
+      console.log('Blob size:', data.size);
+
+      // Optionally convert to URL to test usage in video tag or Image
+      const url = URL.createObjectURL(data);
+      console.log('Blob URL:', url);
+    } catch (err) {
+      console.error('Unexpected error:', err);
+    }
+  };
 
   const handlePractice = scenario => {
     navigation.navigate('LevelOptions', {
@@ -192,7 +232,10 @@ export default function HomeScreen() {
                 scenarios.map(item => (
                   <SceneCard
                     key={item._id}
-                    iconSource={require('../../../assets/pipo/pipo-coffee.png')}
+                    iconSource={
+                      emojiMap[item.title] ||
+                      require('../../../assets/pipo/pipo-coffee.png')
+                    }
                     sceneNumber={item.id}
                     title={item.title}
                     onPress={() => {
