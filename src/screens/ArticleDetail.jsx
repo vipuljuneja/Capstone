@@ -5,7 +5,8 @@ import {
   StyleSheet, 
   ScrollView, 
   ActivityIndicator,
-  TouchableOpacity 
+  TouchableOpacity,
+  Linking
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { getArticleById, toggleBookmark } from '../services/api';
@@ -88,18 +89,19 @@ export default function ArticleDetail({ route }) {
         showsVerticalScrollIndicator={false}
       >
         <BlobCharacter
-          color={article.illustrationData?.backgroundColor || '#e0f2e9'}
           character={article.illustrationData?.character}
           style={styles.heroIllustration}
+          imageStyle={{ borderRadius: 16, height: '90%' }}
+          resizeMode="cover"
         />
 
         <View style={styles.articleHeaderSection}>
           <Text style={styles.title}>{article.title}</Text>
           <View style={styles.metaRow}>
             <ArticleMeta
-              author="Cameron Carter"
+              // author={article.author || 'Anonymous'}
               dateText={formatDate()}
-              readTime={article.readTime}
+              readTime={article.readTime || Math.max(1, Math.ceil((article.content || '').split(/\s+/).length / 180))}
               align="left"
               style={styles.meta}
             />
@@ -118,6 +120,18 @@ export default function ArticleDetail({ route }) {
         </View>
 
         <Text style={styles.articleContent}>{article.content}</Text>
+
+        {Boolean(article.sourceUrl) && (
+          <View style={styles.sourceContainer}>
+            <View style={styles.sourceDivider} />
+            <Text style={styles.sourceLabel}>Source</Text>
+            <TouchableOpacity onPress={() => Linking.openURL(article.sourceUrl)}>
+              <Text style={styles.sourceLink} numberOfLines={1}>
+                {article.sourceUrl}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <ArticleKeywords keywords={article.keywords} />
       </ScrollView>
@@ -154,9 +168,14 @@ const styles = StyleSheet.create({
     color: '#6b7280'
   },
   heroIllustration: {
-    marginTop: 24,
-    marginBottom: 20
-  },
+  marginTop: 24,
+  marginBottom: 20,
+  width: '100%',
+  height: 250,        
+  alignSelf: 'center',
+  borderRadius: 16
+},
+
   articleHeaderSection: {
     marginBottom: 24
   },
@@ -184,5 +203,24 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     color: '#374151',
     marginBottom: 24
+  },
+  sourceContainer: {
+    marginTop: 8,
+    marginBottom: 24
+  },
+  sourceDivider: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginBottom: 12
+  },
+  sourceLabel: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginBottom: 6
+  },
+  sourceLink: {
+    fontSize: 14,
+    color: '#2563eb',
+    textDecorationLine: 'underline'
   }
 });
