@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -10,12 +10,35 @@ import {
     Pressable,
     ScrollView,
     ActivityIndicator,
+    TouchableOpacity,
 } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { auth } from '../firebase';
+import { signOut } from "firebase/auth";
 
 export default function ProfileScreen({ navigation }) {
     const { mongoUser, refreshMongoUser } = useAuth();
+    const [signingOut, setSigningOut] = useState(false);
+    const handleSignOut = useCallback(async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await signOut(auth);
+    //   navigation.dispatch(
+    //   CommonActions.reset({
+    //     index: 0,
+    //     routes: [{ name: 'Login' }], 
+    //   })
+    // );
+    
+    } catch (e) {
+      console.error("Sign out error:", e);
+      Alert.alert("Sign out failed", "Please try again.");
+    } finally {
+        
+      setSigningOut(false);
+    }
+  }, [signingOut]);
 
     const getFirebaseToken = async () => {
         try {
@@ -101,7 +124,7 @@ export default function ProfileScreen({ navigation }) {
             title: "Privacy Policy",
             desc: "How we handle your data",
             icon: images.set_PP,
-            onPress: () => navigation && navigation.navigate?.("Privacy"),
+            onPress: () => navigation && navigation.navigate?.("PrivacyPolicy"),
         },
     ];
 
@@ -145,6 +168,15 @@ export default function ProfileScreen({ navigation }) {
                     <OptionRow key={i} {...it} />
                 ))}
             </View>
+            <View style={{ paddingVertical: 8, paddingBottom: 24 }}>
+        <TouchableOpacity
+          onPress={handleSignOut}
+          style={[S.logout, signingOut && S.disabled]}
+          disabled={signingOut}
+        >
+          {signingOut ? <ActivityIndicator color="#fff" /> : <Text style={S.logoutTxt}>Log Out</Text>}
+        </TouchableOpacity>
+      </View>
         </ScrollView>
     );
 }
@@ -215,4 +247,23 @@ const S = StyleSheet.create({
     optionIcon: { width: 48, height: 48, borderRadius: 12 },
     optionTitle: { fontSize: 14, fontWeight: "600", color: "#111" },
     optionSubtitle: { fontSize: 12, color: "#6b7280", marginTop: 2 },
+    logout: {
+    backgroundColor: '#312e81',
+    paddingVertical: 16,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  disabled: { opacity: 0.6 },
+  logoutTxt: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
 });
