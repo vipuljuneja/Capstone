@@ -7,6 +7,8 @@ import HomeScreen from '../screens/HomeScreen';
 import DailyArticleMain from '../screens/DailyArticleMain';
 // import LevelsScreen from '../screens/LevelsScreen.js';
 import NotebookScreen from '../screens/NotebookScreen';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen.js'
+import TermsScreen from '../screens/TermsScreen.js'
 import Last7DaysScreen from '../screens/Last7DaysScreen';
 import BookmarkedArticles from '../screens/BookmarkedArticles';
 import ProfileSettingScreen from '../pages/ProfileSettingScreen.js';
@@ -121,6 +123,16 @@ export default function MainStack() {
         options={{ title: 'Daily Article' }}
       />
 
+       <Stack.Screen
+        name="PrivacyPolicy"
+        component={PrivacyPolicyScreen}
+        options={{ title: 'Privacy Policy' }}
+      />
+       <Stack.Screen
+        name="Terms"
+        component={TermsScreen}
+        options={{ title: 'Terms of Use' }}
+      />
       <Stack.Screen
         name="EmotionalSupport"
         component={EmotionalSupportScreen}
