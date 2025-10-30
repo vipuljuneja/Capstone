@@ -48,6 +48,8 @@ export const getTodayArticle = async (req: Request, res: Response) => {
         content: generated.content,
         keywords: generated.keywords,
         readTime: generated.readTime,
+        author: generated.author,
+        sourceUrl: generated.sourceUrl,
         illustrationData: {
           character: 'blob',
           backgroundColor: getRandomBackgroundColor()
@@ -116,6 +118,8 @@ export const getLast7DaysArticles = async (req: Request, res: Response): Promise
         content: generated.content,
         keywords: generated.keywords,
         readTime: generated.readTime,
+        author: generated.author,
+        sourceUrl: generated.sourceUrl,
         illustrationData: {
           character: 'blob',
           backgroundColor: getRandomBackgroundColor()
@@ -376,6 +380,8 @@ export const generateTodayArticleManually = async (req: Request, res: Response) 
       content: generated.content,
       keywords: generated.keywords,
       readTime: generated.readTime,
+      author: generated.author,
+      sourceUrl: generated.sourceUrl,
       illustrationData: {
         character: 'blob',
         backgroundColor: getRandomBackgroundColor()

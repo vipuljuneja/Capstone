@@ -4,7 +4,8 @@ import {
   Image,
   StyleSheet,
   StyleProp,
-  ViewStyle
+  ViewStyle,
+  ImageStyle
 } from 'react-native';
 import { characterImageFor } from './characterImages';
 
@@ -12,19 +13,23 @@ type BlobCharacterProps = {
   color?: string;
   style?: StyleProp<ViewStyle>;
   character?: string;
+  imageStyle?: StyleProp<ImageStyle>;
+  resizeMode?: 'cover' | 'contain' | 'stretch' | 'repeat' | 'center';
 };
 
 export default function BlobCharacter({
-  color = '#f5f3ff',
+  color = 'transparent',
   style,
-  character
+  character,
+  imageStyle,
+  resizeMode = 'contain'
 }: BlobCharacterProps) {
   return (
     <View style={[styles.container, { backgroundColor: color }, style]}>
       <Image
         source={characterImageFor(character)}
-        style={styles.image}
-        resizeMode="contain"
+        style={[styles.image, imageStyle]} 
+        resizeMode={resizeMode}
       />
     </View>
   );
@@ -35,11 +40,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     borderRadius: 16,
+    overflow: 'hidden',
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   image: {
-    width: '75%',
-    height: '75%'
-  }
+    width: '100%',  
+    height: '100%',  
+    borderRadius: 16,
+  },
 });

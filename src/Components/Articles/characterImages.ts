@@ -1,6 +1,6 @@
 import { ImageSourcePropType } from 'react-native';
 
-const blobDefault = require('../../../assets/pipo/articlePipo.png');
+const blobDefault = require('../../../assets/Illustration/Small_Steps.png');
 const blobGreen = require('../../../assets/pipo/pipo-hi.png');
 const blobPurple = require('../../../assets/pipo/pipo-coffee.png');
 const blobYellow = require('../../../assets/pipo/pipo-job.png');

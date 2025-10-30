@@ -35,3 +35,4 @@ router.post('/initialize', verifyFirebaseToken, initializeDefaultScenarios);
 
 export default router;
 
+

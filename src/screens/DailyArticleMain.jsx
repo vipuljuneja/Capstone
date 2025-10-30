@@ -55,15 +55,16 @@ const ArticleCard = ({ article, index, currentIndex, navigation, cardBgColor, un
             color="transparent"
             character={article.illustrationData?.character}
             style={S.hero}
+            imageStyle={{ width: '100%', height: '75%' ,borderRadius: 16}}
           />
         </View>
 
         <Text style={S.readTimeLabel}>
-          Read time : {article.readTime} min
+          Read time : {(article.readTime || Math.max(1, Math.ceil((article.content || '').split(/\s+/).length / 180)))} min
         </Text>
 
         <Text style={S.cardTitle}>{article.title}</Text>
-        <Text style={S.cardAuthor}>Cameron Carter</Text>
+        <Text style={S.cardAuthor}>{article.author || 'Anonymous'}</Text>
 
         <View style={S.contentPreview}>
           <Text style={S.cardSummary}>
@@ -171,16 +172,15 @@ export default function DailyArticleMain({ route, navigation }) {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity onPress={onToggleBookmark} hitSlop={16}>
-          <Icon
-            name={currentArticle?.isBookmarked ? 'bookmark' : 'bookmark-o'}
-            size={22}
-            color="#111827"
-          />
+        <TouchableOpacity
+          onPress={() => navigation.navigate('BookmarkedArticles')}
+          hitSlop={16}
+        >
+          <Icon name="bookmark" size={22} color="#111827" />
         </TouchableOpacity>
       ),
     });
-  }, [navigation, currentArticle]);
+  }, [navigation]);
 
   // --- IMPROVED SWIPE LOGIC ---
   const handleGesture = ({ nativeEvent }) => {
@@ -382,11 +382,11 @@ const S = StyleSheet.create({
     textDecorationColor: '#a78bfa',
   },
   readButton: {
-    backgroundColor: '#3730a3',
-    borderRadius: 999,
+    backgroundColor: '#3E3153',
+    borderRadius: 20,
     alignSelf: 'center',
     paddingVertical: 14,
-    paddingHorizontal: 100,
+    paddingHorizontal: 115,
   },
   readButtonTxt: {
     fontSize: 15,

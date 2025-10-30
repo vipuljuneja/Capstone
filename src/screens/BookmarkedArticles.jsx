@@ -14,21 +14,25 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { getUserBookmarkedArticles, removeBookmark } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
-// --- Blob assets ---
-import articlePipo from '../../assets/pipo/articlePipo.png';
-const blobGreen = require('../../assets/pipo/pipo-hi.png');
-const blobPurple = require('../../assets/pipo/pipo-coffee.png');
-const blobYellow = require('../../assets/pipo/pipo-job.png');
+// --- Blob assets (updated) ---
+import imgMakingSmall2 from '../../assets/Illustration/Making_Small2.png';
+import imgSmallSteps2 from '../../assets/Illustration/Small_Steps2.png';
+import imgPracticingPatience2 from '../../assets/Illustration/Practicing_Patience2.png';
+import imgJoyCountsToo2 from '../../assets/Illustration/A_Little_Joy_Counts_Too2.png';
 
-const blobImages = [articlePipo, blobGreen, blobPurple, blobYellow];
+const blobImages = [
+  imgMakingSmall2,
+  imgSmallSteps2,
+  imgPracticingPatience2,
+  imgJoyCountsToo2,
+];
 const pastelColors = [
-  '#E9F5E9',
-  '#FFF4E6',
-  '#E6F0FF',
-  '#FFE6EB',
-  '#F5E6FF',
-  '#FFF9E6',
-  '#E6FAF8',
+  '#6461A4',
+
+  '#C7DFFF',
+  '#D8D2FF',
+  '#F6EAC2',
+  '#EEF3E7',
 ];
 
 // --- Card component ---

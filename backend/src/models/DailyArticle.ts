@@ -6,6 +6,8 @@ export interface IDailyArticle extends Document {
   content: string;
   keywords: string[];
   readTime: number;
+  author?: string;
+  sourceUrl?: string;
   illustrationData: {
     character: string;
     backgroundColor: string;
@@ -39,6 +41,15 @@ const DailyArticleSchema: Schema = new Schema(
       type: Number,
       required: true,
       min: 1
+    },
+    author: {
+      type: String,
+      default: null,
+      trim: true
+    },
+    sourceUrl: {
+      type: String,
+      default: null
     },
     illustrationData: {
       character: {
