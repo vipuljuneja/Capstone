@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as controllers from '../controllers/controllers';
 import simpleScenarioRoutes from './simpleScenarioRoutes';
+import userScenarioOverridesRoutes from './userScenarioOverridesRoutes';
 
 const router = Router();
 
@@ -233,5 +234,10 @@ router.delete('/reflections/:reflectionId', controllers.deleteReflection);
 
 // Mount simple scenario routes
 router.use('/scenarios', simpleScenarioRoutes);
+
+// ============================================
+// USER SCENARIO OVERRIDES ROUTES
+// ============================================
+router.use('/', userScenarioOverridesRoutes);
 
 export default router;

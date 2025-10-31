@@ -389,10 +389,6 @@ const Level2Screen = () => {
     <View style={styles.container}>
       {/* Header with Progress */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>←</Text>
-        </TouchableOpacity>
-
         <View style={styles.progressBar}>
           <View
             style={[

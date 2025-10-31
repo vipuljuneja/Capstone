@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from 'react';
+import { TouchableOpacity } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
+import { HeaderBackButton } from '@react-navigation/elements';
 
 // import HomeScreen from '../screens/HomeScreen';
 import DailyArticleMain from '../screens/DailyArticleMain';
 // import LevelsScreen from '../screens/LevelsScreen.js';
 import NotebookScreen from '../screens/NotebookScreen';
-import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen.js'
-import TermsScreen from '../screens/TermsScreen.js'
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen.js';
+import TermsScreen from '../screens/TermsScreen.js';
 import Last7DaysScreen from '../screens/Last7DaysScreen';
 import BookmarkedArticles from '../screens/BookmarkedArticles';
 import ProfileSettingScreen from '../pages/ProfileSettingScreen.js';
@@ -31,6 +35,8 @@ import Level2IntroScreen from '../pages/level2/Level2IntroScreen';
 import Level2Screen from '../pages/level2/Level2Screen';
 import Level2ResultScreen from '../pages/level2/Level2ResultScreen';
 
+import BackIcon from '../../assets/icons/back.svg';
+
 import { useAuth } from '../contexts/AuthContext';
 
 const Stack = createNativeStackNavigator();
@@ -38,6 +44,7 @@ export default function MainStack() {
   const { user, mongoUser, loading } = useAuth();
   const [initialRoute, setInitialRoute] = useState('Home');
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+  const navigation = useNavigation();
 
   useEffect(() => {
     if (loading) {
@@ -93,6 +100,15 @@ export default function MainStack() {
         headerBackTitleVisible: false,
         headerShadowVisible: false,
         animation: 'slide_from_right',
+        headerBackTitleVisible: Platform.OS === 'ios' ? false : undefined,
+        headerBackTitle: Platform.OS === 'ios' ? ' ' : undefined,
+        headerTruncatedBackTitle: ' ',
+        headerBackTitleStyle: { display: 'none' },
+        // headerLeft: () => (
+        //   <TouchableOpacity onPress={() => navigation.goBack()}>
+        //     <BackIcon width={16} height={16} />
+        //   </TouchableOpacity>
+        // ),
       }}
     >
       {/* <Stack.Screen
@@ -107,12 +123,12 @@ export default function MainStack() {
         options={{ title: 'Daily Article' }}
       />
 
-       <Stack.Screen
+      <Stack.Screen
         name="PrivacyPolicy"
         component={PrivacyPolicyScreen}
         options={{ title: 'Privacy Policy' }}
       />
-       <Stack.Screen
+      <Stack.Screen
         name="Terms"
         component={TermsScreen}
         options={{ title: 'Terms of Use' }}
@@ -153,7 +169,12 @@ export default function MainStack() {
       <Stack.Screen
         name="LevelOptions"
         component={LevelsOptions}
-        options={{ title: 'LevelsOptions' }}
+        options={{
+          title: 'LevelsOptions',
+          headerBackTitleVisible: false,
+          headerBackTitle: ' ',
+          headerBackTitleStyle: { fontSize: 0 },
+        }}
       />
 
       <Stack.Screen

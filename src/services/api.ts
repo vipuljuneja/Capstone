@@ -682,6 +682,89 @@ export const createPipoNoteFromSession = async (
 };
 
 // ============================================
+// PROGRESS API (Level Unlocking)
+// ============================================
+
+export interface ProgressLevelData {
+  attempts: number;
+  lastCompletedAt: string | null;
+  achievements: string[];
+  unlockedAt: string | null;
+}
+
+export interface ProgressDoc {
+  _id: string;
+  userId: string;
+  scenarioId: string;
+  levels: Record<string, ProgressLevelData>;
+  totalSessions: number;
+  lastPlayedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const initializeProgress = async (
+  userId: string,
+  scenarioId: string,
+): Promise<ProgressDoc> => {
+  try {
+    const response = await apiClient.post<ApiSuccessEnvelope<ProgressDoc>>(
+      '/progress',
+      { userId, scenarioId }
+    );
+    if (!response.data?.success || !response.data?.data) {
+      throw new Error('Failed to initialize progress');
+    }
+    return response.data.data;
+  } catch (error: any) {
+    console.error('❌ Failed to initialize progress:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+export const getProgressForScenario = async (
+  userId: string,
+  scenarioId: string,
+): Promise<ProgressDoc | null> => {
+  try {
+    const response = await apiClient.get<ApiSuccessEnvelope<ProgressDoc>>(
+      `/progress/user/${userId}/scenario/${scenarioId}`
+    );
+    if (!response.data?.success || !response.data?.data) {
+      return null;
+    }
+    return response.data.data;
+  } catch (error: any) {
+    // 404 -> not initialized yet
+    if (error?.response?.status === 404) {
+      return null;
+    }
+    console.error('❌ Failed to get progress:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+export const unlockLevel = async (
+  userId: string,
+  scenarioId: string,
+  level: number,
+): Promise<ProgressDoc> => {
+  try {
+    const response = await apiClient.put<ApiSuccessEnvelope<ProgressDoc>>(
+      `/progress/user/${userId}/scenario/${scenarioId}/unlock`,
+      { level }
+    );
+    if (!response.data?.success || !response.data?.data) {
+      throw new Error('Failed to unlock level');
+    }
+    return response.data.data;
+  } catch (error: any) {
+    console.error('❌ Failed to unlock level:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// ============================================
 // SIMPLE SCENARIO API
 // ============================================
 
@@ -814,3 +897,47 @@ export const updateLevel3Questions = async (
   id: string | number,
   questions: Array<{ order: number; text: string; videoUrl: string }>
 ) => updateScenarioQuestions(id, 'level3', questions);
+
+// ============================================
+// USER-SPECIFIC SCENARIO QUESTIONS
+// ============================================
+
+export const getUserLevelQuestions = async (
+  userId: string,
+  scenarioId: string,
+  level: 'level1' | 'level2' | 'level3'
+): Promise<{ questions: Array<{ order: number; text: string; videoUrl: string }> }> => {
+  try {
+    const response = await apiClient.get<ApiSuccessEnvelope<{ questions: any[] }>>(
+      `/users/${userId}/scenarios/${scenarioId}/levels/${level}/questions`
+    );
+    if (!response.data?.success || !response.data?.data) {
+      throw new Error('Failed to fetch questions');
+    }
+    return response.data.data as any;
+  } catch (error: any) {
+    console.error('❌ Failed to get user level questions:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+export const setUserLevelQuestions = async (
+  userId: string,
+  scenarioId: string,
+  level: 'level2' | 'level3',
+  questions: Array<{ order: number; text: string; videoUrl: string }>
+): Promise<void> => {
+  try {
+    const response = await apiClient.put<ApiSuccessEnvelope<unknown>>(
+      `/users/${userId}/scenarios/${scenarioId}/levels/${level}/questions`,
+      { questions }
+    );
+    if (!response.data?.success) {
+      throw new Error('Failed to save personalized questions');
+    }
+    console.log('✅ Saved personalized questions', { userId, scenarioId, level, count: questions.length });
+  } catch (error: any) {
+    console.error('❌ Failed to set user level questions:', error.response?.data || error.message);
+    throw error;
+  }
+};

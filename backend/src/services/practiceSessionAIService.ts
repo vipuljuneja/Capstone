@@ -252,3 +252,78 @@ export const prepareSessionDataForAI = (session: any, scenarioTitle?: string): S
   };
 };
 
+// Generate 3–4 next-level questions based on transcript and session context
+export const generateNextLevelQuestions = async (
+  sessionData: SessionDataForAI & { nextLevel: 2 | 3; scenarioTitle?: string }
+) => {
+  const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+  if (!OPENAI_API_KEY) {
+    console.error('❌ Missing OPENAI_API_KEY');
+    throw new Error('OPENAI_API_KEY is not configured');
+  }
+
+  const transcriptText = sessionData.transcript || '';
+  const scenarioTitle = sessionData.scenarioTitle || 'Practice';
+  const level = sessionData.level;
+  const nextLevel = sessionData.nextLevel;
+
+  const system = 'You design short role-play prompts. Output only valid JSON as specified.';
+  const userPrompt = `
+Create ${nextLevel === 2 ? '3-4' : '3-4'} next-step questions for a user practicing "${scenarioTitle}".
+
+Context:
+- Current Level: ${level}
+- Next Level: ${nextLevel}
+- Transcript (what they said): "${transcriptText.slice(0, 3000)}"
+
+Guidelines:
+- Voice and Perspective: Choose the role that naturally asks the user questions, based on scenario:
+  - If it's a service setting (e.g., Restaurant, Café, Coffee, Shopping): write as STAFF addressing the user (customer).
+  - If it's an Interview (e.g., Interview, Job, Hiring): write as the INTERVIEWER addressing the candidate.
+  - Otherwise: write as a FACILITATOR guiding the user.
+- Use "you" to refer to the user. Do NOT flip the roles into the user asking questions.
+- Preferred patterns: Service → "Would you like...", "Do you prefer..."; Interview → "Can you tell me...", "How did you...", "What would you..."; Facilitator → "Could you try...", "Tell me about...".
+- Make the questions slightly more advanced than the previous level.
+- Keep each question short and natural.
+- Avoid repeating their exact words; build on their intent.
+- Include a videoUrl placeholder like "${scenarioTitle.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_level${nextLevel}_q{n}.mp4".
+- Provide an ordered list starting at 1.
+
+Return JSON only:
+{
+  "questions": [
+    { "order": 1, "text": "...", "videoUrl": "..." }
+  ]
+}`.trim();
+
+  try {
+    console.log('🧩 Generating next-level questions...', { scenarioTitle, level, nextLevel });
+    const client = new OpenAI({ apiKey: OPENAI_API_KEY });
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.8,
+      max_tokens: 600
+    });
+
+    const generatedText = response.choices[0].message?.content?.trim();
+    if (!generatedText) throw new Error('Empty response from OpenAI');
+
+    const cleaned = generatedText.replace(/```json\s*|```/g, '').trim();
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Failed to extract JSON from response');
+
+    const parsed = JSON.parse(match[0]);
+    const questions = Array.isArray(parsed.questions) ? parsed.questions : [];
+
+    console.log('🧪 Next-level questions preview:', questions.slice(0, 2));
+    return questions;
+  } catch (error: any) {
+    console.error('❌ OpenAI error generating next questions:', error.response?.data || error.message);
+    return [];
+  }
+};
+
