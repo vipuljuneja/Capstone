@@ -323,27 +323,30 @@ export default function NotebookScreen({ navigation }) {
   }, [userId, selectedDate, activeTab, toUICard]);
 
   const fetchDots = useCallback(async () => {
-    if (!userId) return;
-    const startDate = dayjs(selectedDate).startOf("month").format("YYYY-MM-DD");
-    const endDate = dayjs(selectedDate).endOf("month").format("YYYY-MM-DD");
-    try {
-      const dates = await getReflectionDates(userId, { startDate, endDate });
-      const next = {};
-      (Array.isArray(dates) ? dates : []).forEach((row) => {
-        const ds = dayjs(row?.date).format("YYYY-MM-DD");
-        const t = String(row?.type || "").toLowerCase();
-        if (!ds) return;
-        if (!next[ds]) next[ds] = {};
-        if (t === "self") next[ds].self = true;
-        if (t === "pipo") next[ds].pipo = true;
-      });
-      setDotDates(next);
+  if (!userId) return;
 
-    } catch (e) {
-      console.error("Get reflection dates failed:", e);
-      setDotDates({});
-    }
-  }, [userId, selectedDate]);
+ 
+  const startDate = dayjs(selectedDate).startOf('week').add(1, 'day').format('YYYY-MM-DD'); 
+  const endDate   = dayjs(selectedDate).endOf('week').add(1, 'day').format('YYYY-MM-DD');
+
+  try {
+    const dates = await getReflectionDates(userId, { startDate, endDate });
+
+    const next = {};
+    (Array.isArray(dates) ? dates : []).forEach((row) => {
+      const ds = dayjs(row?.date).format('YYYY-MM-DD');
+      const t = String(row?.type || '').toLowerCase();
+      if (!ds) return;
+      if (!next[ds]) next[ds] = { self: false, pipo: false };
+      if (t === 'self') next[ds].self = true;
+      if (t === 'pipo') next[ds].pipo = true;
+    });
+    setDotDates(next);
+  } catch (e) {
+    console.error('Get reflection dates failed:', e);
+    setDotDates({});
+  }
+}, [userId, selectedDate]);
 
 
 
@@ -357,32 +360,61 @@ export default function NotebookScreen({ navigation }) {
 
 
 
-  const markedDates = useMemo(() => {
-    const marks = {};
-    // console.log(dotDates);
-    if (dotDates && typeof dotDates === "object") {
-      Object.keys(dotDates).forEach((d0) => {
-        const d = dayjs(d0).format("YYYY-MM-DD");
-        const flags = dotDates[d0] || {};
-        const dots = [];
-        if (flags.pipo) dots.push({ key: "pipo", color: "#E53935", selectedDotColor: "#E53935" });
-        if (flags.self) dots.push({ key: "self", color: "#1E88E5", selectedDotColor: "#1E88E5" });
-        if (dots.length > 0) {
-          marks[d] = { ...(marks[d] || {}), dots };
-        }
-      });
+  // const markedDates = useMemo(() => {
+  //   const marks = {};
+  //   // console.log(dotDates);
+  //   if (dotDates && typeof dotDates === "object") {
+  //     Object.keys(dotDates).forEach((d0) => {
+  //       const d = dayjs(d0).format("YYYY-MM-DD");
+  //       const flags = dotDates[d0] || {};
+  //       const dots = [];
+  //       if (flags.pipo) dots.push({ key: "pipo", color: "#E53935", selectedDotColor: "#E53935" });
+  //       if (flags.self) dots.push({ key: "self", color: "#1E88E5", selectedDotColor: "#1E88E5" });
+  //       if (dots.length > 0) {
+  //         marks[d] = { ...(marks[d] || {}), dots };
+  //       }
+  //     });
+  //   }
+
+  //   marks[selectedDate] = {
+  //     ...(marks[selectedDate] || {}),
+  //     selected: true,
+  //     selectedColor: "#CFCFCF",
+  //     selectedTextColor: "#111",
+  //   };
+  //   return marks;
+  // }, [dotDates, selectedDate]);
+
+
+const markedDates = useMemo(() => {
+  const marks = {};
+
+  Object.keys(dotDates || {}).forEach((ds) => {
+
+    const d = dayjs(ds).format('YYYY-MM-DD');
+    const flags = dotDates[ds] || {};
+    const dots = [];
+
+    if (flags.pipo) dots.push({ key: 'pipo', color: '#E53935', selectedDotColor: '#E53935' });
+    if (flags.self) dots.push({ key: 'self', color: '#1E88E5', selectedDotColor: '#1E88E5' });
+
+    if (dots.length) {
+      
+      marks[d] = { ...(marks[d] || {}), dots, marked: true };
     }
+  });
 
-    marks[selectedDate] = {
-      ...(marks[selectedDate] || {}),
-      selected: true,
-      selectedColor: "#CFCFCF",
-      selectedTextColor: "#111",
-    };
-    return marks;
-  }, [dotDates, selectedDate]);
+ 
+  const sel = dayjs(selectedDate).format('YYYY-MM-DD');
+  marks[sel] = {
+    ...(marks[sel] || {}),
+    selected: true,
+    selectedColor: '#CFCFCF',
+    selectedTextColor: '#111',
+  };
 
-
+  return marks;
+}, [dotDates, selectedDate]);
 
   const handleSaveReflection = async ({ title, description }) => {
     if (!userId) return;
