@@ -25,19 +25,16 @@ const DG_MODEL = 'aura-2-thalia-en';
 const VoiceOrb = forwardRef((props, ref) => {
   const { onStateChange, lines } = props; // Accept dynamic lines
 
-  const LINES = useMemo(
-    () => {
-      if (Array.isArray(lines) && lines.length > 0) return lines;
-      return [
-        'Hello, how are you?',
-        'Take a deep breath and relax.',
-        "You're doing great—keep going.",
-        'Tell me about your day so far.',
-        'Thanks for practicing with me.',
-      ];
-    },
-    [lines],
-  );
+  const LINES = useMemo(() => {
+    if (Array.isArray(lines) && lines.length > 0) return lines.splice(0, 2);
+    return [
+      'Hello, how are you?',
+      'Take a deep breath and relax.',
+      "You're doing great—keep going.",
+      'Tell me about your day so far.',
+      'Thanks for practicing with me.',
+    ];
+  }, [lines]);
 
   const [idx, setIdx] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -188,7 +185,7 @@ const VoiceOrb = forwardRef((props, ref) => {
       setSpeaking(false);
       setLoading(false);
     },
-    reset: reset, // Add reset to imperative handle
+    reset: reset,
     replay: () => {
       speakIndex(idx);
     },

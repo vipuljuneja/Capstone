@@ -1,7 +1,8 @@
 // src/screens/levels/LevelIntroScreen.js
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import LinearGradient from 'react-native-linear-gradient';
 
 const LevelIntroScreen = () => {
   const navigation = useNavigation();
@@ -10,11 +11,19 @@ const LevelIntroScreen = () => {
   // Get level info from navigation params
   const {
     levelNumber = 1,
-    levelTitle = 'Voice Practice',
+    levelTitle = 'Level 1',
     scenarioTitle = 'Ordering Coffee',
     scenarioDescription = "You're at your local café, and you want to order the new Halloween drinks...",
     scenarioId,
   } = route.params || {};
+
+  useEffect(() => {
+    navigation.setOptions({
+      title: levelTitle || 'Level 1',
+    });
+  }, [navigation, route.params]);
+
+  console.log('LevelIntroScreen params:', route.params);
 
   const handleStart = () => {
     // Navigate to the actual level screen based on level number
@@ -24,26 +33,25 @@ const LevelIntroScreen = () => {
       3: 'Level3Practice',
     };
 
-    navigation.navigate('Level1Screen', {
-      levelNumber,
-      scenarioTitle,
-      scenarioId,
-    });
+    navigation.navigate('Level1Screen', route.params);
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient colors={['#fafaff', '#d6dafe']} style={styles.container}>
+      {/* <View style={styles.container}> */}
       {/* Top Section - Level Info */}
       <View style={styles.topSection}>
-        <Text style={styles.levelLabel}>Level {levelNumber}</Text>
-        <Text style={styles.levelTitle}>{levelTitle}</Text>
+        {/* <Text style={styles.levelLabel}>{levelTitle}</Text> */}
+        <Text style={styles.levelTitle}>Voice Practice</Text>
       </View>
 
       {/* Middle Section - Character */}
       <View style={styles.middleSection}>
-        <View style={styles.characterContainer}>
-          <Text style={styles.characterEmoji}>💧</Text>
-        </View>
+        <Image
+          source={require('../../../assets/pipo/pipo-loading.png')}
+          style={styles.characterImage}
+          resizeMode="contain"
+        />
       </View>
 
       {/* Bottom Section - Scenario Card + Start Button */}
@@ -57,14 +65,15 @@ const LevelIntroScreen = () => {
           <Text style={styles.startButtonText}>START</Text>
         </TouchableOpacity>
       </View>
-    </View>
+      {/* </View> */}
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    // backgroundColor: '#FFFFFF',
   },
   headerSection: {
     paddingHorizontal: 20,
@@ -98,13 +107,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#E8F0FF',
   },
   characterContainer: {
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: '#D4C4F8',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -122,14 +129,14 @@ const styles = StyleSheet.create({
   },
   scenarioCard: {
     backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 25,
-    marginBottom: 20,
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.09,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 4,
   },
   scenarioText: {
     fontSize: 16,
@@ -147,12 +154,32 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
+    marginTop: 32,
   },
   startButtonText: {
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
     letterSpacing: 1,
+  },
+  characterImage: {
+    width: 240,
+    height: 240,
+    marginBottom: 0,
+  },
+  levelLabel: {
+    fontSize: 18,
+    color: '#666',
+    marginBottom: 12,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  levelTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#222',
+    textAlign: 'center',
+    marginBottom: 14,
   },
 });
 

@@ -14,7 +14,6 @@ const AudioRecorder = forwardRef(
     const [recordingPath, setRecordingPath] = useState(null);
     const [audioResult, setAudioResult] = useState(null);
 
-    // Missing state variables
     const [recordingCount, setRecordingCount] = useState(0);
     const [sessionData, setSessionData] = useState([]);
     const [sessionActive, setSessionActive] = useState(false);
@@ -30,7 +29,6 @@ const AudioRecorder = forwardRef(
       };
     }, [audioRecorder]);
 
-    // Missing startSession function
     const startSession = () => {
       console.log('\n╔═══════════════════════════════════════════╗');
       console.log('║           NEW SESSION STARTED             ║');
@@ -277,18 +275,15 @@ const AudioRecorder = forwardRef(
       console.log(JSON.stringify(sessionSummary, null, 2));
       console.log('\n');
 
-      // Call parent callback if provided
       if (onSessionComplete) {
         onSessionComplete(sessionSummary);
       }
 
-      // Reset session
       setSessionActive(false);
 
       return sessionSummary;
     };
 
-    // Get current session data anytime
     const getSessionData = () => {
       return {
         recordingCount: recordingCount,
@@ -297,12 +292,29 @@ const AudioRecorder = forwardRef(
       };
     };
 
+    // Reset the entire component state and stop any recording
+    const reset = () => {
+      console.log('↩️ Resetting AudioRecorder state');
+      // Stop recording if active
+      if (isRecording) {
+        audioRecorder.stopRecorder().catch(() => {});
+        audioRecorder.removeRecordBackListener();
+      }
+      setIsRecording(false);
+      setRecordingPath(null);
+      setAudioResult(null);
+      setRecordingCount(0);
+      setSessionData([]);
+      setSessionActive(false);
+    };
+
     useImperativeHandle(ref, () => ({
       startSession,
       startRecording,
       stopRecording,
       endSession,
       getSessionData,
+      reset, // expose reset
       isRecording,
       recordingPath,
       audioResult,

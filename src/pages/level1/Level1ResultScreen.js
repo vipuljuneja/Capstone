@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
@@ -13,31 +14,30 @@ import { useSessionSaver } from '../../services/sessionSaver';
 import { unlockLevel, getProgressForScenario } from '../../services/api';
 import { ActivityIndicator } from 'react-native';
 
+import BackIcon from '../../../assets/icons/back.svg';
+
 const Level1ResultScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { mongoUser } = useAuth();
-  const { isSaving, savedSessionId, saveError, saveSession } = useSessionSaver();
+  const { isSaving, savedSessionId, saveError, saveSession } =
+    useSessionSaver();
   const [checkingNext, setCheckingNext] = useState(true);
   const [nextLevelUnlocked, setNextLevelUnlocked] = useState(false);
 
-  const { 
+  const {
     transcriptionResults = [],
     scenarioId,
     scenarioTitle,
-    scenarioEmoji 
+    scenarioEmoji,
   } = route.params || {};
+
+  console.log('Level1ResultScreen route params:', route.params);
 
   // Use the actual scenario ID from navigation params
   const finalScenarioId = scenarioId; // must be passed; no fallback
 
-  console.log('📊 Results screen received:', {
-    transcriptionResults: transcriptionResults.length,
-    scenarioId: scenarioId,
-    finalScenarioId: finalScenarioId,
-    scenarioTitle: scenarioTitle,
-    scenarioEmoji: scenarioEmoji
-  });
+  console.log('📊 Results screen received:', route.params);
 
   // Poll progress to enable Next Level only when unlocked
   useEffect(() => {
@@ -52,7 +52,10 @@ const Level1ResultScreen = () => {
         let attempts = 0;
         const maxAttempts = 8; // ~4s total
         while (!cancelled && attempts < maxAttempts) {
-          const progress = await getProgressForScenario(mongoUser._id, finalScenarioId);
+          const progress = await getProgressForScenario(
+            mongoUser._id,
+            finalScenarioId,
+          );
           const unlocked = Boolean(progress?.levels?.['2']?.unlockedAt);
           if (unlocked) {
             setNextLevelUnlocked(true);
@@ -68,7 +71,9 @@ const Level1ResultScreen = () => {
       }
     };
     check();
-    return () => { cancelled = true };
+    return () => {
+      cancelled = true;
+    };
   }, [mongoUser?._id, finalScenarioId]);
 
   // Calculate average metrics from all recordings
@@ -135,7 +140,7 @@ const Level1ResultScreen = () => {
 
       try {
         console.log('💾 Auto-saving Level 1 session...');
-        
+
         await saveSession({
           userId: mongoUser._id,
           scenarioId: finalScenarioId,
@@ -152,7 +157,10 @@ const Level1ResultScreen = () => {
           console.log('🔓 Level 2 unlocked');
           setNextLevelUnlocked(true);
         } catch (e) {
-          console.warn('⚠️ Failed to unlock Level 2 (non-fatal):', e?.message || e);
+          console.warn(
+            '⚠️ Failed to unlock Level 2 (non-fatal):',
+            e?.message || e,
+          );
         }
       } catch (error) {
         console.error('❌ Failed to save Level 1 session:', error);
@@ -190,7 +198,7 @@ const Level1ResultScreen = () => {
   };
 
   const handleRetry = () => {
-    navigation.navigate('Level1IntroScreen');
+    navigation.navigate('Level1IntroScreen', route.params);
   };
 
   const handleNextLevel = () => {
@@ -205,12 +213,16 @@ const Level1ResultScreen = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate('LevelOptions', { 
-          scenarioTitle: scenarioTitle || 'Ordering Coffee',
-          scenarioEmoji: scenarioEmoji || '☕',
-          scenarioId: finalScenarioId,
-        })}>
-          <Text style={styles.backButton}>←</Text>
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate('LevelOptions', {
+              scenarioTitle: scenarioTitle || 'Ordering Coffee',
+              scenarioEmoji: scenarioEmoji || '☕',
+              scenarioId: finalScenarioId,
+            })
+          }
+        >
+          <BackIcon width={24} height={24} style={styles.backButton} />
         </TouchableOpacity>
       </View>
 
@@ -221,9 +233,11 @@ const Level1ResultScreen = () => {
       >
         {/* Character and Title */}
         <View style={styles.topSection}>
-          <View style={styles.characterContainer}>
-            <Text style={styles.characterEmoji}>💧</Text>
-          </View>
+          <Image
+            source={require('../../../assets/pipo/pipo-complete.png')}
+            style={styles.characterImage}
+            resizeMode="contain"
+          />
           <Text style={styles.title}>That was smooth!</Text>
         </View>
 
@@ -295,18 +309,30 @@ const Level1ResultScreen = () => {
             <Text style={styles.statsLabel}>Total pauses:</Text>
             <Text style={styles.statsValue}>{metrics.totalPauses}</Text>
           </View>
-          
+
           {/* Session Save Status */}
           <View style={styles.statsRow}>
             <Text style={styles.statsLabel}>Session status:</Text>
-            <Text style={[
-              styles.statsValue,
-              { color: savedSessionId ? '#10b981' : isSaving ? '#f59e0b' : '#ef4444' }
-            ]}>
-              {savedSessionId ? 'Saved ✓' : isSaving ? 'Saving...' : 'Not saved'}
+            <Text
+              style={[
+                styles.statsValue,
+                {
+                  color: savedSessionId
+                    ? '#10b981'
+                    : isSaving
+                    ? '#f59e0b'
+                    : '#ef4444',
+                },
+              ]}
+            >
+              {savedSessionId
+                ? 'Saved ✓'
+                : isSaving
+                ? 'Saving...'
+                : 'Not saved'}
             </Text>
           </View>
-          
+
           {saveError && (
             <View style={styles.errorRow}>
               <Text style={styles.errorText}>Save failed: {saveError}</Text>
@@ -321,7 +347,11 @@ const Level1ResultScreen = () => {
           <Text style={styles.retryButtonText}>RETRY</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.nextButton, { opacity: nextLevelUnlocked ? 1 : 0.6 }]} onPress={handleNextLevel} disabled={!nextLevelUnlocked}>
+        <TouchableOpacity
+          style={[styles.nextButton, { opacity: nextLevelUnlocked ? 1 : 0.6 }]}
+          onPress={handleNextLevel}
+          disabled={!nextLevelUnlocked}
+        >
           {checkingNext ? (
             <ActivityIndicator color="#fff" />
           ) : (
@@ -484,6 +514,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     letterSpacing: 0.5,
+  },
+  characterImage: {
+    height: 180,
+    width: 180,
+    marginBottom: 20,
   },
 });
 
