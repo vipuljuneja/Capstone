@@ -408,12 +408,7 @@ const Level2Screen = () => {
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => {
-            navigation.navigate('LevelOptions', {
-              scenarioTitle,
-              scenarioEmoji,
-              scenarioId,
-              scenarioDescription,
-            });
+            navigation.navigate('LevelOptions', route.params);
           }}
           style={styles.backButtonContainer}
         >
