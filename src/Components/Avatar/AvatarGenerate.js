@@ -25,7 +25,12 @@ const AVATAR_IMAGE_URL =
 const { width } = Dimensions.get('window');
 
 const AvatarGenerator = forwardRef((props, ref) => {
-  const { onStateChange, onInitialized, lines = [] } = props;
+  const {
+    onStateChange,
+    onInitialized,
+    lines = [],
+    imgURL = AVATAR_IMAGE_URL,
+  } = props;
 
   const QUESTIONS = lines;
 
@@ -124,7 +129,7 @@ const AvatarGenerator = forwardRef((props, ref) => {
           input: line,
           provider: { type: 'microsoft', voice_id: 'en-US-JennyNeural' },
         },
-        source_url: AVATAR_IMAGE_URL,
+        source_url: imgURL,
         config: { stitch: true },
       }),
     });

@@ -104,7 +104,7 @@ const getAvgScore = (arr, path) => {
   return count ? Math.round(total / count) : 0;
 };
 
-const Level2ResultScreen = () => {
+const Level3ResultScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { mongoUser } = useAuth();
@@ -156,7 +156,7 @@ const Level2ResultScreen = () => {
         await saveSession({
           userId: mongoUser._id,
           scenarioId: finalScenarioId,
-          level: 2,
+          level: 3,
           transcriptionResults,
           facialAnalysisResults,
         });
@@ -224,7 +224,7 @@ const Level2ResultScreen = () => {
 
   // Button handlers replicating Level1ResultScreen structure
   const handleRetry = () => {
-    navigation.navigate('Level2IntroScreen', route.params);
+    navigation.navigate('Level3IntroScreen', route.params);
   };
 
   const handleNextLevel = () => {
@@ -447,4 +447,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Level2ResultScreen;
+export default Level3ResultScreen;

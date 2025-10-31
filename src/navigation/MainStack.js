@@ -35,6 +35,11 @@ import Level2IntroScreen from '../pages/level2/Level2IntroScreen';
 import Level2Screen from '../pages/level2/Level2Screen';
 import Level2ResultScreen from '../pages/level2/Level2ResultScreen';
 
+import Level3NoticeScreen from '../pages/level3/Level3NoticeScreen';
+import Level3IntroScreen from '../pages/level3/Level3IntroScreen';
+import Level3Screen from '../pages/level3/Level3Screen';
+import Level3ResultScreen from '../pages/level3/Level3ResultScreen';
+
 import BackIcon from '../../assets/icons/back.svg';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -191,6 +196,7 @@ export default function MainStack() {
         options={{
           title: 'LevelsOptions',
           headerBackTitleVisible: false,
+          headerShown: false,
           headerBackTitle: ' ',
           headerBackTitleStyle: { fontSize: 0 },
         }}
@@ -214,17 +220,9 @@ export default function MainStack() {
         options={{ title: 'Level1ResultScreen', headerShown: false }}
       />
 
-      <Stack.Screen
-        name="Level2NoticeScreen"
-        component={Level2NoticeScreen}
-        options={{ headerShown: false }}
-      />
+      <Stack.Screen name="Level2NoticeScreen" component={Level2NoticeScreen} />
 
-      <Stack.Screen
-        name="Level2IntroScreen"
-        component={Level2IntroScreen}
-        options={{ headerShown: false }}
-      />
+      <Stack.Screen name="Level2IntroScreen" component={Level2IntroScreen} />
 
       <Stack.Screen
         name="Level2Screen"
@@ -235,6 +233,22 @@ export default function MainStack() {
       <Stack.Screen
         name="Level2ResultScreen"
         component={Level2ResultScreen}
+        options={{ headerShown: false }}
+      />
+
+      <Stack.Screen name="Level3NoticeScreen" component={Level3NoticeScreen} />
+
+      <Stack.Screen name="Level3IntroScreen" component={Level3IntroScreen} />
+
+      <Stack.Screen
+        name="Level3Screen"
+        component={Level3Screen}
+        options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="Level3ResultScreen"
+        component={Level3ResultScreen}
         options={{ headerShown: false }}
       />
 

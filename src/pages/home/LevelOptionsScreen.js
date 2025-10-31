@@ -24,6 +24,8 @@ import {
   getUserLevelQuestions,
 } from '../../services/api';
 
+import BackIcon from '../../../assets/icons/back.svg';
+
 export default function LevelOptionsScreen({ route, navigation }) {
   const { scenarioTitle, scenarioEmoji, scenarioId, scenarioDescription } =
     route.params || {};
@@ -134,7 +136,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
         description:
           'Time to go all in. Combine voice and facial and expressions like a pro.',
         emoji: '💬',
-        isLocked: locks.level3Locked,
+        isLocked: false,
         bgColor: '#C8E6C9',
       },
     ],
@@ -169,6 +171,14 @@ export default function LevelOptionsScreen({ route, navigation }) {
         scenarioEmoji: scenarioEmoji,
         scenarioId: scenarioId,
       });
+    } else if (level.id === 3) {
+      navigation.navigate('Level3NoticeScreen', {
+        levelNumber: level.id,
+        levelTitle: level.title.split(' ').slice(0, 2).join(' '), // "Level 2"
+        scenarioTitle: scenarioTitle,
+        scenarioEmoji: scenarioEmoji,
+        scenarioId: scenarioId,
+      });
     } else {
       // Level 1 goes directly to intro
       navigation.navigate('Level1IntroScreen', {
@@ -185,14 +195,14 @@ export default function LevelOptionsScreen({ route, navigation }) {
   return (
     <View style={styles.container}>
       {/* Header with Back Button */}
-      {/* <View style={styles.header}>
+      <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.navigate('Home')}
           style={styles.backButton}
         >
-
+          <BackIcon height={24} width={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{scenarioTitle}</Text>
+        {/* <Text style={styles.headerTitle}>{scenarioTitle}</Text>
         <TouchableOpacity
           onPress={async () => {
             try {
@@ -205,9 +215,9 @@ export default function LevelOptionsScreen({ route, navigation }) {
           }}
           style={styles.testButton}
         >
-          <Text style={styles.testButtonText}>🚪</Text>
-        </TouchableOpacity>
-      </View> */}
+          <BackIcon />
+        </TouchableOpacity> */}
+      </View>
 
       {/* Timeline with Levels */}
       <ScrollView

@@ -6,7 +6,7 @@ import AudioWaveform from '../../Components/Audio/AudioWaveform';
 import scenarioService from '../../services/scenarioService';
 
 import BackIcon from '../../../assets/icons/back.svg';
-import MicIcon from '../../../assets/icons/mic-filled.svg';
+import MicIcon from '../../../assets/icons/mic-white.svg';
 import DeleteIcon from '../../../assets/icons/delete-filled.svg';
 
 import { useNavigation, useRoute } from '@react-navigation/native';
