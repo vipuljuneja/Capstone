@@ -5,6 +5,10 @@ import AudioRecorder from '../../Components/Audio/AudioRecorder';
 import AudioWaveform from '../../Components/Audio/AudioWaveform';
 import scenarioService from '../../services/scenarioService';
 
+import BackIcon from '../../../assets/icons/back.svg';
+import MicIcon from '../../../assets/icons/mic-filled.svg';
+import DeleteIcon from '../../../assets/icons/delete-filled.svg';
+
 import { useNavigation, useRoute } from '@react-navigation/native';
 
 const Level1Screen = () => {
@@ -21,7 +25,8 @@ const Level1Screen = () => {
   const transcriptionPromiseRef = useRef(null);
 
   const route = useRoute();
-  const { scenarioTitle, scenarioId } = route.params || {};
+  const { scenarioTitle, scenarioId, scenarioEmoji, scenarioDescription } =
+    route.params || {};
 
   const [orbState, setOrbState] = useState({
     speaking: false,
@@ -38,12 +43,12 @@ const Level1Screen = () => {
         if (scenarioId) {
           const scenario = await scenarioService.getScenarioById(scenarioId);
           setScenarioData(scenario);
-          
+
           // Update orb state with actual question count
           const questionCount = scenario?.level1?.questions?.length || 5;
           setOrbState(prev => ({
             ...prev,
-            totalLines: questionCount
+            totalLines: questionCount,
           }));
         }
       } catch (error) {
@@ -65,24 +70,28 @@ const Level1Screen = () => {
   const resetLevel = useCallback(() => {
     console.log('🔄 Resetting level to start');
 
-    // Reset all state
+    // Reset local state
     setIsRecording(false);
     setTranscriptionResults([]);
+    setOrbState({
+      speaking: false,
+      loading: false,
+      idx: 0,
+      totalLines: scenarioData?.level1?.questions?.length || 5,
+    });
+
     transcriptionResultsRef.current = [];
 
-    // Reset voice orb using the new reset method
+    // Reset VoiceOrb
     if (voiceOrbRef.current?.reset) {
       voiceOrbRef.current.reset();
     }
 
-    // Reset local state
-    setOrbState(prev => ({
-      ...prev,
-      idx: 0,
-      speaking: false,
-      loading: false,
-    }));
-  }, []);
+    // Reset AudioRecorder
+    if (audioRecorderRef.current?.reset) {
+      audioRecorderRef.current.reset();
+    }
+  }, [scenarioData]);
 
   const handleTranscriptionComplete = useCallback(report => {
     console.log('📥 Transcription result:', report);
@@ -227,6 +236,7 @@ const Level1Screen = () => {
           scenarioTitle: scenarioTitle || 'Ordering Coffee',
           scenarioEmoji: scenarioEmoji || '☕',
           scenarioId: scenarioId,
+          ...route.params,
         });
       };
 
@@ -257,14 +267,32 @@ const Level1Screen = () => {
   return (
     <View style={styles.container}>
       {/* Header with Progress */}
+
       <View style={styles.header}>
-        <View style={styles.progressBar}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${((orbState.idx + 1) / orbState.totalLines) * 100}%` },
-            ]}
-          />
+        <TouchableOpacity
+          onPress={() => {
+            navigation.navigate('LevelOptions', {
+              scenarioTitle,
+              scenarioEmoji,
+              scenarioId,
+              scenarioDescription,
+            });
+          }}
+          style={styles.backButtonContainer}
+        >
+          <BackIcon width={20} height={20} style={styles.backButton} />
+        </TouchableOpacity>
+        <View style={styles.progressBarContainer}>
+          <View style={styles.progressBarTrack}>
+            <View
+              style={[
+                styles.progressBarFill,
+                {
+                  width: `${((orbState.idx + 1) / orbState.totalLines) * 100}%`,
+                },
+              ]}
+            />
+          </View>
         </View>
       </View>
 
@@ -294,9 +322,15 @@ const Level1Screen = () => {
         {/* Microphone Button */}
         <TouchableOpacity
           style={isRecording ? styles.stopButton : styles.micButton}
-          onPress={isRecording ? handleStop : handleStart}
+          onPress={isRecording ? resetLevel : handleStart}
         >
-          <Text style={styles.buttonEmoji}>{isRecording ? '⏹️' : '🎤'}</Text>
+          <Text style={styles.buttonEmoji}>
+            {isRecording ? (
+              <DeleteIcon height={24} width={24} />
+            ) : (
+              <MicIcon height={24} width={24} />
+            )}
+          </Text>
         </TouchableOpacity>
 
         {/* Next/Done Button */}
@@ -324,34 +358,56 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
+  // Header with back button and progress bar
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
     backgroundColor: 'white',
-    gap: 15,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomColor: '#eee',
+    borderBottomWidth: 1,
+  },
+  backButtonContainer: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
   },
   backButton: {
-    fontSize: 28,
+    fontSize: 20,
+    color: '#222',
+    fontWeight: '400',
   },
-  progressBar: {
+  progressBarContainer: {
     flex: 1,
-    height: 8,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 4,
+    marginLeft: 12,
+    justifyContent: 'center',
+  },
+  progressBarTrack: {
+    width: '95%',
+    height: 14,
+    borderRadius: 9,
+    backgroundColor: '#e2e2e2',
+    alignSelf: 'center',
     overflow: 'hidden',
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#6B5B95',
-    borderRadius: 4,
+  progressBarFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#463855',
+    borderRadius: 9,
   },
+  // Main content
   middleSection: {
     flex: 1,
     backgroundColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  // Audio waveform display
   waveformHidden: {
     width: 0,
     height: 0,
@@ -363,6 +419,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     paddingHorizontal: 15,
   },
+  // Controls at the bottom
   bottomSection: {
     flexDirection: 'row',
     alignItems: 'center',

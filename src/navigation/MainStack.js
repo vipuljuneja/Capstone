@@ -199,7 +199,7 @@ export default function MainStack() {
       <Stack.Screen
         name="Level1Screen"
         component={Level1Screen}
-        options={{ title: 'Level1Screen' }}
+        options={{ title: 'Level1Screen', headerShown: false }}
       />
 
       <Stack.Screen
@@ -211,7 +211,7 @@ export default function MainStack() {
       <Stack.Screen
         name="Level1ResultScreen"
         component={Level1ResultScreen}
-        options={{ title: 'Level1ResultScreen' }}
+        options={{ title: 'Level1ResultScreen', headerShown: false }}
       />
 
       <Stack.Screen
