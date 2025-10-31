@@ -29,6 +29,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       authUid,
       email,
       name,
+      onboarding: { completed: false, completedAt: null },
       profile: profile || { severityLevel: 'Moderate', focusHints: [] },
       streak: { current: 0, longest: 0, lastActiveAt: null },
       achievements: []
@@ -71,6 +72,38 @@ export const updateUserProfile = async (req: Request, res: Response): Promise<vo
     const user = await User.findOneAndUpdate(
       { authUid },
       updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    res.json({ success: true, data: user });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateOnboardingStatus = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { authUid } = req.params;
+    const { completed } = req.body;
+
+    if (typeof completed !== 'boolean') {
+      res.status(400).json({ error: 'completed flag must be provided as a boolean' });
+      return;
+    }
+
+    const update = {
+      'onboarding.completed': completed,
+      'onboarding.completedAt': completed ? new Date() : null
+    };
+
+    const user = await User.findOneAndUpdate(
+      { authUid },
+      update,
       { new: true, runValidators: true }
     );
 

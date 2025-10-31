@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { HeaderBackButton } from '@react-navigation/elements';
 
-import HomeScreen from '../screens/HomeScreen';
+// import HomeScreen from '../screens/HomeScreen';
 import DailyArticleMain from '../screens/DailyArticleMain';
 // import LevelsScreen from '../screens/LevelsScreen.js';
 import NotebookScreen from '../screens/NotebookScreen';
@@ -40,51 +40,37 @@ import BackIcon from '../../assets/icons/back.svg';
 import { useAuth } from '../contexts/AuthContext';
 
 const Stack = createNativeStackNavigator();
-const ONBOARDING_FLAG_PREFIX = 'onboardingCompleted:';
-
 export default function MainStack() {
-  const { user } = useAuth();
+  const { user, mongoUser, loading } = useAuth();
   const [initialRoute, setInitialRoute] = useState('Home');
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const navigation = useNavigation();
 
   useEffect(() => {
-    let isMounted = true;
+    if (loading) {
+      setCheckingOnboarding(true);
+      return;
+    }
 
-    const determineInitialRoute = async () => {
-      if (!user?.uid) {
-        if (isMounted) {
-          setInitialRoute('Home');
-          setCheckingOnboarding(false);
-        }
-        return;
-      }
+    if (!user?.uid) {
+      setInitialRoute('Home');
+      setCheckingOnboarding(false);
+      return;
+    }
 
-      try {
-        const stored = await AsyncStorage.getItem(
-          `${ONBOARDING_FLAG_PREFIX}${user.uid}`,
-        );
-        if (isMounted) {
-          setInitialRoute(stored ? 'Home' : 'Onboarding');
-        }
-      } catch (error) {
-        console.warn('Failed to read onboarding status', error);
-        if (isMounted) {
-          setInitialRoute('Onboarding');
-        }
-      } finally {
-        if (isMounted) {
-          setCheckingOnboarding(false);
-        }
-      }
-    };
+    if (!mongoUser) {
+      setInitialRoute('Onboarding');
+      setCheckingOnboarding(false);
+      return;
+    }
 
-    determineInitialRoute();
+    const completed = mongoUser?.onboarding?.completed;
+    console.log(mongoUser)
+    setInitialRoute(completed ? 'Home' : 'Onboarding');
+    setCheckingOnboarding(false);
+  }, [user?.uid, mongoUser, loading]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [user?.uid]);
+
 
   if (checkingOnboarding) {
     return (
@@ -102,8 +88,7 @@ export default function MainStack() {
   }
 
   return (
-    <Stack.Navigator
-      initialRouteName={initialRoute}
+    <Stack.Navigator initialRouteName={initialRoute}
       screenOptions={{
         headerStyle: { backgroundColor: '#ffffff' },
         headerTintColor: '#111827',
@@ -172,11 +157,7 @@ export default function MainStack() {
       <Stack.Screen
         name="Home"
         component={HomeScreenLevels}
-        options={{
-          title: 'Practice Levels',
-          headerShown: false,
-          headerBackTitle: ' ',
-        }}
+        options={{ title: 'Home', headerShown: false ,gestureEnabled: false }}
       />
 
       {/* <Stack.Screen

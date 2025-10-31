@@ -63,6 +63,10 @@ export type BackendUser = {
   authUid: string;
   email: string;
   name: string;
+  onboarding?: {
+    completed: boolean;
+    completedAt?: string | null;
+  };
   avatarImage?: string;
   profile?: {
     severityLevel?: 'Minimal' | 'Mild' | 'Moderate' | 'Severe';
@@ -166,6 +170,28 @@ export const updateUserProfile = async (
   } catch (error) {
     const message = extractErrorMessage(error);
     console.error('❌ Failed to update user profile:', message);
+    throw new Error(message);
+  }
+};
+
+export const updateOnboardingStatus = async (
+  authUid: string,
+  completed: boolean,
+): Promise<BackendUser> => {
+  try {
+    const { data } = await apiClient.put<ApiSuccessEnvelope<BackendUser>>(
+      `/users/${authUid}/onboarding`,
+      { completed },
+    );
+
+    if (!data?.success || !data?.data) {
+      throw new Error('Failed to update onboarding status.');
+    }
+
+    return data.data;
+  } catch (error) {
+    const message = extractErrorMessage(error);
+    console.error('Failed to update onboarding status:', message);
     throw new Error(message);
   }
 };
