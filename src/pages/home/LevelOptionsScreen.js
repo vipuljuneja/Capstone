@@ -136,7 +136,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
         description:
           'Time to go all in. Combine voice and facial and expressions like a pro.',
         emoji: '💬',
-        isLocked: false,
+        isLocked: locks.level3Locked,
         bgColor: '#C8E6C9',
       },
     ],

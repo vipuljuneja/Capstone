@@ -344,7 +344,7 @@ const Level3ResultScreen = () => {
           {checkingNext ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.nextButtonText}>NEXT LEVEL</Text>
+            <Text style={styles.nextButtonText}>LEVELS</Text>
           )}
         </TouchableOpacity>
       </View>

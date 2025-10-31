@@ -26,7 +26,7 @@ const Level3IntroScreen = () => {
   }, [navigation, route.params]);
 
   const handleStart = () => {
-    navigation.navigate('Level2Screen', route.params);
+    navigation.navigate('Level3Screen', route.params);
   };
 
   return (

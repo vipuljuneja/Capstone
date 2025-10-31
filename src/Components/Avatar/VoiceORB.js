@@ -26,7 +26,7 @@ const VoiceOrb = forwardRef((props, ref) => {
   const { onStateChange, lines } = props; // Accept dynamic lines
 
   const LINES = useMemo(() => {
-    if (Array.isArray(lines) && lines.length > 0) return lines.splice(0, 2);
+    if (Array.isArray(lines) && lines.length > 0) return lines;
     return [
       'Hello, how are you?',
       'Take a deep breath and relax.',

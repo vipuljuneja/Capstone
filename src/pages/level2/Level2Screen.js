@@ -444,7 +444,7 @@ const Level2Screen = () => {
           }
           lines={(scenarioData?.level2?.questions || [])
             .map(q => q.text)
-            .slice(0, 1)}
+            .slice(0, 2)}
         />
 
         {/* Draggable Camera Overlay */}

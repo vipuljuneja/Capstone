@@ -198,6 +198,7 @@ const Level3Screen = () => {
     },
     [orbState.totalLines],
   );
+  console.log('Level33333');
 
   // useEffect to watch for both flags and navigate once both are true
   useEffect(() => {
@@ -406,7 +407,7 @@ const Level3Screen = () => {
           onInitialized={handleAvatarInitialized}
           lines={(scenarioData?.level3?.questions || [])
             .map(q => q.text)
-            .slice(0, 1)}
+            .slice(0, 2)}
         />
 
         {/* Draggable Camera Overlay */}

@@ -165,6 +165,7 @@ const Level2ResultScreen = () => {
         try {
           await unlockLevel(mongoUser._id, finalScenarioId, 3);
           console.log('🔓 Level 3 unlocked');
+          setNextLevelUnlocked(true);
         } catch (e) {
           console.warn(
             '⚠️ Failed to unlock Level 3 (non-fatal):',
@@ -203,6 +204,7 @@ const Level2ResultScreen = () => {
             finalScenarioId,
           );
           const unlocked = Boolean(progress?.levels?.['3']?.unlockedAt);
+          console.log('Unlocked', unlocked, progress);
           if (unlocked) {
             setNextLevelUnlocked(true);
             break;

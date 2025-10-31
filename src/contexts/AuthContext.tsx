@@ -33,35 +33,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   // const [mongoUser, setMongoUser] = useState<BackendUser | null>(null);
-   const [mongoUser, setMongoUser] = useState<any | null>(null);
+  const [mongoUser, setMongoUser] = useState<any | null>(null);
 
   const fetchMongoUser = async (firebaseUser: User, retries = 3) => {
     try {
       console.log('🔍 Fetching MongoDB user for:', firebaseUser.uid);
-      
+
       // getUserByAuthUid already returns the BackendUser directly (not wrapped in envelope)
       const userData = await getUserByAuthUid(firebaseUser.uid);
-      
+
       console.log('✅ MongoDB user found:', userData.name);
       setMongoUser(userData);
-      
     } catch (error: any) {
-      console.warn(`❌ Failed to fetch MongoDB user (attempt ${4 - retries}/3):`, error.message);
-      
+      // console.warn(`❌ Failed to fetch MongoDB user (attempt ${4 - retries}/3):`, error.message);
+
       // If user not found and we have retries left, wait and try again
       // This handles the race condition during signup
-      if (retries > 0 && (
-        error.message?.includes('not found') || 
-        error.message?.includes('404') ||
-        error.message?.includes('Failed to load user profile')
-      )) {
+      if (
+        retries > 0 &&
+        (error.message?.includes('not found') ||
+          error.message?.includes('404') ||
+          error.message?.includes('Failed to load user profile'))
+      ) {
         console.log(`⏳ Retrying in 1 second... (${retries} attempts left)`);
         await new Promise(resolve => setTimeout(resolve, 1000));
         return fetchMongoUser(firebaseUser, retries - 1);
       }
-      
+
       // After all retries, log but don't crash
-      console.error('❌ Failed to load MongoDB user after all retries');
+      // console.error('❌ Failed to load MongoDB user after all retries');
       setMongoUser(null);
     }
   };
@@ -73,11 +73,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
-      console.log('🔐 Auth state changed:', nextUser ? nextUser.email : 'Signed out');
+    const unsubscribe = onAuthStateChanged(auth, async nextUser => {
+      console.log(
+        '🔐 Auth state changed:',
+        nextUser ? nextUser.email : 'Signed out',
+      );
       setLoading(true);
       setUser(nextUser);
-      
+
       if (nextUser) {
         // User signed in - fetch their MongoDB profile with retry logic
         await fetchMongoUser(nextUser);
@@ -85,7 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         // User signed out
         setMongoUser(null);
       }
-      
+
       setLoading(false);
     });
 
@@ -93,7 +96,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, mongoUser, refreshMongoUser }}>
+    <AuthContext.Provider
+      value={{ user, loading, mongoUser, refreshMongoUser }}
+    >
       {children}
     </AuthContext.Provider>
   );

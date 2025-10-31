@@ -4,11 +4,11 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { auth } from '../../firebase';
 import { createUserInBackend } from '../../services/api';
-import { 
-  getAuthErrorMessage, 
-  validateEmail, 
-  validatePassword, 
-  validateName 
+import {
+  getAuthErrorMessage,
+  validateEmail,
+  validatePassword,
+  validateName,
 } from '../../utils/authErrors';
 import AuthCard from '../../Components/Auth/AuthCard';
 import AuthInput from '../../Components/Auth/AuthInput';
@@ -20,7 +20,10 @@ interface SignupScreenProps {
   onSwitchToLogin?: () => void;
 }
 
-export default function SignupScreen({ navigation, onSwitchToLogin }: SignupScreenProps) {
+export default function SignupScreen({
+  navigation,
+  onSwitchToLogin,
+}: SignupScreenProps) {
   // Handle navigation - use navigation prop if available, otherwise use callback
   const handleSwitchToLogin = () => {
     if (navigation) {
@@ -35,13 +38,17 @@ export default function SignupScreen({ navigation, onSwitchToLogin }: SignupScre
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Field-specific errors
   const [nameError, setNameError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
-  const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
+  const [confirmPasswordError, setConfirmPasswordError] = useState<
+    string | null
+  >(null);
+  const [passwordStrength, setPasswordStrength] = useState<
+    'weak' | 'medium' | 'strong' | null
+  >(null);
 
   const handleNameChange = (text: string) => {
     setName(text);
@@ -77,7 +84,7 @@ export default function SignupScreen({ navigation, onSwitchToLogin }: SignupScre
     setPassword(text);
     setPasswordError(null);
     setError(null);
-    
+
     if (text) {
       const validation = validatePassword(text);
       if (!validation.isValid) {
@@ -100,13 +107,13 @@ export default function SignupScreen({ navigation, onSwitchToLogin }: SignupScre
 
   const handleConfirmPasswordChange = (text: string) => {
     setConfirmPassword(text);
-    
+
     if (text && password && text !== password) {
       setConfirmPasswordError('Passwords do not match');
     } else {
       setConfirmPasswordError(null);
     }
-    
+
     setError(null);
   };
 
@@ -154,7 +161,7 @@ export default function SignupScreen({ navigation, onSwitchToLogin }: SignupScre
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email.trim(),
-        password
+        password,
       );
 
       firebaseUser = userCredential.user;
@@ -169,7 +176,6 @@ export default function SignupScreen({ navigation, onSwitchToLogin }: SignupScre
 
       console.log('✅ MongoDB user created successfully.');
       // Navigation will be handled by AuthContext automatically
-
     } catch (err: any) {
       console.error('❌ Signup error:', err);
 
@@ -186,7 +192,6 @@ export default function SignupScreen({ navigation, onSwitchToLogin }: SignupScre
 
       const message = getAuthErrorMessage(err);
       setError(message);
-
     } finally {
       setLoading(false);
     }
@@ -211,146 +216,153 @@ export default function SignupScreen({ navigation, onSwitchToLogin }: SignupScre
     //   enableOnAndroid
     //   extraScrollHeight={20}
     // >
-      <AuthCard title="Sign up" blobTopMargin={110}>
-        <AuthInput
-          icon="user"
-          iconSize={20}
-          value={name}
-          onChangeText={handleNameChange}
-          onBlur={handleNameBlur}
-          placeholder="Name"
-          editable={!loading}
-          error={!!nameError}
-          testID="signup-name-input"
-        />
+    <AuthCard title="Sign up" blobTopMargin={110}>
+      <AuthInput
+        icon="user"
+        iconSize={20}
+        value={name}
+        onChangeText={handleNameChange}
+        onBlur={handleNameBlur}
+        placeholder="Name"
+        editable={!loading}
+        error={!!nameError}
+        testID="signup-name-input"
+      />
 
-        {nameError && (
-          <Text style={[authStyles.helperText, authStyles.helperTextError]}>
-            {nameError}
-          </Text>
-        )}
+      {nameError && (
+        <Text style={[authStyles.helperText, authStyles.helperTextError]}>
+          {nameError}
+        </Text>
+      )}
 
-        <AuthInput
-          icon="envelope"
-          iconSize={18}
-          value={email}
-          onChangeText={handleEmailChange}
-          onBlur={handleEmailBlur}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          placeholder="Email"
-          editable={!loading}
-          error={!!emailError}
-          testID="signup-email-input"
-        />
+      <AuthInput
+        icon="envelope"
+        iconSize={18}
+        value={email}
+        onChangeText={handleEmailChange}
+        onBlur={handleEmailBlur}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        placeholder="Email"
+        editable={!loading}
+        error={!!emailError}
+        testID="signup-email-input"
+      />
 
-        {emailError && (
-          <Text style={[authStyles.helperText, authStyles.helperTextError]}>
-            {emailError}
-          </Text>
-        )}
+      {emailError && (
+        <Text style={[authStyles.helperText, authStyles.helperTextError]}>
+          {emailError}
+        </Text>
+      )}
 
-        <AuthInput
-          icon="lock"
-          iconSize={20}
-          value={password}
-          onChangeText={handlePasswordChange}
-          placeholder="Password"
-          isPassword
-          editable={!loading}
-          error={!!passwordError}
-          testID="signup-password-input"
-        />
+      <AuthInput
+        icon="lock"
+        iconSize={20}
+        value={password}
+        onChangeText={handlePasswordChange}
+        placeholder="Password"
+        isPassword
+        editable={!loading}
+        error={!!passwordError}
+        testID="signup-password-input"
+      />
 
-        {passwordError && (
-          <Text style={[authStyles.helperText, authStyles.helperTextError]}>
-            {passwordError}
-          </Text>
-        )}
+      {passwordError && (
+        <Text style={[authStyles.helperText, authStyles.helperTextError]}>
+          {passwordError}
+        </Text>
+      )}
 
-        {password && !passwordError && passwordStrength && (
-          <>
-            <View style={authStyles.passwordStrengthContainer}>
-              <View
-                style={[
-                  authStyles.passwordStrengthBar,
+      {password && !passwordError && passwordStrength && (
+        <>
+          <View style={authStyles.passwordStrengthContainer}>
+            <View
+              style={[
+                authStyles.passwordStrengthBar,
+                authStyles.passwordStrengthBarFilled,
+                passwordStrength === 'weak' &&
+                  authStyles.passwordStrengthBarWeak,
+                passwordStrength === 'medium' &&
+                  authStyles.passwordStrengthBarMedium,
+                passwordStrength === 'strong' &&
+                  authStyles.passwordStrengthBarStrong,
+              ]}
+            />
+            <View
+              style={[
+                authStyles.passwordStrengthBar,
+                (passwordStrength === 'medium' ||
+                  passwordStrength === 'strong') &&
                   authStyles.passwordStrengthBarFilled,
-                  passwordStrength === 'weak' && authStyles.passwordStrengthBarWeak,
-                  passwordStrength === 'medium' && authStyles.passwordStrengthBarMedium,
-                  passwordStrength === 'strong' && authStyles.passwordStrengthBarStrong,
-                ]}
-              />
-              <View
-                style={[
-                  authStyles.passwordStrengthBar,
-                  (passwordStrength === 'medium' || passwordStrength === 'strong') &&
-                    authStyles.passwordStrengthBarFilled,
-                  passwordStrength === 'medium' && authStyles.passwordStrengthBarMedium,
-                  passwordStrength === 'strong' && authStyles.passwordStrengthBarStrong,
-                ]}
-              />
-              <View
-                style={[
-                  authStyles.passwordStrengthBar,
-                  passwordStrength === 'strong' &&
-                    authStyles.passwordStrengthBarFilled &&
-                    authStyles.passwordStrengthBarStrong,
-                ]}
-              />
-            </View>
-            <Text style={authStyles.passwordStrengthText}>
-              Password strength: {passwordStrength}
-            </Text>
-          </>
-        )}
-
-        <AuthInput
-          icon="lock"
-          iconSize={20}
-          value={confirmPassword}
-          onChangeText={handleConfirmPasswordChange}
-          placeholder="Confirm Password"
-          isPassword
-          editable={!loading}
-          error={!!confirmPasswordError}
-          testID="signup-confirm-password-input"
-        />
-
-        {confirmPasswordError && (
-          <Text style={[authStyles.helperText, authStyles.helperTextError]}>
-            {confirmPasswordError}
+                passwordStrength === 'medium' &&
+                  authStyles.passwordStrengthBarMedium,
+                passwordStrength === 'strong' &&
+                  authStyles.passwordStrengthBarStrong,
+              ]}
+            />
+            <View
+              style={[
+                authStyles.passwordStrengthBar,
+                passwordStrength === 'strong' &&
+                  authStyles.passwordStrengthBarFilled &&
+                  authStyles.passwordStrengthBarStrong,
+              ]}
+            />
+          </View>
+          <Text style={authStyles.passwordStrengthText}>
+            Password strength: {passwordStrength}
           </Text>
-        )}
+        </>
+      )}
 
-        {error && <Text style={authStyles.errorText}>{error}</Text>}
+      <AuthInput
+        icon="lock"
+        iconSize={20}
+        value={confirmPassword}
+        onChangeText={handleConfirmPasswordChange}
+        placeholder="Confirm Password"
+        isPassword
+        editable={!loading}
+        error={!!confirmPasswordError}
+        testID="signup-confirm-password-input"
+      />
 
-        <View style={authStyles.termsContainer}>
-          <Text style={authStyles.termsText}>
-            By signing up, you agree to our{' '}
-            <Text style={authStyles.link}>Terms of Use</Text> and{' '}
-            <Text style={authStyles.link}>Privacy Policy</Text>
-          </Text>
-        </View>
+      {confirmPasswordError && (
+        <Text style={[authStyles.helperText, authStyles.helperTextError]}>
+          {confirmPasswordError}
+        </Text>
+      )}
 
-        <AuthButton
-          title="SIGN UP"
-          onPress={handleSignup}
-          disabled={!canSubmit}
-          loading={loading}
-          testID="signup-button"
-        />
+      {error && <Text style={authStyles.errorText}>{error}</Text>}
 
-        <View style={authStyles.footer}>
-          <Text style={authStyles.footerText}>Already have an account?</Text>
-          <TouchableOpacity 
-            onPress={handleSwitchToLogin} 
-            disabled={loading}
-            testID="switch-to-login"
-          >
-            <Text style={authStyles.link}>Sign In</Text>
-          </TouchableOpacity>
-        </View>
-      </AuthCard>
+      <View style={authStyles.termsContainer}>
+        <Text style={authStyles.termsText}>
+          By signing up, you agree to our{' '}
+          <Text style={authStyles.link}>Terms of Use</Text> and{' '}
+          <Text style={authStyles.link}>Privacy Policy</Text>
+        </Text>
+      </View>
+
+      <AuthButton
+        title="SIGN UP"
+        onPress={handleSignup}
+        disabled={!canSubmit}
+        loading={loading}
+        testID="signup-button"
+      />
+
+      <View style={authStyles.footer}>
+        <Text style={authStyles.footerText}>Already have an account?</Text>
+        <TouchableOpacity
+          onPress={handleSwitchToLogin}
+          disabled={loading}
+          testID="switch-to-login"
+        >
+          <Text style={authStyles.link}>Sign In</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={{ height: 200 }} />
+    </AuthCard>
     // </KeyboardAwareScrollView>
   );
 }
