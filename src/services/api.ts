@@ -15,7 +15,7 @@ const apiClient = axios.create({
 
 // Add request interceptor to attach Firebase auth token
 apiClient.interceptors.request.use(
-  async (config) => {
+  async config => {
     try {
       const user = auth.currentUser;
       if (user) {
@@ -27,9 +27,9 @@ apiClient.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
+  error => {
     return Promise.reject(error);
-  }
+  },
 );
 
 type ApiSuccessEnvelope<T> = {
@@ -98,7 +98,7 @@ export const createUserInBackend = async (userData: {
     return data.data;
   } catch (error) {
     const message = extractErrorMessage(error);
-    console.error('❌ Failed to create user in backend:', message);
+    // console.error('❌ Failed to create user in backend:', message);
     throw new Error(message);
   }
 };
@@ -118,7 +118,7 @@ export const getUserByAuthUid = async (
     return data.data;
   } catch (error) {
     const message = extractErrorMessage(error);
-    console.error('❌ Failed to get user:', message);
+    // console.error('❌ Failed to get user:', message);
     throw new Error(message);
   }
 };
@@ -502,9 +502,7 @@ export const updateReflection = async (
 /**
  * Delete a reflection
  */
-export const deleteReflection = async (
-  reflectionId: string,
-): Promise<void> => {
+export const deleteReflection = async (reflectionId: string): Promise<void> => {
   try {
     const response = await apiClient.delete<
       ApiSuccessEnvelope<{ message: string }>
@@ -580,14 +578,17 @@ export const submitCompletePracticeSession = async (
       sessionData,
       {
         timeout: 60000,
-      }
+      },
     );
 
     if (!response.data?.success || !response.data?.data) {
       throw new Error('Failed to submit practice session');
     }
 
-    console.log('✅ Practice session submitted successfully:', response.data.data._id);
+    console.log(
+      '✅ Practice session submitted successfully:',
+      response.data.data._id,
+    );
     return response.data.data;
   } catch (error: any) {
     console.error(
@@ -710,14 +711,17 @@ export const initializeProgress = async (
   try {
     const response = await apiClient.post<ApiSuccessEnvelope<ProgressDoc>>(
       '/progress',
-      { userId, scenarioId }
+      { userId, scenarioId },
     );
     if (!response.data?.success || !response.data?.data) {
       throw new Error('Failed to initialize progress');
     }
     return response.data.data;
   } catch (error: any) {
-    console.error('❌ Failed to initialize progress:', error.response?.data || error.message);
+    console.error(
+      '❌ Failed to initialize progress:',
+      error.response?.data || error.message,
+    );
     throw error;
   }
 };
@@ -728,7 +732,7 @@ export const getProgressForScenario = async (
 ): Promise<ProgressDoc | null> => {
   try {
     const response = await apiClient.get<ApiSuccessEnvelope<ProgressDoc>>(
-      `/progress/user/${userId}/scenario/${scenarioId}`
+      `/progress/user/${userId}/scenario/${scenarioId}`,
     );
     if (!response.data?.success || !response.data?.data) {
       return null;
@@ -739,7 +743,10 @@ export const getProgressForScenario = async (
     if (error?.response?.status === 404) {
       return null;
     }
-    console.error('❌ Failed to get progress:', error.response?.data || error.message);
+    console.error(
+      '❌ Failed to get progress:',
+      error.response?.data || error.message,
+    );
     throw error;
   }
 };
@@ -752,14 +759,17 @@ export const unlockLevel = async (
   try {
     const response = await apiClient.put<ApiSuccessEnvelope<ProgressDoc>>(
       `/progress/user/${userId}/scenario/${scenarioId}/unlock`,
-      { level }
+      { level },
     );
     if (!response.data?.success || !response.data?.data) {
       throw new Error('Failed to unlock level');
     }
     return response.data.data;
   } catch (error: any) {
-    console.error('❌ Failed to unlock level:', error.response?.data || error.message);
+    console.error(
+      '❌ Failed to unlock level:',
+      error.response?.data || error.message,
+    );
     throw error;
   }
 };
@@ -804,15 +814,20 @@ export interface SimpleScenario {
  */
 export const getAllScenarios = async (): Promise<SimpleScenario[]> => {
   try {
-    const response = await apiClient.get<ApiSuccessEnvelope<SimpleScenario[]>>('/scenarios');
-    
+    const response = await apiClient.get<ApiSuccessEnvelope<SimpleScenario[]>>(
+      '/scenarios',
+    );
+
     if (!response.data?.success || !response.data?.data) {
       throw new Error('Failed to fetch scenarios');
     }
 
     return response.data.data;
   } catch (error: any) {
-    console.error('❌ Failed to fetch scenarios:', error.response?.data || error.message);
+    console.error(
+      '❌ Failed to fetch scenarios:',
+      error.response?.data || error.message,
+    );
     throw error;
   }
 };
@@ -820,17 +835,24 @@ export const getAllScenarios = async (): Promise<SimpleScenario[]> => {
 /**
  * Get scenario by ID
  */
-export const getScenarioById = async (id: string | number): Promise<SimpleScenario> => {
+export const getScenarioById = async (
+  id: string | number,
+): Promise<SimpleScenario> => {
   try {
-    const response = await apiClient.get<ApiSuccessEnvelope<SimpleScenario>>(`/scenarios/${id}`);
-    
+    const response = await apiClient.get<ApiSuccessEnvelope<SimpleScenario>>(
+      `/scenarios/${id}`,
+    );
+
     if (!response.data?.success || !response.data?.data) {
       throw new Error('Failed to fetch scenario');
     }
 
     return response.data.data;
   } catch (error: any) {
-    console.error(`❌ Failed to fetch scenario ${id}:`, error.response?.data || error.message);
+    console.error(
+      `❌ Failed to fetch scenario ${id}:`,
+      error.response?.data || error.message,
+    );
     throw error;
   }
 };
@@ -838,17 +860,24 @@ export const getScenarioById = async (id: string | number): Promise<SimpleScenar
 /**
  * Initialize default scenarios
  */
-export const initializeDefaultScenarios = async (): Promise<SimpleScenario[]> => {
+export const initializeDefaultScenarios = async (): Promise<
+  SimpleScenario[]
+> => {
   try {
-    const response = await apiClient.post<ApiSuccessEnvelope<SimpleScenario[]>>('/scenarios/initialize');
-    
+    const response = await apiClient.post<ApiSuccessEnvelope<SimpleScenario[]>>(
+      '/scenarios/initialize',
+    );
+
     if (!response.data?.success || !response.data?.data) {
       throw new Error('Failed to initialize default scenarios');
     }
 
     return response.data.data;
   } catch (error: any) {
-    console.error('❌ Failed to initialize default scenarios:', error.response?.data || error.message);
+    console.error(
+      '❌ Failed to initialize default scenarios:',
+      error.response?.data || error.message,
+    );
     throw error;
   }
 };
@@ -863,21 +892,24 @@ export const updateScenarioQuestions = async (
     order: number;
     text: string;
     videoUrl: string;
-  }>
+  }>,
 ): Promise<SimpleScenario> => {
   try {
     const response = await apiClient.put<ApiSuccessEnvelope<SimpleScenario>>(
       `/scenarios/${id}/questions`,
-      { level, questions }
+      { level, questions },
     );
-    
+
     if (!response.data?.success || !response.data?.data) {
       throw new Error('Failed to update scenario questions');
     }
 
     return response.data.data;
   } catch (error: any) {
-    console.error(`❌ Failed to update scenario ${id} questions:`, error.response?.data || error.message);
+    console.error(
+      `❌ Failed to update scenario ${id} questions:`,
+      error.response?.data || error.message,
+    );
     throw error;
   }
 };
@@ -885,17 +917,17 @@ export const updateScenarioQuestions = async (
 // Convenience helpers for specific levels
 export const updateLevel1Questions = async (
   id: string | number,
-  questions: Array<{ order: number; text: string; videoUrl: string }>
+  questions: Array<{ order: number; text: string; videoUrl: string }>,
 ) => updateScenarioQuestions(id, 'level1', questions);
 
 export const updateLevel2Questions = async (
   id: string | number,
-  questions: Array<{ order: number; text: string; videoUrl: string }>
+  questions: Array<{ order: number; text: string; videoUrl: string }>,
 ) => updateScenarioQuestions(id, 'level2', questions);
 
 export const updateLevel3Questions = async (
   id: string | number,
-  questions: Array<{ order: number; text: string; videoUrl: string }>
+  questions: Array<{ order: number; text: string; videoUrl: string }>,
 ) => updateScenarioQuestions(id, 'level3', questions);
 
 // ============================================
@@ -905,18 +937,23 @@ export const updateLevel3Questions = async (
 export const getUserLevelQuestions = async (
   userId: string,
   scenarioId: string,
-  level: 'level1' | 'level2' | 'level3'
-): Promise<{ questions: Array<{ order: number; text: string; videoUrl: string }> }> => {
+  level: 'level1' | 'level2' | 'level3',
+): Promise<{
+  questions: Array<{ order: number; text: string; videoUrl: string }>;
+}> => {
   try {
-    const response = await apiClient.get<ApiSuccessEnvelope<{ questions: any[] }>>(
-      `/users/${userId}/scenarios/${scenarioId}/levels/${level}/questions`
-    );
+    const response = await apiClient.get<
+      ApiSuccessEnvelope<{ questions: any[] }>
+    >(`/users/${userId}/scenarios/${scenarioId}/levels/${level}/questions`);
     if (!response.data?.success || !response.data?.data) {
       throw new Error('Failed to fetch questions');
     }
     return response.data.data as any;
   } catch (error: any) {
-    console.error('❌ Failed to get user level questions:', error.response?.data || error.message);
+    console.error(
+      '❌ Failed to get user level questions:',
+      error.response?.data || error.message,
+    );
     throw error;
   }
 };
@@ -925,19 +962,27 @@ export const setUserLevelQuestions = async (
   userId: string,
   scenarioId: string,
   level: 'level2' | 'level3',
-  questions: Array<{ order: number; text: string; videoUrl: string }>
+  questions: Array<{ order: number; text: string; videoUrl: string }>,
 ): Promise<void> => {
   try {
     const response = await apiClient.put<ApiSuccessEnvelope<unknown>>(
       `/users/${userId}/scenarios/${scenarioId}/levels/${level}/questions`,
-      { questions }
+      { questions },
     );
     if (!response.data?.success) {
       throw new Error('Failed to save personalized questions');
     }
-    console.log('✅ Saved personalized questions', { userId, scenarioId, level, count: questions.length });
+    console.log('✅ Saved personalized questions', {
+      userId,
+      scenarioId,
+      level,
+      count: questions.length,
+    });
   } catch (error: any) {
-    console.error('❌ Failed to set user level questions:', error.response?.data || error.message);
+    console.error(
+      '❌ Failed to set user level questions:',
+      error.response?.data || error.message,
+    );
     throw error;
   }
 };

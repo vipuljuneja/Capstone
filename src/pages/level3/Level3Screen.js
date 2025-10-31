@@ -360,13 +360,15 @@ const Level3Screen = () => {
         waitingForFinalResult.current = true;
 
         // Check if results already present
-        if (
-          transcriptionResultsRef.current.length === currentState.totalLines &&
-          facialAnalysisResultsRef.current.length === currentState.totalLines
-        ) {
-          setLastTranscriptionReceived(true);
-          setLastFacialAnalysisReceived(true);
-        }
+        setLastTranscriptionReceived(true);
+        setLastFacialAnalysisReceived(true);
+        // if (
+        //   transcriptionResultsRef.current.length === currentState.totalLines &&
+        //   facialAnalysisResultsRef.current.length === currentState.totalLines
+        // ) {
+        //   setLastTranscriptionReceived(true);
+        //   setLastFacialAnalysisReceived(true);
+        // }
       };
 
       finishAfterResults();

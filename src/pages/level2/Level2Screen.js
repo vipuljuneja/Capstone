@@ -161,6 +161,8 @@ const Level2Screen = () => {
           orbState.totalLines,
         );
 
+        console.log('Here', waitingForFinalResult, newResults, orbState);
+
         if (
           waitingForFinalResult.current &&
           newResults.length === orbState.totalLines
@@ -366,13 +368,19 @@ const Level2Screen = () => {
         waitingForFinalResult.current = true;
 
         // Check if results already present
-        if (
-          transcriptionResultsRef.current.length === currentState.totalLines &&
-          facialAnalysisResultsRef.current.length === currentState.totalLines
-        ) {
-          setLastTranscriptionReceived(true);
-          setLastFacialAnalysisReceived(true);
-        }
+        setLastTranscriptionReceived(true);
+        setLastFacialAnalysisReceived(true);
+        // console.log(
+        //   'Hereee',
+        //   transcriptionResultsRef,
+        //   facialAnalysisResultsRef,
+        // );
+        // if (
+        //   transcriptionResultsRef.current.length === currentState.totalLines &&
+        //   facialAnalysisResultsRef.current.length === currentState.totalLines
+        // ) {
+
+        // }
       };
 
       finishAfterResults();
