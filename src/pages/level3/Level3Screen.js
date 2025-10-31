@@ -1,4 +1,3 @@
-// src/screens/levels/Level2Screen.js
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
@@ -8,7 +7,6 @@ import {
   Animated,
   PanResponder,
   Dimensions,
-  Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AvatarGenerator from '../../Components/Avatar/AvatarGenerate';
@@ -17,13 +15,10 @@ import AudioRecorder from '../../Components/Audio/AudioRecorder';
 import AudioWaveform from '../../Components/Audio/AudioWaveform';
 
 import scenarioService from '../../services/scenarioService';
-import BackIcon from '../../../assets/icons/back.svg';
-import MicIcon from '../../../assets/icons/mic-white.svg';
-import DeleteIcon from '../../../assets/icons/delete-filled.svg';
 
 const { width, height } = Dimensions.get('window');
 
-const Level2Screen = () => {
+const Level3Screen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { scenarioTitle, scenarioId } = route.params || {};
@@ -42,7 +37,7 @@ const Level2Screen = () => {
           setScenarioData(scenario);
 
           // Update orb state with question count from loaded data
-          const questionCount = scenario?.level2?.questions?.length || 5;
+          const questionCount = scenario?.level3?.questions?.length || 5;
           setOrbState(prev => ({ ...prev, totalLines: questionCount }));
         }
       } catch (error) {
@@ -120,30 +115,28 @@ const Level2Screen = () => {
   }, []);
 
   const resetLevel = useCallback(() => {
-    console.log('🔄 Resetting level to start');
-
-    // Reset local state
     setIsRecording(false);
     setTranscriptionResults([]);
-    setOrbState({
+    setFacialAnalysisResults([]);
+    transcriptionResultsRef.current = [];
+    facialAnalysisResultsRef.current = [];
+
+    // Reset flags and refs
+    setLastTranscriptionReceived(false);
+    setLastFacialAnalysisReceived(false);
+    waitingForFinalResult.current = false;
+
+    if (avatarRef.current?.reset) {
+      avatarRef.current.reset();
+    }
+
+    setOrbState(prev => ({
+      ...prev,
+      idx: 0,
       speaking: false,
       loading: false,
-      idx: 0,
-      totalLines: scenarioData?.level1?.questions?.length || 5,
-    });
-
-    transcriptionResultsRef.current = [];
-
-    // Reset VoiceOrb
-    if (voiceOrbRef.current?.reset) {
-      voiceOrbRef.current.reset();
-    }
-
-    // Reset AudioRecorder
-    if (audioRecorderRef.current?.reset) {
-      audioRecorderRef.current.reset();
-    }
-  }, [scenarioData]);
+    }));
+  }, []);
 
   // Handle transcription result arrival
   const handleTranscriptionComplete = useCallback(
@@ -242,7 +235,7 @@ const Level2Screen = () => {
     );
 
     setTimeout(() => {
-      navigation.navigate('Level2ResultScreen', {
+      navigation.navigate('Level3ResultScreen', {
         totalQuestions: currentState?.totalLines || 5,
         transcriptionResults: transcriptionResultsRef.current,
         facialAnalysisResults: facialAnalysisResultsRef.current,
@@ -394,7 +387,7 @@ const Level2Screen = () => {
   return (
     <View style={styles.container}>
       {/* Header with Progress */}
-      {/* <View style={styles.header}>
+      <View style={styles.header}>
         <View style={styles.progressBar}>
           <View
             style={[
@@ -402,34 +395,6 @@ const Level2Screen = () => {
               { width: `${((orbState.idx + 1) / orbState.totalLines) * 100}%` },
             ]}
           />
-        </View>
-      </View> */}
-
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => {
-            navigation.navigate('LevelOptions', {
-              scenarioTitle,
-              scenarioEmoji,
-              scenarioId,
-              scenarioDescription,
-            });
-          }}
-          style={styles.backButtonContainer}
-        >
-          <BackIcon width={20} height={20} style={styles.backButton} />
-        </TouchableOpacity>
-        <View style={styles.progressBarContainer}>
-          <View style={styles.progressBarTrack}>
-            <View
-              style={[
-                styles.progressBarFill,
-                {
-                  width: `${((orbState.idx + 1) / orbState.totalLines) * 100}%`,
-                },
-              ]}
-            />
-          </View>
         </View>
       </View>
 
@@ -439,10 +404,7 @@ const Level2Screen = () => {
           ref={avatarRef}
           onStateChange={handleStateChange}
           onInitialized={handleAvatarInitialized}
-          imgURL={
-            'https://tujrvclzhnflmqkkotem.supabase.co/storage/v1/object/public/capstone/sula.png'
-          }
-          lines={(scenarioData?.level2?.questions || [])
+          lines={(scenarioData?.level3?.questions || [])
             .map(q => q.text)
             .slice(0, 1)}
         />
@@ -465,11 +427,11 @@ const Level2Screen = () => {
       </View>
 
       {/* Waveform */}
-      <View
+      {/* <View
         style={isRecording ? styles.waveformVisible : styles.waveformHidden}
       >
         <AudioWaveform ref={waveformRef} />
-      </View>
+      </View> */}
 
       {/* Bottom Controls */}
       <View style={styles.bottomSection}>
@@ -484,13 +446,7 @@ const Level2Screen = () => {
           onPress={isRecording ? handleStop : handleStart}
           disabled={!avatarReady && !isRecording}
         >
-          <Text style={styles.buttonEmoji}>
-            {isRecording ? (
-              <DeleteIcon height={24} width={24} />
-            ) : (
-              <MicIcon height={24} width={24} />
-            )}
-          </Text>
+          <Text style={styles.buttonEmoji}>{isRecording ? '⏹️' : '🎤'}</Text>
         </TouchableOpacity>
 
         {/* Next/Done Button */}
@@ -611,27 +567,6 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.5,
   },
-  progressBarContainer: {
-    flex: 1,
-    marginLeft: 12,
-    justifyContent: 'center',
-  },
-  progressBarTrack: {
-    width: '95%',
-    height: 14,
-    borderRadius: 9,
-    backgroundColor: '#e2e2e2',
-    alignSelf: 'center',
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    backgroundColor: '#463855',
-    borderRadius: 9,
-  },
 });
 
-export default Level2Screen;
+export default Level3Screen;

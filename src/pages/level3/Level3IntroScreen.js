@@ -4,24 +4,24 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 
-const Level2IntroScreen = () => {
+const Level3IntroScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
 
   // You can pass these as navigation params if needed
   const {
-    levelNumber = 2,
-    levelTitle = 'Level 2',
+    levelNumber = 3,
+    levelTitle = 'Level 3',
     scenarioTitle = 'Voice and Facial Expressions Practice',
     scenarioDescription = 'You are at your favourite cafe. You ordered your usual menu but the barista gives you the wrong order . . .',
     scenarioId,
   } = route.params || {};
 
-  console.log('Level2IntroScreen params:', route.params);
+  console.log('Level3IntroScreen params:', route.params);
 
   useEffect(() => {
     navigation.setOptions({
-      title: levelTitle || 'Level 2',
+      title: levelTitle || 'Level 3',
     });
   }, [navigation, route.params]);
 
@@ -126,4 +126,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Level2IntroScreen;
+export default Level3IntroScreen;
