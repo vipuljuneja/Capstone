@@ -1,10 +1,11 @@
-import React, { useState } from "react";
-import { View, Text, Pressable, StyleSheet, Alert , Image} from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, View, Text, Pressable, StyleSheet, Alert, Image } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import QuestionCard from "../Components/Onboarding/QuestionCard";
-import { updateSeverityLevel } from "../services/api";
-import { useNavigation } from "@react-navigation/native";
+import { updateOnboardingStatus, updateSeverityLevel } from "../services/api";
+// import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../contexts/AuthContext";
+import { CommonActions, useNavigation } from '@react-navigation/native';
 
 
 
@@ -47,8 +48,6 @@ const SLIDES = [
   },
 ];
 
-const ONBOARDING_FLAG_PREFIX = "onboardingCompleted:";
-
 function getSummary(responses) {
   const valid = responses.filter(v => typeof v === "number");
   const avg = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : 0;
@@ -63,13 +62,25 @@ function getSummary(responses) {
 }
 
 export default function Onboarding() {
-  const { user } = useAuth();
+  const { user, mongoUser, refreshMongoUser } = useAuth();
   const [phase, setPhase] = useState("slides");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [responses, setResponses] = useState(Array(questionList.length).fill(null));
   const [slideIndex, setSlideIndex] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   const navigation = useNavigation(); 
+  const isMountedRef = useRef(true);
+  const hasExitedRef = useRef(false);
+  const isRetake = !!mongoUser?.onboarding?.completed;
+  
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const markOnboardingComplete = async () => {
     if (!user?.uid) {
@@ -77,45 +88,72 @@ export default function Onboarding() {
     }
 
     try {
-      await AsyncStorage.setItem(
-        `${ONBOARDING_FLAG_PREFIX}${user.uid}`,
-        'true',
-      );
+      await updateOnboardingStatus(user.uid, true);
+      refreshMongoUser()
+        .catch(refreshError => {
+          console.warn('Failed to refresh onboarding status from backend', refreshError);
+        });
     } catch (storageError) {
       console.warn('Failed to persist onboarding completion flag', storageError);
     }
   };
 
-  const exitToHome = () => {
-    requestAnimationFrame(() => {
-      navigation.navigate('Home');
-    });
-  };
+const exitToHome = () => {
+  if (hasExitedRef.current) return;
+  hasExitedRef.current = true;
 
-  const completeAndExit = async () => {
-    await markOnboardingComplete();
-    exitToHome();
-  };
+  
+  const parent = navigation.getParent?.();
+  if (parent) {
+    parent.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'Home' }],
+      })
+    );
+    return;
+  }
+
+
+  navigation.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [{ name: 'Home' }],
+    })
+  );
+};
 
   const selected = responses[currentIndex];
-  const progress = (currentIndex + (selected ? 1 : 0)) / questionList.length;
 
   const startQuestions = () => setPhase("questions");
 
   const skipAll = async () => {
+    if (submitting) {
+      return;
+    }
+    setSubmitting(true);
     try {
       const filled = responses.map(v => (v == null ? 0 : v));
       console.log("Onboarding skipped:", filled);
-      await AsyncStorage.setItem("surveyResponses", JSON.stringify(filled));
-      
       if (user?.uid) {
-        await updateSeverityLevel(user.uid, 'MODERATE');
-        console.log("✅ Severity level set to MODERATE (skipped)");
+        await updateSeverityLevel(user.uid, 'Moderate');
+        console.log("Severity level set to Moderate (skipped)");
       }
     } catch (error) {
-      console.error("❌ Error in skipAll:", error);
+      console.error("Error in skipAll:", error);
     } finally {
-      await completeAndExit();
+      try {
+        await markOnboardingComplete();
+      } finally {
+        if (isMountedRef.current) {
+          setSubmitting(false);
+        }
+        if (isRetake) {
+          exitToHome();
+        } else if (isMountedRef.current) {
+          setRedirecting(true);
+        }
+      }
     }
   };
 
@@ -144,44 +182,26 @@ export default function Onboarding() {
   };
 
   const handleFinish = async () => {
-    try {
-      const summary = getSummary(responses);
-      console.log("Final results:", { responses, summary });
-      
-      // Update the severity level in the backend
-      if (user?.uid) {
-        await updateSeverityLevel(user.uid, summary.label);
-        console.log("✅ Severity level updated:", summary.label);
-        await markOnboardingComplete();
-        
-        Alert.alert(
-          "Assessment Complete! 🎉",
-          `Your anxiety level: ${summary.label}\n\n${summary.message}`,
-          [
-            {
-              text: "Let's Start!",
-              onPress: () => exitToHome()
-            }
-          ]
-        );
-      } else {
-        console.warn("⚠️ No user found, skipping backend update");
-        exitToHome();
-      }
-    } catch (error) {
-      console.error("❌ Error updating severity level:", error);
-      Alert.alert(
-        "Error",
-        "Failed to save your assessment. Please try again.",
-        [
-          {
-            text: "OK",
-            onPress: () => exitToHome()
-          }
-        ]
-      );
+  if (submitting) return;
+  setSubmitting(true);
+  try {
+    const summary = getSummary(responses);
+
+    if (user?.uid) {
+      await updateSeverityLevel(user.uid, summary.label);
+      await markOnboardingComplete(); 
     }
-  };
+
+    
+    navigation.navigate('Home');
+  } catch (e) {
+    console.error(e);
+    Alert.alert('Error', 'Failed to save your assessment. Please try again.');
+  } finally {
+    if (isMountedRef.current) setSubmitting(false);
+  }
+};
+
 
   // if (phase === "intro") {
   //   return (
@@ -201,6 +221,17 @@ export default function Onboarding() {
   //     </View>
   //   );
   // }
+  if (redirecting) {
+    return (
+      <View style={S.container}>
+        <View style={S.center}>
+          <ActivityIndicator size="large" color="#4f46e5" />
+          <Text style={S.desc}>Wrapping things up… hang tight!</Text>
+        </View>
+      </View>
+    );
+  }
+
   if (phase === "slides") {
     const slide = SLIDES[slideIndex];
     const onPrimary = () => {
@@ -213,7 +244,7 @@ export default function Onboarding() {
 
     return (
       <View style={S.container}>
-        <Pressable onPress={skipAll} style={S.skip}>
+        <Pressable onPress={skipAll} disabled={submitting} style={[S.skip, submitting && S.skipDisabled]}>
           <Text style={S.skipText}>SKIP</Text>
         </Pressable>
 
@@ -236,7 +267,7 @@ export default function Onboarding() {
           <Text style={S.desc}>{slide.desc}</Text>
         </View>
 
-        <Pressable onPress={onPrimary} style={S.startBtn}>
+        <Pressable onPress={onPrimary} disabled={submitting} style={[S.startBtn, submitting && S.disabled]}>
           <Text style={S.startText}>{slide.cta}</Text>
         </Pressable>
       </View>
@@ -253,7 +284,7 @@ export default function Onboarding() {
           {/* <Text style={S.desc}>{message}</Text> */}
           <Text style={S.desc}> {"\n"} Let’s move forward together {"\n"} One step at a time.</Text>
         </View>
-        <Pressable onPress={handleFinish} style={S.startBtn}>
+        <Pressable onPress={handleFinish} disabled={submitting} style={[S.startBtn, submitting && S.disabled]}>
           <Text style={S.startText}>LET’S GO!</Text>
         </Pressable>
       </View>
@@ -262,7 +293,7 @@ export default function Onboarding() {
 
   return (
     <View style={S.container}>
-      <Pressable onPress={skipAll} style={S.skip}>
+      <Pressable onPress={skipAll} disabled={submitting} style={[S.skip, submitting && S.skipDisabled]}>
         <Text style={S.skipText}>SKIP</Text>
       </Pressable>
 
@@ -279,7 +310,7 @@ export default function Onboarding() {
           <Text style={S.backText}>Back</Text>
         </Pressable>
 
-        <Pressable onPress={next} style={S.nextBtn}>
+        <Pressable onPress={next} style={[S.nextBtn, submitting && S.disabled]} disabled={submitting}>
           <Text style={S.nextText}>Next</Text>
         </Pressable>
       </View>
@@ -291,6 +322,7 @@ const S = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc", padding: 20 },
   skip: { alignSelf: "flex-end", marginBottom: 10 },
   skipText: { fontSize: 12, color: "#6b7280", letterSpacing: 1 },
+  skipDisabled: { opacity: 0.4 },
   center: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
   title: { fontSize: 22, fontWeight: "800", color: "#111827", textAlign: "center" },
   desc: { fontSize: 14, color: "#6b7280", textAlign: "center", lineHeight: 20 },
@@ -332,4 +364,3 @@ const S = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#d1d5db" },
   dotActive: { width: 22, borderRadius: 5, backgroundColor: "#4b5563" },
 });
-

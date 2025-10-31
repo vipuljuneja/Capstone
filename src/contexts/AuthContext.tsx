@@ -2,11 +2,12 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
-import { getUserByAuthUid } from '../services/api';
+import { BackendUser, getUserByAuthUid } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  // mongoUser: BackendUser | null;
   mongoUser: any | null;
   refreshMongoUser: () => Promise<void>;
 }
@@ -31,7 +32,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mongoUser, setMongoUser] = useState<any | null>(null);
+  // const [mongoUser, setMongoUser] = useState<BackendUser | null>(null);
+   const [mongoUser, setMongoUser] = useState<any | null>(null);
 
   const fetchMongoUser = async (firebaseUser: User, retries = 3) => {
     try {
@@ -73,6 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
       console.log('🔐 Auth state changed:', nextUser ? nextUser.email : 'Signed out');
+      setLoading(true);
       setUser(nextUser);
       
       if (nextUser) {

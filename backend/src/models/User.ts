@@ -5,6 +5,10 @@ export interface IUser extends Document {
   email: string;
   name: string;
   avatarImage?: string; // Stores the avatar name (e.g., 'pipo_set', 'bro_set', 'cherry_set')
+  onboarding: {
+    completed: boolean;
+    completedAt: Date | null;
+  };
   profile: {
     severityLevel: 'Minimal' | 'Mild' | 'Moderate' | 'Severe';
     focusHints: string[];
@@ -43,6 +47,16 @@ const UserSchema: Schema = new Schema(
       type: String,
       default: 'pipo_set',
       trim: true
+    },
+    onboarding: {
+      completed: {
+        type: Boolean,
+        default: false
+      },
+      completedAt: {
+        type: Date,
+        default: null
+      }
     },
     profile: {
       severityLevel: {

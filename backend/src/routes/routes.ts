@@ -17,6 +17,9 @@ router.get('/users/:authUid', controllers.getUserByAuthUid);
 // PUT /api/users/:authUid - Update user profile
 router.put('/users/:authUid', controllers.updateUserProfile);
 
+// PUT /api/users/:authUid/onboarding - Update onboarding completion flag
+router.put('/users/:authUid/onboarding', controllers.updateOnboardingStatus);
+
 // PUT /api/users/:authUid/severity - Update user severity level
 router.put('/users/:authUid/severity', controllers.updateSeverityLevel);
 
