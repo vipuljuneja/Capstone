@@ -22,6 +22,8 @@ import { CalendarProvider, WeekCalendar } from "react-native-calendars";
 import AddReflectionCard from "../Components/Notebook/AddReflectionCard";
 import { useAuth } from "../contexts/AuthContext";
 import { ImageBackground } from "react-native";
+import isoWeek from 'dayjs/plugin/isoWeek';
+dayjs.extend(isoWeek);
 
 
 const { width: screenWidth } = Dimensions.get("window");
@@ -49,7 +51,6 @@ const MOTIVATION_TITLES = [
 function getRandomElement(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
-const Motivation = getRandomElement(MOTIVATION_TITLES)
 
 
 
@@ -125,8 +126,8 @@ function SupportModal({ visible, onClose, onGoSupport }) {
             <MaterialIcons name="close" size={24} color="#111" />
           </Pressable>
 
-            <Image source={require('../../assets/pipo-heart.png')} style={M.illust} resizeMode="contain" />
-          
+          <Image source={require('../../assets/pipo-heart.png')} style={M.illust} resizeMode="contain" />
+
           <Text style={M.bodyLine}>It sounds like you might be in pain.</Text>
           <Text style={M.bodyLine}>You don’t have to face this alone.</Text>
           <Text style={[M.bodyLine, { marginBottom: 22 }]}>Help is available right now.</Text>
@@ -228,7 +229,7 @@ function SelfReflectionCard({ title, description, onEdit, onDelete }) {
   );
 }
 
-function PipoCard({ title, subtitle, index, onPress }) {
+function PipoCard({ title, subtitle, index, onPress, motivation }) {
   const isEven = index % 2 === 0;
   const tint = isEven ? "#EEF5FF" : "#FFF8E9";
   const border = isEven ? "#CFE0FF" : "#FFE8B8";
@@ -239,7 +240,7 @@ function PipoCard({ title, subtitle, index, onPress }) {
         <View style={styles.pipoBlob} />
       </View>
       <Text style={styles.pipoTitle} numberOfLines={2}>
-        {Motivation}
+        {motivation || "You’ve got this"}
       </Text>
       <Text style={styles.pipoSubtitle} numberOfLines={1}>
         {title}
@@ -255,7 +256,7 @@ export default function NotebookScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState("pipo");
   const [fullCalendarVisible, setFullCalendarVisible] = useState(false);
   const [writerOpen, setWriterOpen] = useState(false);
-  const [showSupportModal, setShowSupportModal] = useState(false); 
+  const [showSupportModal, setShowSupportModal] = useState(false);
   const goingToSupportRef = useRef(false);
 
 
@@ -323,30 +324,31 @@ export default function NotebookScreen({ navigation }) {
   }, [userId, selectedDate, activeTab, toUICard]);
 
   const fetchDots = useCallback(async () => {
-  if (!userId) return;
+    if (!userId) return;
 
- 
-  const startDate = dayjs(selectedDate).startOf('week').add(1, 'day').format('YYYY-MM-DD'); 
-  const endDate   = dayjs(selectedDate).endOf('week').add(1, 'day').format('YYYY-MM-DD');
 
-  try {
-    const dates = await getReflectionDates(userId, { startDate, endDate });
+    const startDate = dayjs(selectedDate).startOf('isoWeek').format('YYYY-MM-DD');
+    const endDate = dayjs(selectedDate).endOf('isoWeek').add(1, 'day').format('YYYY-MM-DD');
 
-    const next = {};
-    (Array.isArray(dates) ? dates : []).forEach((row) => {
-      const ds = dayjs(row?.date).format('YYYY-MM-DD');
-      const t = String(row?.type || '').toLowerCase();
-      if (!ds) return;
-      if (!next[ds]) next[ds] = { self: false, pipo: false };
-      if (t === 'self') next[ds].self = true;
-      if (t === 'pipo') next[ds].pipo = true;
-    });
-    setDotDates(next);
-  } catch (e) {
-    console.error('Get reflection dates failed:', e);
-    setDotDates({});
-  }
-}, [userId, selectedDate]);
+
+    try {
+      const dates = await getReflectionDates(userId, { startDate, endDate });
+
+      const next = {};
+      (Array.isArray(dates) ? dates : []).forEach((row) => {
+        const ds = dayjs(row?.date).format('YYYY-MM-DD');
+        const t = String(row?.type || '').toLowerCase();
+        if (!ds) return;
+        if (!next[ds]) next[ds] = { self: false, pipo: false };
+        if (t === 'self') next[ds].self = true;
+        if (t === 'pipo') next[ds].pipo = true;
+      });
+      setDotDates(next);
+    } catch (e) {
+      console.error('Get reflection dates failed:', e);
+      setDotDates({});
+    }
+  }, [userId, selectedDate]);
 
 
 
@@ -360,61 +362,35 @@ export default function NotebookScreen({ navigation }) {
 
 
 
-  // const markedDates = useMemo(() => {
-  //   const marks = {};
-  //   // console.log(dotDates);
-  //   if (dotDates && typeof dotDates === "object") {
-  //     Object.keys(dotDates).forEach((d0) => {
-  //       const d = dayjs(d0).format("YYYY-MM-DD");
-  //       const flags = dotDates[d0] || {};
-  //       const dots = [];
-  //       if (flags.pipo) dots.push({ key: "pipo", color: "#E53935", selectedDotColor: "#E53935" });
-  //       if (flags.self) dots.push({ key: "self", color: "#1E88E5", selectedDotColor: "#1E88E5" });
-  //       if (dots.length > 0) {
-  //         marks[d] = { ...(marks[d] || {}), dots };
-  //       }
-  //     });
-  //   }
+  const markedDates = useMemo(() => {
+    const marks = {};
 
-  //   marks[selectedDate] = {
-  //     ...(marks[selectedDate] || {}),
-  //     selected: true,
-  //     selectedColor: "#CFCFCF",
-  //     selectedTextColor: "#111",
-  //   };
-  //   return marks;
-  // }, [dotDates, selectedDate]);
+    Object.keys(dotDates || {}).forEach((ds) => {
+
+      const d = dayjs(ds).format('YYYY-MM-DD');
+      const flags = dotDates[ds] || {};
+      const dots = [];
+
+      if (flags.pipo) dots.push({ key: 'pipo', color: '#E53935', selectedDotColor: '#E53935' });
+      if (flags.self) dots.push({ key: 'self', color: '#1E88E5', selectedDotColor: '#1E88E5' });
+
+      if (dots.length) {
+
+        marks[d] = { ...(marks[d] || {}), dots, marked: true };
+      }
+    });
 
 
-const markedDates = useMemo(() => {
-  const marks = {};
+    const sel = dayjs(selectedDate).format('YYYY-MM-DD');
+    marks[sel] = {
+      ...(marks[sel] || {}),
+      selected: true,
+      selectedColor: '#CFCFCF',
+      selectedTextColor: '#111',
+    };
 
-  Object.keys(dotDates || {}).forEach((ds) => {
-
-    const d = dayjs(ds).format('YYYY-MM-DD');
-    const flags = dotDates[ds] || {};
-    const dots = [];
-
-    if (flags.pipo) dots.push({ key: 'pipo', color: '#E53935', selectedDotColor: '#E53935' });
-    if (flags.self) dots.push({ key: 'self', color: '#1E88E5', selectedDotColor: '#1E88E5' });
-
-    if (dots.length) {
-      
-      marks[d] = { ...(marks[d] || {}), dots, marked: true };
-    }
-  });
-
- 
-  const sel = dayjs(selectedDate).format('YYYY-MM-DD');
-  marks[sel] = {
-    ...(marks[sel] || {}),
-    selected: true,
-    selectedColor: '#CFCFCF',
-    selectedTextColor: '#111',
-  };
-
-  return marks;
-}, [dotDates, selectedDate]);
+    return marks;
+  }, [dotDates, selectedDate]);
 
   const handleSaveReflection = async ({ title, description }) => {
     if (!userId) return;
@@ -513,21 +489,29 @@ const markedDates = useMemo(() => {
         setModalVisible={setFullCalendarVisible}
       />
       <CalendarProvider date={selectedDate} onDateChanged={(d) => setSelectedDate(d)}>
-        <WeekCalendar
-          firstDay={1}
-          markedDates={markedDates}
-          markingType="multi-dot"
-          allowShadow={false}
-          style={styles.weekCalendar}
-          onDayPress={(d) => setSelectedDate(d.dateString)}
-          theme={{
-            todayTextColor: "#111",
-            selectedDayBackgroundColor: "#CFCFCF",
-            textSectionTitleColor: "#666",
-            dayTextColor: "#666",
-          }}
-        />
+        <View style={styles.weekHeaderWrap}>
+          <WeekCalendar
+            firstDay={1}
+            markedDates={markedDates}
+            markingType="multi-dot"
+            allowShadow={false}
+            style={styles.weekCalendar}
+            onDayPress={(d) => setSelectedDate(d.dateString)}
+            theme={{
+              todayTextColor: "#111",
+              selectedDayBackgroundColor: "#CFCFCF",
+              textSectionTitleColor: "#666",
+              dayTextColor: "#666",
+            }}
+          />
+
+
+        </View>
+
+
       </CalendarProvider>
+
+
 
       {isSelf ? (
         <ScrollView
@@ -563,7 +547,7 @@ const markedDates = useMemo(() => {
         </ScrollView>
       ) : (
         <ScrollView
-          contentContainerStyle={{ paddingTop: 20, paddingBottom: 96, paddingHorizontal: 16 }}
+          contentContainerStyle={{ paddingTop: 90, paddingBottom: 96, paddingHorizontal: 16 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
           {loading && pipoData.length === 0 ? (
@@ -578,26 +562,31 @@ const markedDates = useMemo(() => {
             </View>
           ) : (
             <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
-              {pipoData.map((item, i) => (
-                <PipoCard
-                  key={item.id}
-                  title={item.title}
-                  subtitle={item.subtitle}
-                  index={i}
-                  onPress={() =>
-                    navigation.navigate("PipoDetail", {
-                      pipo: {
-                        id: item.id,
-                        Motivation: Motivation,
-                        title: item.title,
-                        subtitle: item.subtitle,
-                        dateISO: selectedDate,
-                        dateText: dayjs(selectedDate).format("ddd, MMM D").toUpperCase(),
-                      },
-                    })
-                  }
-                />
-              ))}
+              {pipoData.map((item, i) => {
+                const randomMotivation = getRandomElement(MOTIVATION_TITLES);
+                return (
+                  <PipoCard
+                    key={item.id}
+                    title={item.title}
+                    subtitle={item.subtitle}
+                    index={i}
+                    motivation={randomMotivation}
+                    onPress={() =>
+                      navigation.navigate("PipoDetail", {
+                        pipo: {
+                          id: item.id,
+                          Motivation: randomMotivation,
+                          title: item.title,
+                          subtitle: item.subtitle,
+                          dateISO: selectedDate,
+                          dateText: dayjs(selectedDate).format("ddd, MMM D").toUpperCase(),
+                        },
+                      })
+                    }
+                  />
+                );
+              })}
+
             </View>
           )}
           <View style={{ height: 16 }} />
@@ -681,13 +670,13 @@ const markedDates = useMemo(() => {
         visible={showSupportModal}
         onClose={() => setShowSupportModal(false)}
         onGoSupport={() => {
-          if (goingToSupportRef.current) return;       
+          if (goingToSupportRef.current) return;
           goingToSupportRef.current = true;
 
           setShowSupportModal(false);
 
           requestAnimationFrame(() => {
-            navigation.navigate("EmotionalSupport");   
+            navigation.navigate("EmotionalSupport");
             setTimeout(() => { goingToSupportRef.current = false; }, 300);
           });
         }}
@@ -774,11 +763,6 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
   },
   emptyText: { color: "#777", fontSize: 14, textAlign: "center" },
-  weekCalendar: {
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: "#eee",
-  },
   pipoCard: {
     width: cardWidth,
     borderRadius: 20,
@@ -853,5 +837,28 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 1.5,
   },
+  weekHeaderWrap: {
+    height: 80,
+    paddingBottom: 19,
+    backgroundColor: "#fff",
+    zIndex: 100,
+    overflow: "visible",
 
+
+    ...Platform.select({
+      android: { elevation: 8 },
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+      },
+    }),
+  },
+  weekCalendar: {
+    paddingVertical: 8,
+    paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: "#eee",
+  },
 });
