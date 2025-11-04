@@ -22,6 +22,9 @@ router.put('/users/:authUid', verifyFirebaseToken, verifyUserOwnership, controll
 // PUT /api/users/:authUid/onboarding - Update onboarding completion flag
 router.put('/users/:authUid/onboarding', verifyFirebaseToken, verifyUserOwnership, controllers.updateOnboardingStatus);
 
+// PUT /api/users/:authUid/seen-tour - Update hasSeenTour flag
+router.put('/users/:authUid/seen-tour', verifyFirebaseToken, verifyUserOwnership, controllers.updateHasSeenTour);
+
 // PUT /api/users/:authUid/severity - Update user severity level
 router.put('/users/:authUid/severity', verifyFirebaseToken, verifyUserOwnership, controllers.updateSeverityLevel);
 
