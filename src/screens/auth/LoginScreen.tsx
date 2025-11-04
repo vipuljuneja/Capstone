@@ -7,6 +7,8 @@ import { getAuthErrorMessage, validateEmail } from '../../utils/authErrors';
 import AuthCard from '../../Components/Auth/AuthCard';
 import AuthInput from '../../Components/Auth/AuthInput';
 import AuthButton from '../../Components/Auth/AuthButton';
+import GoogleAuthButton from '../../Components/Auth/GoogleAuthButton';
+import { signInWithGoogle } from '../../services/googleAuth';
 import { authStyles } from '../../Components/Auth/authStyles';
 
 interface LoginScreenProps {
@@ -39,6 +41,7 @@ export default function LoginScreen({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
 
@@ -91,6 +94,20 @@ export default function LoginScreen({
       setError(message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    if (googleLoading) return;
+    setError(null);
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle({ ensureBackendUser: true });
+    } catch (err: any) {
+      console.error('❌ Google sign-in error:', err);
+      setError('Failed to sign in with Google. Please try again.');
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -153,6 +170,17 @@ export default function LoginScreen({
           loading={loading}
           testID="login-button"
         />
+
+        {/* Divider */}
+        <View style={{ height: 16 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 8 }}>
+          <View style={{ flex: 1, height: 1, backgroundColor: '#E6E8EB' }} />
+          <Text style={{ marginHorizontal: 12, color: '#6B7280' }}>or</Text>
+          <View style={{ flex: 1, height: 1, backgroundColor: '#E6E8EB' }} />
+        </View>
+        <View style={{ alignItems: 'center' }}>
+          <GoogleAuthButton onPress={handleGoogleLogin} loading={googleLoading} />
+        </View>
 
         <View style={authStyles.footer}>
           <Text style={authStyles.footerText}>Don't have an account?</Text>
