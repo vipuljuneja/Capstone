@@ -12,6 +12,9 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import LinearGradient from 'react-native-linear-gradient';
 import supabase from '../../services/supabaseClient';
+import Tooltip from 'react-native-walkthrough-tooltip';
+import TourTipCard from '../../Components/Tooltip/TourTipCard'
+import { updateHasSeenTour  } from '../../services/api.ts'
 
 import NotebookIcon from '../../../assets/icons/notebook.svg';
 import MailboxIcon from '../../../assets/icons/mailbox.svg';
@@ -49,6 +52,9 @@ export default function HomeScreen() {
   const [scenarios, setScenarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
+  const [tourVisible, setTourVisible] = useState(false);
+  const [tourStep, setTourStep] = useState(1);
+  const TOTAL_STEPS = 4;
 
   const { user, mongoUser } = useAuth();
 
@@ -93,6 +99,49 @@ export default function HomeScreen() {
   useEffect(() => {
     testDownload();
   }, []);
+
+useEffect(() => {
+  if (!mongoUser) return;
+  //  updateHasSeenTour (mongoUser.authUid, true);
+
+
+  const hasSeen = mongoUser.hasSeenTour === true;
+
+
+  if (!hasSeen) {
+    
+    const t = setTimeout(() => {
+      setTourStep(1);      
+      setTourVisible(true);  
+      
+    }, 200);                
+    return () => clearTimeout(t);
+  } else {
+    setTourVisible(false);
+  }
+}, [mongoUser]);
+
+
+const finishTour = React.useCallback(async () => {
+  setTourVisible(false);
+  try {
+    if (!mongoUser?.authUid) {
+      throw new Error('Missing authUid; cannot persist tour status');
+    }
+    await updateHasSeenTour (mongoUser.authUid, true); 
+  } catch (e) {
+    console.log('updateHasSeenTour failed:', e);
+  }
+}, [mongoUser]);
+
+const nextStep = React.useCallback(() => {
+  if (tourStep < TOTAL_STEPS) setTourStep(tourStep + 1);
+  else finishTour();
+}, [tourStep, finishTour]);
+
+const skipTour = React.useCallback(() => { finishTour(); }, [finishTour]);
+
+
 
   const testDownload = async () => {
     console.log('🧪 TESTING FILE DOWNLOAD...');
@@ -225,28 +274,78 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerIcon}>
-            <CircularIconButton
-              style={{ padding: 24 }}
-              onPress={() => {
-                navigation.navigate('Article', { userId: user?.uid });
-              }}
-            >
-              <NotebookIcon width={32} height={32} />
-            </CircularIconButton>
-            <CircularIconButton
-              style={{ padding: 24 }}
-              onPress={() => navigation.navigate('Notebook')}
-            >
-              <MailboxIcon width={32} height={32} />
-            </CircularIconButton>
+            <Tooltip
+  isVisible={tourVisible && tourStep === 2}
+  placement="bottom"
+  useReactNativeModal
+  content={
+    <TourTipCard
+      step={2} total={TOTAL_STEPS}
+      title="Read"
+      desc="Explore daily article tailored just for you"
+      onNext={nextStep} onSkip={skipTour}
+    />
+  }
+>
+              <CircularIconButton
+                style={{ padding: 24 }}
+                onPress={() => {
+                  navigation.navigate('Article', { userId: user?.uid });
+                }}
+              >
+                <NotebookIcon width={32} height={32} />
+              </CircularIconButton>
+            </Tooltip>
+            <Tooltip
+  isVisible={tourVisible && tourStep === 3}
+  placement="bottom"
+  useReactNativeModal
+  content={
+    <TourTipCard
+      step={3} total={TOTAL_STEPS}
+      title="Mailbox"
+      desc="See notes from Pipo and write a reflection note to yourself"
+      onNext={nextStep} onSkip={skipTour}
+    />
+  }
+>
+              <CircularIconButton
+                style={{ padding: 24 }}
+                onPress={() => navigation.navigate('Notebook')}
+              >
+                <MailboxIcon width={32} height={32} />
+              </CircularIconButton>
+            </Tooltip>
           </View>
           <View>
+            <Tooltip
+  isVisible={tourVisible && tourStep === 4}
+  placement="bottom"
+  useReactNativeModal
+  tooltipStyle={{ marginLeft: -1 }}
+  arrowStyle={{ right: 40 }}
+  content={
+    <TourTipCard
+      step={4}
+      total={TOTAL_STEPS}
+      title="Profile"
+      desc="You can manage your profile and settings here"
+      onNext={finishTour}
+      onSkip={skipTour}
+      isLast
+    />
+  }
+>
+             
+            
             <CircularIconButton
               style={{ padding: 24 }}
               onPress={() => navigation.navigate('Profile')}
             >
               <Image source={avatarSource} style={styles.headerAvatar} />
             </CircularIconButton>
+</Tooltip>
+
           </View>
         </View>
 
@@ -295,20 +394,36 @@ export default function HomeScreen() {
         {/* Bottom Buttons `*/}
         <View style={styles.micWrapper}>
           <Animated.View style={startAnimStyle}>
-            <AnimatedRippleButton
-              size={160}
-              diskSize={80}
-              rippleColor="rgba(113,99,168,0.5)"
-              onPress={() => setVisible(true)}
-              disabled={visible}
-            >
-              <Image
-                source={require('../../../assets/icons/purple-button.png')}
-                style={{ width: 80, height: 80, borderRadius: 50 }}
-                resizeMode="cover"
-              />
-            </AnimatedRippleButton>
-          </Animated.View>
+  <Tooltip
+    isVisible={tourVisible && tourStep === 1}
+    placement="top"
+    useReactNativeModal
+    content={
+      <TourTipCard
+        step={1} total={TOTAL_STEPS}
+        title="Scene Practice"
+        desc="Tap here to select scenes to practice"
+        onNext={() => setTourStep(2)}
+        onSkip={skipTour}
+      />
+    }
+  >
+    <AnimatedRippleButton
+      size={160}
+      diskSize={80}
+      rippleColor="rgba(113,99,168,0.5)"
+      onPress={() => setVisible(true)}
+      disabled={visible}
+    >
+      <Image
+        source={require('../../../assets/icons/purple-button.png')}
+        style={{ width: 80, height: 80, borderRadius: 50 }}
+        resizeMode="cover"
+      />
+    </AnimatedRippleButton>
+  </Tooltip>
+</Animated.View>
+
           <Animated.View style={closeAnimStyle}>
             <TouchableOpacity
               style={styles.closeButton}
