@@ -46,7 +46,38 @@ export default function PipoDetailScreen({ route, navigation }) {
         <Text style={{ fontSize: 14, lineHeight: 22, color: "#333", marginBottom: 16 }}>
           {pipo.subtitle || "Hi there, it’s me, Pipo! … (put your dynamic message here)."}
         </Text>
+        {pipo?.sessionId ? (
+          <View style={{ marginTop: 24 }}>
+            <Pressable
+              onPress={() => navigation.navigate('Transcript', { sessionId: pipo.sessionId })}
+              style={styles.primary}
+              hitSlop={12}
+            >
+              <Text style={styles.primaryText}>VIEW TRANSCRIPT</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  primary: {
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: '#342E4E',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    width: '100%',
+    alignSelf: 'stretch',
+    marginBottom: 8,
+  },
+  primaryText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 2,
+  },
+});
