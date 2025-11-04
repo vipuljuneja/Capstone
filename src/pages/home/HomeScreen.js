@@ -14,7 +14,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import supabase from '../../services/supabaseClient';
 import Tooltip from 'react-native-walkthrough-tooltip';
 import TourTipCard from '../../Components/Tooltip/TourTipCard'
-import { updateHasSeenTour  } from '../../services/api.ts'
+import { updateHasSeenTour } from '../../services/api.ts'
 
 import NotebookIcon from '../../../assets/icons/notebook.svg';
 import MailboxIcon from '../../../assets/icons/mailbox.svg';
@@ -100,46 +100,46 @@ export default function HomeScreen() {
     testDownload();
   }, []);
 
-useEffect(() => {
-  if (!mongoUser) return;
-  //  updateHasSeenTour (mongoUser.authUid, true);
+  useEffect(() => {
+    if (!mongoUser) return;
+    //  updateHasSeenTour (mongoUser.authUid, true);
 
 
-  const hasSeen = mongoUser.hasSeenTour === true;
+    const hasSeen = mongoUser.hasSeenTour === true;
 
 
-  if (!hasSeen) {
-    
-    const t = setTimeout(() => {
-      setTourStep(1);      
-      setTourVisible(true);  
-      
-    }, 200);                
-    return () => clearTimeout(t);
-  } else {
-    setTourVisible(false);
-  }
-}, [mongoUser]);
+    if (!hasSeen) {
 
+      const t = setTimeout(() => {
+        setTourStep(1);
+        setTourVisible(true);
 
-const finishTour = React.useCallback(async () => {
-  setTourVisible(false);
-  try {
-    if (!mongoUser?.authUid) {
-      throw new Error('Missing authUid; cannot persist tour status');
+      }, 200);
+      return () => clearTimeout(t);
+    } else {
+      setTourVisible(false);
     }
-    await updateHasSeenTour (mongoUser.authUid, true); 
-  } catch (e) {
-    console.log('updateHasSeenTour failed:', e);
-  }
-}, [mongoUser]);
+  }, [mongoUser]);
 
-const nextStep = React.useCallback(() => {
-  if (tourStep < TOTAL_STEPS) setTourStep(tourStep + 1);
-  else finishTour();
-}, [tourStep, finishTour]);
 
-const skipTour = React.useCallback(() => { finishTour(); }, [finishTour]);
+  const finishTour = React.useCallback(async () => {
+    setTourVisible(false);
+    try {
+      if (!mongoUser?.authUid) {
+        throw new Error('Missing authUid; cannot persist tour status');
+      }
+      await updateHasSeenTour(mongoUser.authUid, true);
+    } catch (e) {
+      console.log('updateHasSeenTour failed:', e);
+    }
+  }, [mongoUser]);
+
+  const nextStep = React.useCallback(() => {
+    if (tourStep < TOTAL_STEPS) setTourStep(tourStep + 1);
+    else finishTour();
+  }, [tourStep, finishTour]);
+
+  const skipTour = React.useCallback(() => { finishTour(); }, [finishTour]);
 
 
 
@@ -275,18 +275,31 @@ const skipTour = React.useCallback(() => { finishTour(); }, [finishTour]);
         <View style={styles.header}>
           <View style={styles.headerIcon}>
             <Tooltip
-  isVisible={tourVisible && tourStep === 2}
-  placement="bottom"
-  useReactNativeModal
-  content={
-    <TourTipCard
-      step={2} total={TOTAL_STEPS}
-      title="Read"
-      desc="Explore daily article tailored just for you"
-      onNext={nextStep} onSkip={skipTour}
-    />
-  }
->
+              isVisible={tourVisible && tourStep === 2}
+              placement="bottom"
+              useReactNativeModal
+              tooltipStyle={{ backgroundColor: 'transparent', padding: 0, }}
+              contentStyle={{
+                backgroundColor: '#fff',
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: '#E3DDF4',
+                overflow: 'hidden',
+                shadowColor: '#000',
+                shadowOpacity: 0.12,
+                shadowOffset: { width: 0, height: 4 },
+                shadowRadius: 8,
+                elevation: 4,
+              }}
+              content={
+                <TourTipCard
+                  step={2} total={TOTAL_STEPS}
+                  title="Read"
+                  desc="Explore daily article tailored just for you"
+                  onNext={nextStep} onSkip={skipTour}
+                />
+              }
+            >
               <CircularIconButton
                 style={{ padding: 24 }}
                 onPress={() => {
@@ -297,18 +310,31 @@ const skipTour = React.useCallback(() => { finishTour(); }, [finishTour]);
               </CircularIconButton>
             </Tooltip>
             <Tooltip
-  isVisible={tourVisible && tourStep === 3}
-  placement="bottom"
-  useReactNativeModal
-  content={
-    <TourTipCard
-      step={3} total={TOTAL_STEPS}
-      title="Mailbox"
-      desc="See notes from Pipo and write a reflection note to yourself"
-      onNext={nextStep} onSkip={skipTour}
-    />
-  }
->
+              isVisible={tourVisible && tourStep === 3}
+              placement="bottom"
+              useReactNativeModal
+              tooltipStyle={{ backgroundColor: 'transparent', padding: 0, }}
+              contentStyle={{
+                backgroundColor: '#fff',
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: '#E3DDF4',
+                overflow: 'hidden',
+                shadowColor: '#000',
+                shadowOpacity: 0.12,
+                shadowOffset: { width: 0, height: 4 },
+                shadowRadius: 8,
+                elevation: 4,
+              }}
+              content={
+                <TourTipCard
+                  step={3} total={TOTAL_STEPS}
+                  title="Mailbox"
+                  desc="See notes from Pipo and write a reflection note to yourself"
+                  onNext={nextStep} onSkip={skipTour}
+                />
+              }
+            >
               <CircularIconButton
                 style={{ padding: 24 }}
                 onPress={() => navigation.navigate('Notebook')}
@@ -319,32 +345,47 @@ const skipTour = React.useCallback(() => { finishTour(); }, [finishTour]);
           </View>
           <View>
             <Tooltip
-  isVisible={tourVisible && tourStep === 4}
-  placement="bottom"
-  useReactNativeModal
-  tooltipStyle={{ marginLeft: -1 }}
-  arrowStyle={{ right: 40 }}
-  content={
-    <TourTipCard
-      step={4}
-      total={TOTAL_STEPS}
-      title="Profile"
-      desc="You can manage your profile and settings here"
-      onNext={finishTour}
-      onSkip={skipTour}
-      isLast
-    />
-  }
->
-             
-            
-            <CircularIconButton
-              style={{ padding: 24 }}
-              onPress={() => navigation.navigate('Profile')}
+              isVisible={tourVisible && tourStep === 4}
+              placement="bottom"
+              useReactNativeModal
+              tooltipStyle={{
+                backgroundColor: 'transparent', padding: 0,
+                marginLeft: -1
+              }}
+              arrowStyle={{ right: 40 }}
+              contentStyle={{
+                backgroundColor: '#fff',
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: '#E3DDF4',
+                overflow: 'hidden',
+                shadowColor: '#000',
+                shadowOpacity: 0.12,
+                shadowOffset: { width: 0, height: 4 },
+                shadowRadius: 8,
+                elevation: 4,
+              }}
+              content={
+                <TourTipCard
+                  step={4}
+                  total={TOTAL_STEPS}
+                  title="Profile"
+                  desc="You can manage your profile and settings here"
+                  onNext={finishTour}
+                  onSkip={skipTour}
+                  isLast
+                />
+              }
             >
-              <Image source={avatarSource} style={styles.headerAvatar} />
-            </CircularIconButton>
-</Tooltip>
+
+
+              <CircularIconButton
+                style={{ padding: 24 }}
+                onPress={() => navigation.navigate('Profile')}
+              >
+                <Image source={avatarSource} style={styles.headerAvatar} />
+              </CircularIconButton>
+            </Tooltip>
 
           </View>
         </View>
@@ -394,35 +435,51 @@ const skipTour = React.useCallback(() => { finishTour(); }, [finishTour]);
         {/* Bottom Buttons `*/}
         <View style={styles.micWrapper}>
           <Animated.View style={startAnimStyle}>
-  <Tooltip
-    isVisible={tourVisible && tourStep === 1}
-    placement="top"
-    useReactNativeModal
-    content={
-      <TourTipCard
-        step={1} total={TOTAL_STEPS}
-        title="Scene Practice"
-        desc="Tap here to select scenes to practice"
-        onNext={() => setTourStep(2)}
-        onSkip={skipTour}
-      />
-    }
-  >
-    <AnimatedRippleButton
-      size={160}
-      diskSize={80}
-      rippleColor="rgba(113,99,168,0.5)"
-      onPress={() => setVisible(true)}
-      disabled={visible}
-    >
-      <Image
-        source={require('../../../assets/icons/purple-button.png')}
-        style={{ width: 80, height: 80, borderRadius: 50 }}
-        resizeMode="cover"
-      />
-    </AnimatedRippleButton>
-  </Tooltip>
-</Animated.View>
+            <Tooltip
+              isVisible={tourVisible && tourStep === 1}
+              placement="top"
+              useReactNativeModal
+              tooltipStyle={{
+                backgroundColor: 'transparent',
+                padding: 0, marginTop: 24
+              }}
+              contentStyle={{
+                backgroundColor: '#fff',
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: '#E3DDF4',
+                overflow: 'hidden',
+                shadowColor: '#000',
+                shadowOpacity: 0.12,
+                shadowOffset: { width: 0, height: 4 },
+                shadowRadius: 8,
+                elevation: 4,
+              }}
+              content={
+                <TourTipCard
+                  step={1} total={TOTAL_STEPS}
+                  title="Scene Practice"
+                  desc="Tap here to select scenes to practice"
+                  onNext={() => setTourStep(2)}
+                  onSkip={skipTour}
+                />
+              }
+            >
+              <AnimatedRippleButton
+                size={160}
+                diskSize={80}
+                rippleColor="rgba(113,99,168,0.5)"
+                onPress={() => setVisible(true)}
+                disabled={visible}
+              >
+                <Image
+                  source={require('../../../assets/icons/purple-button.png')}
+                  style={{ width: 80, height: 80, borderRadius: 50 }}
+                  resizeMode="cover"
+                />
+              </AnimatedRippleButton>
+            </Tooltip>
+          </Animated.View>
 
           <Animated.View style={closeAnimStyle}>
             <TouchableOpacity
