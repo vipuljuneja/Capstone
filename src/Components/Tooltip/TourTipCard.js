@@ -24,7 +24,10 @@ export default function TourTipCard({
 }
 
 const S = StyleSheet.create({
-  box: { width: 260, padding: 12, borderRadius: 14, backgroundColor: '#fff', borderWidth: 1, borderColor: '#D6D6E7' },
+  box: { width: 260, padding: 12,  
+    backgroundColor: 'transparent', 
+    
+  },
   title: { fontWeight: '700', fontSize: 16, marginBottom: 4, color: '#111' },
   desc: { fontSize: 13, color: '#4b5563', marginBottom: 10 },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
