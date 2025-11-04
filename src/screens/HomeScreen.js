@@ -43,7 +43,22 @@ export default function HomeScreen({ navigation }) {
   };
 
   const getUserAvatar = () => {
-    const avatarName = mongoUser?.avatarImage || 'pipo_set';
+    const candidate =
+      mongoUser?.avatarImage ||
+      mongoUser?.avatarUrl ||
+      mongoUser?.profile?.avatarImage ||
+      mongoUser?.profile?.avatarUrl;
+
+    if (
+      typeof candidate === 'string' &&
+      (candidate.startsWith('http') ||
+        candidate.startsWith('file:') ||
+        candidate.startsWith('data:'))
+    ) {
+      return { uri: candidate };
+    }
+
+    const avatarName = candidate || 'pipo_set';
     return avatarImages[avatarName] || avatarImages.pipo_set;
   };
 

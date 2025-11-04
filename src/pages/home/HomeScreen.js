@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,6 @@ import { updateHasSeenTour  } from '../../services/api.ts'
 
 import NotebookIcon from '../../../assets/icons/notebook.svg';
 import MailboxIcon from '../../../assets/icons/mailbox.svg';
-import ProfileIcon from '../../../assets/icons/profile.svg';
 import CloseIcon from '../../../assets/icons/close.svg';
 
 import CircularIconButton from '../../Components/UI/button/CircularIconButton';
@@ -41,6 +40,13 @@ const emojiMap = {
   'Job Interview': require('../../../assets/pipo/pipo-job.png'),
 };
 
+const avatarImages = {
+  pipo_set: require('../../../assets/pipo_set.png'),
+  bro_set: require('../../../assets/bro_set.png'),
+  cherry_set: require('../../../assets/cherry_set.png'),
+  mshrom_set: require('../../../assets/mshrom_set.png'),
+};
+
 export default function HomeScreen() {
   const [visible, setVisible] = useState(false);
   const [scenarios, setScenarios] = useState([]);
@@ -50,8 +56,7 @@ export default function HomeScreen() {
   const [tourStep, setTourStep] = useState(1);
   const TOTAL_STEPS = 4;
 
-  const {mongoUser, user } = useAuth();
-  console.log("MY", user)
+  const { user, mongoUser } = useAuth();
 
   const screenWidth = Dimensions.get('window').width;
   const screenHeight = Dimensions.get('window').height;
@@ -171,6 +176,34 @@ const skipTour = React.useCallback(() => { finishTour(); }, [finishTour]);
       scenarioDescription: scenario.description,
     });
   };
+
+  const avatarSource = useMemo(() => {
+    const candidate =
+      mongoUser?.avatarImage ??
+      mongoUser?.avatarUrl ??
+      mongoUser?.profile?.avatarImage ??
+      mongoUser?.profile?.avatarUrl;
+
+    if (!candidate) {
+      return avatarImages.pipo_set;
+    }
+
+    if (
+      typeof candidate === 'string' &&
+      (candidate.startsWith('http') ||
+        candidate.startsWith('file:') ||
+        candidate.startsWith('data:'))
+    ) {
+      return { uri: candidate };
+    }
+
+    return avatarImages[candidate] || avatarImages.pipo_set;
+  }, [
+    mongoUser?.avatarImage,
+    mongoUser?.avatarUrl,
+    mongoUser?.profile?.avatarImage,
+    mongoUser?.profile?.avatarUrl,
+  ]);
 
   const contentAnimStyle = useAnimatedStyle(() => ({
     opacity: contentProgress.value,
@@ -303,13 +336,16 @@ const skipTour = React.useCallback(() => { finishTour(); }, [finishTour]);
     />
   }
 >
-              <CircularIconButton
-                style={{ padding: 24 }}
-                onPress={() => navigation.navigate('Profile')}
-              >
-                <ProfileIcon width={32} height={32} />
-              </CircularIconButton>
-            </Tooltip>
+             
+            
+            <CircularIconButton
+              style={{ padding: 24 }}
+              onPress={() => navigation.navigate('Profile')}
+            >
+              <Image source={avatarSource} style={styles.headerAvatar} />
+            </CircularIconButton>
+</Tooltip>
+
           </View>
         </View>
 
@@ -416,6 +452,14 @@ const styles = StyleSheet.create({
   headerIcon: {
     flexDirection: 'row',
     gap: 16,
+  },
+  headerAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    resizeMode: 'cover',
+    backgroundColor: '#fff',
+    overflow: 'hidden',
   },
   icon: {
     fontSize: 32,
