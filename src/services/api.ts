@@ -99,6 +99,7 @@ export type BackendUser = {
   authUid: string;
   email: string;
   name: string;
+  hasSeenTour?: boolean;
   onboarding?: {
     completed: boolean;
     completedAt?: string | null;
@@ -228,6 +229,28 @@ export const updateOnboardingStatus = async (
   } catch (error) {
     const message = extractErrorMessage(error);
     console.error('Failed to update onboarding status:', message);
+    throw new Error(message);
+  }
+};
+
+export const updateHasSeenTour = async (
+  authUid: string,
+  hasSeenTour: boolean,
+): Promise<BackendUser> => {
+  try {
+    const { data } = await apiClient.put<ApiSuccessEnvelope<BackendUser>>(
+      `/users/${authUid}/seen-tour`,
+      { hasSeenTour },
+    );
+
+    if (!data?.success || !data?.data) {
+      throw new Error('Failed to update hasSeenTour.');
+    }
+
+    return data.data;
+  } catch (error) {
+    const message = extractErrorMessage(error);
+    console.error('Failed to update hasSeenTour:', message);
     throw new Error(message);
   }
 };

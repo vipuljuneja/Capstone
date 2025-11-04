@@ -118,6 +118,33 @@ export const updateOnboardingStatus = async (req: Request, res: Response): Promi
   }
 };
 
+export const updateHasSeenTour = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { authUid } = req.params;
+    const { hasSeenTour } = req.body as { hasSeenTour?: boolean };
+
+    if (typeof hasSeenTour !== 'boolean') {
+      res.status(400).json({ error: 'hasSeenTour must be provided as a boolean' });
+      return;
+    }
+
+    const user = await User.findOneAndUpdate(
+      { authUid },
+      { hasSeenTour },
+      { new: true, runValidators: true }
+    );
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    res.json({ success: true, data: user });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export const updateSeverityLevel = async (req: Request, res: Response): Promise<void> => {
   try {
     const { authUid } = req.params;

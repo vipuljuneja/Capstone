@@ -5,6 +5,7 @@ export interface IUser extends Document {
   email: string;
   name: string;
   avatarImage?: string; // Stores the avatar name (e.g., 'pipo_set', 'bro_set', 'cherry_set')
+  hasSeenTour?: boolean;
   onboarding: {
     completed: boolean;
     completedAt: Date | null;
@@ -47,6 +48,11 @@ const UserSchema: Schema = new Schema(
       type: String,
       default: 'pipo_set',
       trim: true
+    },
+    hasSeenTour: {
+      type: Boolean,
+      default: false,
+      index: true
     },
     onboarding: {
       completed: {

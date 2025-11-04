@@ -7,6 +7,7 @@ import {
   getUserByAuthUid,
   updateUserProfile,
   updateOnboardingStatus,
+  updateHasSeenTour,
   updateUserStreak
 } from '../controllers/userController';
 
@@ -19,6 +20,7 @@ router.post('/', createUser);
 router.get('/:authUid', verifyFirebaseToken, getUserByAuthUid);
 router.put('/:authUid/profile', verifyFirebaseToken, updateUserProfile);
 router.put('/:authUid/onboarding', verifyFirebaseToken, updateOnboardingStatus);
+router.put('/:authUid/seen-tour', verifyFirebaseToken, updateHasSeenTour);
 router.patch('/:authUid/streak', verifyFirebaseToken, updateUserStreak);
 router.post('/:authUid/achievements', verifyFirebaseToken, addUserAchievement);
 router.delete('/:authUid', verifyFirebaseToken, deleteUser);
