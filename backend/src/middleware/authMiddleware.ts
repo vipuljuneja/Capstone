@@ -115,3 +115,33 @@ export const optionalAuth = async (
     next();
   }
 };
+
+/**
+ * Middleware to verify that the authenticated user matches the :authUid parameter
+ * Must be used after verifyFirebaseToken
+ */
+export const verifyUserOwnership = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (!req.user) {
+    res.status(401).json({
+      status: 'error',
+      message: 'Authentication required'
+    });
+    return;
+  }
+
+  const { authUid } = req.params;
+  
+  if (authUid && req.user.uid !== authUid) {
+    res.status(403).json({
+      status: 'error',
+      message: 'Forbidden: You can only access your own resources'
+    });
+    return;
+  }
+
+  next();
+};

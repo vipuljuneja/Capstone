@@ -19,15 +19,51 @@ apiClient.interceptors.request.use(
     try {
       const user = auth.currentUser;
       if (user) {
+        // Get token (Firebase auto-refreshes if expired)
         const token = await user.getIdToken();
         config.headers.Authorization = `Bearer ${token}`;
+      } else {
+        // User not logged in - remove any existing auth header
+        delete config.headers.Authorization;
       }
     } catch (error) {
       console.error('❌ Failed to get auth token:', error);
+      // Don't add token if we can't get it, let backend handle the error
+      delete config.headers.Authorization;
     }
     return config;
   },
   error => {
+    return Promise.reject(error);
+  },
+);
+
+// Add response interceptor to handle 401 errors (token expired)
+apiClient.interceptors.response.use(
+  response => response,
+  async error => {
+    const originalRequest = error.config;
+
+    // If we get 401 and haven't retried yet, try to refresh token
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          // Force refresh token
+          const newToken = await user.getIdToken(true);
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          // Retry the original request with new token
+          return apiClient(originalRequest);
+        }
+      } catch (refreshError) {
+        console.error('❌ Failed to refresh token:', refreshError);
+        // Token refresh failed, user needs to login again
+        return Promise.reject(error);
+      }
+    }
+
     return Promise.reject(error);
   },
 );
