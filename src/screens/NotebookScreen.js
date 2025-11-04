@@ -301,6 +301,9 @@ export default function NotebookScreen({ navigation }) {
       date: r?.date ?? selectedDate,
       title: r?.title ?? "",
       subtitle: r?.description ?? "",
+      sessionId: r?.linkedSessionId || null,
+      scenarioId: r?.scenarioId || null,
+      level: r?.level || null,
     }),
     [isSelf, selectedDate]
   );
@@ -580,6 +583,9 @@ export default function NotebookScreen({ navigation }) {
                           subtitle: item.subtitle,
                           dateISO: selectedDate,
                           dateText: dayjs(selectedDate).format("ddd, MMM D").toUpperCase(),
+                          sessionId: item.sessionId,
+                          scenarioId: item.scenarioId,
+                          level: item.level,
                         },
                       })
                     }
