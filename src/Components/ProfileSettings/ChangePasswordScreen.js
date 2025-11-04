@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -15,12 +15,23 @@ import {
   updatePassword,
   EmailAuthProvider,
   reauthenticateWithCredential,
+  linkWithCredential,
+  onAuthStateChanged,
 } from 'firebase/auth';
 import { auth } from '../../firebase';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import {
+  configureGoogleSignin,
+  reauthenticateCurrentUserWithGoogle,
+} from '../../services/googleAuth';
 
 export default function ChangePasswordScreen({}) {
-  const user = auth.currentUser;
+  const [currentUser, setCurrentUser] = useState(auth.currentUser);
+  const [hasPasswordProvider, setHasPasswordProvider] = useState(
+    !!auth.currentUser?.providerData?.some(
+      provider => provider.providerId === 'password',
+    ),
+  );
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -31,14 +42,25 @@ export default function ChangePasswordScreen({}) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    configureGoogleSignin();
+
+    const unsubscribe = onAuthStateChanged(auth, user => {
+      setCurrentUser(user);
+      setHasPasswordProvider(
+        !!user?.providerData?.some(
+          provider => provider.providerId === 'password',
+        ),
+      );
+    });
+
+    return unsubscribe;
+  }, []);
+
   const handleChangePassword = async () => {
+    const user = currentUser || auth.currentUser;
     if (!user) {
       Alert.alert('Error', 'You must be logged in to change your password.');
-      return;
-    }
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Please fill out all fields.');
       return;
     }
 
@@ -52,16 +74,42 @@ export default function ChangePasswordScreen({}) {
       return;
     }
 
+    if (hasPasswordProvider) {
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        Alert.alert('Error', 'Please fill out all fields.');
+        return;
+      }
+    } else {
+      if (!newPassword || !confirmPassword) {
+        Alert.alert('Error', 'Please fill out both password fields.');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
-      const credential = EmailAuthProvider.credential(
-        user.email,
-        currentPassword,
-      );
-      await reauthenticateWithCredential(user, credential);
+      if (hasPasswordProvider) {
+        const credential = EmailAuthProvider.credential(
+          user.email,
+          currentPassword,
+        );
+        await reauthenticateWithCredential(user, credential);
 
-      await updatePassword(user, newPassword);
+        await updatePassword(user, newPassword);
+      } else {
+        if (!user.email) {
+          throw new Error('No email associated with this account.');
+        }
+
+        await reauthenticateCurrentUserWithGoogle();
+        const emailCredential = EmailAuthProvider.credential(
+          user.email,
+          newPassword,
+        );
+        await linkWithCredential(user, emailCredential);
+        setHasPasswordProvider(true);
+      }
 
       Alert.alert('Success', 'Password updated successfully!', [
         {
@@ -76,17 +124,37 @@ export default function ChangePasswordScreen({}) {
       ]);
     } catch (error) {
       console.error('Password update error:', error);
-      if (error.code === 'auth/wrong-password') {
+      const code = error?.code;
+      if (code === 'auth/wrong-password') {
         Alert.alert('Error', 'Current password is incorrect.');
-      } else if (error.code === 'auth/too-many-requests') {
+      } else if (code === 'auth/too-many-requests') {
         Alert.alert('Error', 'Too many failed attempts. Try again later.');
+      } else if (code === 'auth/provider-already-linked') {
+        Alert.alert(
+          'Notice',
+          'A password is already linked to this account. Please sign in again and try changing it.',
+        );
+        setHasPasswordProvider(true);
+      } else if (code === 'auth/requires-recent-login') {
+        Alert.alert(
+          'Error',
+          'Please sign in again with Google and retry.',
+        );
       } else {
-        Alert.alert('Error', 'Failed to update password. Please try again.');
+        Alert.alert(
+          'Error',
+          'Failed to update password. Please try again.',
+        );
       }
     }
 
     setLoading(false);
   };
+
+  const actionLabel = hasPasswordProvider ? 'Change' : 'Set';
+  const subtitle = hasPasswordProvider
+    ? 'Enter your current and new passwords below.'
+    : 'Create a password to sign in without Google next time.';
 
   return (
     <SafeAreaView style={S.container}>
@@ -94,39 +162,41 @@ export default function ChangePasswordScreen({}) {
         contentContainerStyle={S.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={S.title}>Change Password</Text>
-        <Text style={S.subtitle}>
-          Enter your current and new passwords below.
-        </Text>
+        <Text style={S.title}>{actionLabel} Password</Text>
+        <Text style={S.subtitle}>{subtitle}</Text>
 
         {/* Current Password */}
-        <View style={S.field}>
-          <Text style={S.label}>Current Password</Text>
-          <View style={S.passwordRow}>
-            <TextInput
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-              secureTextEntry={!showCurrent}
-              placeholder="Enter current password"
-              placeholderTextColor="#8A8A8A"
-              style={[S.input, { flex: 1 }]}
-            />
-            <TouchableOpacity
-              onPress={() => setShowCurrent(!showCurrent)}
-              style={S.eyeButton}
-            >
-              <Feather
-                name={showCurrent ? 'eye' : 'eye-off'}
-                size={20}
-                color="#555"
+        {hasPasswordProvider && (
+          <View style={S.field}>
+            <Text style={S.label}>Current Password</Text>
+            <View style={S.passwordRow}>
+              <TextInput
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                secureTextEntry={!showCurrent}
+                placeholder="Enter current password"
+                placeholderTextColor="#8A8A8A"
+                style={[S.input, { flex: 1 }]}
               />
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setShowCurrent(!showCurrent)}
+                style={S.eyeButton}
+              >
+                <Feather
+                  name={showCurrent ? 'eye' : 'eye-off'}
+                  size={20}
+                  color="#555"
+                />
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* New Password */}
         <View style={S.field}>
-          <Text style={S.label}>New Password</Text>
+          <Text style={S.label}>
+            {hasPasswordProvider ? 'New Password' : 'Password'}
+          </Text>
           <View style={S.passwordRow}>
             <TextInput
               value={newPassword}
@@ -151,7 +221,9 @@ export default function ChangePasswordScreen({}) {
 
         {/* Confirm New Password */}
         <View style={S.field}>
-          <Text style={S.label}>Confirm New Password</Text>
+          <Text style={S.label}>
+            {hasPasswordProvider ? 'Confirm New Password' : 'Confirm Password'}
+          </Text>
           <View style={S.passwordRow}>
             <TextInput
               value={confirmPassword}
@@ -178,12 +250,17 @@ export default function ChangePasswordScreen({}) {
         <TouchableOpacity
           onPress={handleChangePassword}
           style={[S.saveButton, loading && S.saveButtonDisabled]}
-          disabled={loading}
+          disabled={
+            loading ||
+            (hasPasswordProvider
+              ? !currentPassword || !newPassword || !confirmPassword
+              : !newPassword || !confirmPassword)
+          }
         >
           {loading ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Text style={S.saveButtonText}>Change Password</Text>
+            <Text style={S.saveButtonText}>{actionLabel} Password</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
