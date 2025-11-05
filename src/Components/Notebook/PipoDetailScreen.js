@@ -2,40 +2,59 @@ import React, { useEffect, useLayoutEffect, useState } from "react";
 import { SafeAreaView, View, Text, StyleSheet, Pressable, ScrollView, Image, Alert } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { deleteReflection,updateReflectionReadStatus } from "../../services/api";
+import ConfirmDialog from '../AlertBox/ConfirmDialog'
 
 export default function PipoDetailScreen({ route, navigation }) {
   const { pipo } = route.params || {};
   const [deleting, setDeleting] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
 
   const handleDelete = () => {
     if (!pipo?.id || deleting || isDeleted) return;
-
-    Alert.alert(
-      "Delete note?",
-      "This will permanently remove this Pipo note.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            setDeleting(true);
-            try {
-              await deleteReflection(pipo.id);
-              setIsDeleted(true);
-            } catch (e) {
-              console.error("Delete failed:", e);
-              Alert.alert("Error", "Could not delete. Please try again.");
-            } finally {
-              setDeleting(false);
-            }
-          },
-        },
-      ],
-      { cancelable: true }
-    );
+    setShowConfirm(true);
+    // Alert.alert(
+    //   "Delete note?",
+    //   "This will permanently remove this Pipo note.",
+    //   [
+    //     { text: "Cancel", style: "cancel" },
+    //     {
+    //       text: "Delete",
+    //       style: "destructive",
+    //       onPress: async () => {
+    //         setDeleting(true);
+    //         try {
+    //           await deleteReflection(pipo.id);
+    //           setIsDeleted(true);
+    //         } catch (e) {
+    //           console.error("Delete failed:", e);
+    //           Alert.alert("Error", "Could not delete. Please try again.");
+    //         } finally {
+    //           setDeleting(false);
+    //         }
+    //       },
+    //     },
+    //   ],
+    //   { cancelable: true }
+    // );
   };
+
+  const confirmDelete = async () => {
+  if (!pipo?.id) return;
+  setDeleting(true);
+  try {
+    await deleteReflection(pipo.id);
+    setIsDeleted(true);
+    setShowConfirm(false);
+  } catch (e) {
+    console.error("Delete failed:", e);
+    Alert.alert("Error", "Could not delete. Please try again.");
+  } finally {
+    setDeleting(false);
+  }
+};
+
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -146,6 +165,18 @@ export default function PipoDetailScreen({ route, navigation }) {
           </>
         )}
       </ScrollView>
+      <ConfirmDialog
+  visible={showConfirm}
+  title="Are you sure?"
+  message="This action cannot be undone."
+  secondaryMessage="All related data will be permanently removed."
+  confirmText="DELETE"
+  cancelText="CANCEL"
+  onConfirm={confirmDelete}
+  onCancel={() => setShowConfirm(false)}
+  loading={deleting}
+/>
+
     </SafeAreaView>
   );
 }
