@@ -15,6 +15,8 @@ import {
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
+import LinearGradient from 'react-native-linear-gradient';
+
 
 export default function ProfileScreen({ navigation }) {
   const { mongoUser, refreshMongoUser } = useAuth();
@@ -145,7 +147,13 @@ export default function ProfileScreen({ navigation }) {
       {/* Avatar */}
       <View style={S.avatarSection}>
         <View style={S.avatarWrap}>
-          <Image source={getUserAvatar()} style={S.avatar} />
+          <LinearGradient
+            colors={['#FAFAFA', '#C7DFFF']}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={S.gradient}>
+            <Image source={getUserAvatar()} style={S.avatar} />
+          </LinearGradient>
           <Pressable
             style={S.editFab}
             onPress={() => navigation.navigate('ProfileSettingScreen')}
@@ -214,6 +222,12 @@ function OptionRow({ title, desc, icon, onPress }) {
 }
 
 const S = StyleSheet.create({
+  gradient: {
+    width: 120, height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 60
+  },
   container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 20 },
   header: {
     flexDirection: 'row',
