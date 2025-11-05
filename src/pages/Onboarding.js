@@ -107,26 +107,14 @@ export default function Onboarding() {
   }, []);
 
   const markOnboardingComplete = async () => {
-    if (!user?.uid) {
-      return;
-    }
-
-    try {
-      await updateOnboardingStatus(user.uid, true);
-      refreshMongoUser().catch(refreshError => {
-        console.warn(
-          'Failed to refresh onboarding status from backend',
-          refreshError,
-        );
-      });
-    } catch (storageError) {
-      console.warn(
-        'Failed to persist onboarding completion flag',
-        storageError,
-      );
-    }
-  };
-
+  if (!user?.uid) return;
+  try {
+    await updateOnboardingStatus(user.uid, true);
+    await refreshMongoUser();
+  } catch (err) {
+    console.warn('Failed to persist/refresh onboarding completion', err);
+  }
+};
   const exitToHome = () => {
     if (hasExitedRef.current) return;
     hasExitedRef.current = true;
@@ -155,34 +143,23 @@ export default function Onboarding() {
   const startQuestions = () => setPhase('questions');
 
   const skipAll = async () => {
-    if (submitting) {
-      return;
+  if (submitting) return;
+  setSubmitting(true);
+  try {
+    const filled = responses.map(v => (v == null ? 0 : v));
+    console.log('Onboarding skipped:', filled);
+    if (user?.uid) {
+      await updateSeverityLevel(user.uid, 'Moderate');
+      console.log('Severity level set to Moderate (skipped)');
     }
-    setSubmitting(true);
-    try {
-      const filled = responses.map(v => (v == null ? 0 : v));
-      console.log('Onboarding skipped:', filled);
-      if (user?.uid) {
-        await updateSeverityLevel(user.uid, 'Moderate');
-        console.log('Severity level set to Moderate (skipped)');
-      }
-    } catch (error) {
-      console.error('Error in skipAll:', error);
-    } finally {
-      try {
-        await markOnboardingComplete();
-      } finally {
-        if (isMountedRef.current) {
-          setSubmitting(false);
-        }
-        if (isRetake) {
-          exitToHome();
-        } else if (isMountedRef.current) {
-          setRedirecting(true);
-        }
-      }
-    }
-  };
+    await markOnboardingComplete();
+  } catch (error) {
+    console.error('Error in skipAll:', error);
+  } finally {
+    if (isMountedRef.current) setSubmitting(false);
+    navigation.navigate("Home")
+  }
+};
 
   const handleSelect = option => {
     const updated = [...responses];
@@ -269,13 +246,13 @@ export default function Onboarding() {
 
     return (
       <View style={S.container}>
-        {/* <Pressable
+        <Pressable
           onPress={skipAll}
           disabled={submitting}
           style={[S.skip, submitting && S.skipDisabled]}
         >
           <Text style={S.skipText}>SKIP</Text>
-        </Pressable> */}
+        </Pressable>
 
         <View style={S.center}>
           {
@@ -336,13 +313,13 @@ export default function Onboarding() {
 
   return (
     <View style={S.container}>
-      {/* <Pressable
+      <Pressable
         onPress={skipAll}
         disabled={submitting}
         style={[S.skip, submitting && S.skipDisabled]}
       >
         <Text style={S.skipText}>SKIP</Text>
-      </Pressable> */}
+      </Pressable>
 
       <QuestionCard
         index={currentIndex}
