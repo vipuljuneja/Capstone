@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Keyboard } from 'react-native';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { auth } from '../../firebase';
 import { createUserInBackend } from '../../services/api';
 import {
@@ -51,6 +50,7 @@ export default function SignupScreen({
   >(null);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const handleNameChange = (text: string) => {
     setName(text);
@@ -118,6 +118,20 @@ export default function SignupScreen({
 
     setError(null);
   };
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   const handleSignup = async () => {
     setError(null);
@@ -212,13 +226,7 @@ export default function SignupScreen({
     !loading;
 
   return (
-    // <KeyboardAwareScrollView
-    //   contentContainerStyle={{ flexGrow: 1 }}
-    //   keyboardShouldPersistTaps="handled"
-    //   enableOnAndroid
-    //   extraScrollHeight={20}
-    // >
-    <AuthCard title="Sign up" blobTopMargin={110} coverEyes={isPasswordVisible || isConfirmPasswordVisible}>
+    <AuthCard title="Sign up" blobTopMargin={keyboardVisible ? 20 : 110} coverEyes={isPasswordVisible || isConfirmPasswordVisible}>
       <AuthInput
         icon="user"
         iconSize={20}
@@ -369,6 +377,5 @@ export default function SignupScreen({
       </View>
       <View style={{ height: 200 }} />
     </AuthCard>
-    // </KeyboardAwareScrollView>
   );
 }

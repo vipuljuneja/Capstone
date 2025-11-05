@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Keyboard } from 'react-native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { auth } from '../../firebase';
 import { getAuthErrorMessage, validateEmail } from '../../utils/authErrors';
 import AuthCard from '../../Components/Auth/AuthCard';
@@ -45,6 +44,7 @@ export default function LoginScreen({
   const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const handleEmailChange = (text: string) => {
     setEmail(text);
@@ -65,6 +65,20 @@ export default function LoginScreen({
       }
     }
   };
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   const handleLogin = async () => {
     setError(null);
@@ -115,13 +129,7 @@ export default function LoginScreen({
   const canSubmit = email.trim() !== '' && password !== '' && !emailError && !loading;
 
   return (
-    // <KeyboardAwareScrollView
-    //   contentContainerStyle={{ flexGrow: 1 }}
-    //   keyboardShouldPersistTaps="handled"
-    //   enableOnAndroid
-    //   extraScrollHeight={20}
-    // >
-      <AuthCard title="Welcome back" blobTopMargin={110} coverEyes={isPasswordVisible}>
+    <AuthCard title="Welcome back" blobTopMargin={keyboardVisible ? 20 : 110} coverEyes={isPasswordVisible}>
         <AuthInput
           icon="envelope"
           iconSize={18}
@@ -196,6 +204,5 @@ export default function LoginScreen({
           </TouchableOpacity>
         </View>
       </AuthCard>
-    // </KeyboardAwareScrollView>
   );
 }
