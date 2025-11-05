@@ -1,7 +1,7 @@
-import React, { useLayoutEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import { SafeAreaView, View, Text, StyleSheet, Pressable, ScrollView, Image, Alert } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import { deleteReflection } from "../../services/api";
+import { deleteReflection,updateReflectionReadStatus } from "../../services/api";
 
 export default function PipoDetailScreen({ route, navigation }) {
   const { pipo } = route.params || {};
@@ -52,6 +52,39 @@ export default function PipoDetailScreen({ route, navigation }) {
         ),
     });
   }, [navigation, deleting, isDeleted]);
+
+ 
+
+  useEffect(() => {
+    if (!pipo?.id) return;
+    if (pipo?.readAt != null) return; 
+
+    let stop = false;
+    (async () => {
+      try {
+        await updateReflectionReadStatus(pipo?.id, { readAt: new Date().toISOString() });
+      } catch (e) {
+        if (!stop) console.error("Failed to set readAt:", e);
+      }
+    })();
+
+    return () => { stop = true; };
+  }, [pipo?.id, pipo?.readAt]);
+
+//   useEffect(() => {
+//   const reflectionId = pipo?._id || pipo?.id;
+//   if (!reflectionId) return;
+
+//   (async () => {
+//     try {
+//       // for testing
+//       await updateReflectionReadStatus(reflectionId, { readAt: null });
+//       console.log('readAt set to null for testing');
+//     } catch (e) {
+//       console.error('Failed to set readAt null:', e);
+//     }
+//   })();
+// }, [pipo?._id, pipo?.id]);
 
   if (!pipo) {
     return (

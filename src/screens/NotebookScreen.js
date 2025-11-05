@@ -606,6 +606,7 @@ export default function NotebookScreen({ navigation }) {
                           subtitle: item.subtitle,
                           dateISO: selectedDate,
                           dateText: dayjs(selectedDate).format("ddd, MMM D").toUpperCase(),
+                          readAt: item.readAt,
                           sessionId: item.sessionId,
                           scenarioId: item.scenarioId,
                           level: item.level,

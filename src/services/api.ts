@@ -393,6 +393,7 @@ export type Reflection = {
   description: string;
   date: string;
   type: 'pipo' | 'self';
+  readAt: string | null;
   imageName?: string; // For Pipo avatar image
   linkedSessionId?: string; // Link to PracticeSession
   scenarioId?: string; // Reference to scenario
@@ -408,6 +409,7 @@ export type CreateReflectionData = {
   date: string;
   type?: 'pipo' | 'self';
   imageName?: string; // For Pipo avatar image
+  readAt?: string | null;
 };
 
 export type UpdateReflectionData = {
@@ -416,6 +418,7 @@ export type UpdateReflectionData = {
   date?: string;
   type?: 'pipo' | 'self';
   imageName?: string; // For Pipo avatar image
+  readAt?: string | null;
 };
 
 /**
@@ -552,6 +555,35 @@ export const updateReflection = async (
   } catch (error: any) {
     console.error(
       '❌ Failed to update reflection:',
+      error.response?.data || error.message,
+    );
+    throw error;
+  }
+};
+
+/**
+ * Update the read status of a reflection
+ */
+export const updateReflectionReadStatus = async (
+  reflectionId: string,
+  payload:
+    | { read: boolean }
+    | { readAt: string | null },
+): Promise<Reflection> => {
+  try {
+    const response = await apiClient.patch<ApiSuccessEnvelope<Reflection>>(
+      `/reflections/${reflectionId}/read-status`,
+      payload,
+    );
+
+    if (!response.data?.success || !response.data?.data) {
+      throw new Error('Failed to update reflection read status');
+    }
+
+    return response.data.data;
+  } catch (error: any) {
+    console.error(
+      '❌ Failed to update reflection read status:',
       error.response?.data || error.message,
     );
     throw error;

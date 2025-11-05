@@ -6,6 +6,7 @@ import {
   updateReflection,
   deleteReflection,
   getReflectionDates,
+  updateReflectionReadStatus,
 } from '../controllers/selfReflection.controller';
 
 const router = Router();
@@ -25,8 +26,10 @@ router.get('/:reflectionId', getReflectionById);
 // Update a reflection
 router.put('/:reflectionId', updateReflection);
 
+// Update read status for a reflection
+router.patch('/:reflectionId/read-status', updateReflectionReadStatus);
+
 // Delete a reflection
 router.delete('/:reflectionId', deleteReflection);
 
 export default router;
-

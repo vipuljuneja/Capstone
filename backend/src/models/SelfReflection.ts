@@ -6,6 +6,7 @@ export interface ISelfReflection extends Document {
   description: string;
   date: Date;
   type: 'pipo' | 'self';
+  readAt: Date | null;
   imageName?: string; // For Pipo avatar image
   linkedSessionId?: mongoose.Types.ObjectId; // Link to PracticeSession
   scenarioId?: mongoose.Types.ObjectId; // Quick reference to scenario
@@ -43,6 +44,11 @@ const SelfReflectionSchema = new Schema<ISelfReflection>(
       required: true,
       default: 'self',
     },
+    readAt: {
+      type: Date,
+      default: null,
+      // Null until the user views the note
+    },
     imageName: {
       type: String,
       trim: true,
@@ -78,6 +84,7 @@ SelfReflectionSchema.index({ userId: 1, date: -1 });
 SelfReflectionSchema.index({ userId: 1, type: 1, date: -1 });
 SelfReflectionSchema.index({ linkedSessionId: 1 });
 SelfReflectionSchema.index({ userId: 1, scenarioId: 1, level: 1 });
+SelfReflectionSchema.index({ userId: 1, type: 1, readAt: 1 });
 
 const SelfReflection = mongoose.model<ISelfReflection>(
   'SelfReflection',
@@ -85,4 +92,3 @@ const SelfReflection = mongoose.model<ISelfReflection>(
 );
 
 export default SelfReflection;
-
