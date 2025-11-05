@@ -8,8 +8,9 @@ import {
   TouchableOpacity,
   Linking
 } from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome';
 import { getArticleById, toggleBookmark } from '../services/api';
+import FillNoIcon from '../../assets/icons/Fill=No.svg';
+import FillYesIcon from '../../assets/icons/Fill=Yes.svg';
 import ArticleHeader from '../Components/Articles/ArticleHeader';
 import BlobCharacter from '../Components/Articles/BlobCharacter';
 import ArticleMeta from '../Components/Articles/ArticleMeta';
@@ -110,11 +111,11 @@ export default function ArticleDetail({ route }) {
               style={styles.bookmarkButton}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Icon
-                name={isBookmarked ? 'bookmark' : 'bookmark-o'}
-                size={24}
-                color="#111827"
-              />
+              {isBookmarked ? (
+                <FillYesIcon width={24} height={24} />
+              ) : (
+                <FillNoIcon width={24} height={24} />
+              )}
             </TouchableOpacity>
           </View>
         </View>
