@@ -13,6 +13,8 @@ interface AuthInputProps extends TextInputProps {
   iconSize?: number;
   isPassword?: boolean;
   error?: boolean;
+  isPasswordVisible?: boolean;
+  onPasswordVisibilityChange?: (visible: boolean) => void;
 }
 
 export default function AuthInput({
@@ -20,9 +22,23 @@ export default function AuthInput({
   iconSize = 20,
   isPassword = false,
   error = false,
+  isPasswordVisible: controlledVisibility,
+  onPasswordVisibilityChange,
   ...textInputProps
 }: AuthInputProps) {
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [uncontrolledVisibility, setUncontrolledVisibility] = useState(false);
+  const isPasswordVisible =
+    typeof controlledVisibility === 'boolean'
+      ? controlledVisibility
+      : uncontrolledVisibility;
+
+  const handleToggleVisibility = () => {
+    const nextVisibility = !isPasswordVisible;
+    onPasswordVisibilityChange?.(nextVisibility);
+    if (typeof controlledVisibility !== 'boolean') {
+      setUncontrolledVisibility(nextVisibility);
+    }
+  };
 
   return (
     <View style={[styles.container, error && styles.containerError]}>
@@ -40,7 +56,7 @@ export default function AuthInput({
       />
       {isPassword && (
         <TouchableOpacity
-          onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+          onPress={handleToggleVisibility}
           style={styles.eyeButton}
           accessibilityLabel={isPasswordVisible ? 'Hide password' : 'Show password'}
           accessibilityRole="button"
@@ -84,4 +100,3 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 });
-

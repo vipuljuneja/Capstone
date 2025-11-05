@@ -44,6 +44,7 @@ export default function LoginScreen({
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   const handleEmailChange = (text: string) => {
     setEmail(text);
@@ -120,7 +121,7 @@ export default function LoginScreen({
     //   enableOnAndroid
     //   extraScrollHeight={20}
     // >
-      <AuthCard title="Welcome back" blobTopMargin={110}>
+      <AuthCard title="Welcome back" blobTopMargin={110} coverEyes={isPasswordVisible}>
         <AuthInput
           icon="envelope"
           iconSize={18}
@@ -148,6 +149,8 @@ export default function LoginScreen({
           onChangeText={handlePasswordChange}
           placeholder="Password"
           isPassword
+          isPasswordVisible={isPasswordVisible}
+          onPasswordVisibilityChange={setIsPasswordVisible}
           editable={!loading}
           testID="login-password-input"
         />
