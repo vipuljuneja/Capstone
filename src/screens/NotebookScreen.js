@@ -24,6 +24,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { ImageBackground } from "react-native";
 import isoWeek from 'dayjs/plugin/isoWeek';
 dayjs.extend(isoWeek);
+import { useFocusEffect } from '@react-navigation/native';
+
 
 
 const { width: screenWidth } = Dimensions.get("window");
@@ -48,6 +50,16 @@ const MOTIVATION_TITLES = [
   "You’re turning discomfort into power",
   "A small victory, a huge step forward"
 ];
+
+const imagesArr = [
+  require('../../assets/pipo/articlePipo.png'),
+  // require('../../assets/pipo/pipo-coffee.png'),
+  require('../../assets/pipo/pipo-hi.png'),
+  require('../../assets/pipo/pipo-job.png'),
+  require('../../assets/pipo/pipo-loading.png'),
+  require('../../assets/pipo/pipo-onboard1.png'),
+];
+
 function getRandomElement(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -229,7 +241,7 @@ function SelfReflectionCard({ title, description, onEdit, onDelete }) {
   );
 }
 
-function PipoCard({ title, subtitle, index, onPress, motivation }) {
+function PipoCard({ title, subtitle, index, onPress, motivation,image }) {
   const isEven = index % 2 === 0;
   const tint = isEven ? "#EEF5FF" : "#FFF8E9";
   const border = isEven ? "#CFE0FF" : "#FFE8B8";
@@ -237,7 +249,8 @@ function PipoCard({ title, subtitle, index, onPress, motivation }) {
   return (
     <Pressable onPress={onPress} style={[styles.pipoCard, { backgroundColor: tint, borderColor: border }]}>
       <View style={styles.pipoIconWrap}>
-        <View style={styles.pipoBlob} />
+        {/* <View style={styles.pipoBlob} /> */}
+        <Image source={image} style={styles.pipoBlob}></Image>
       </View>
       <Text style={styles.pipoTitle} numberOfLines={2}>
         {motivation || "You’ve got this"}
@@ -362,6 +375,13 @@ export default function NotebookScreen({ navigation }) {
   useEffect(() => {
     fetchCards();
   }, [fetchCards]);
+  
+  useFocusEffect(
+  useCallback(() => {
+    fetchCards();
+    fetchDots();
+  }, [fetchCards, fetchDots])
+);
 
 
 
@@ -567,9 +587,11 @@ export default function NotebookScreen({ navigation }) {
             <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
               {pipoData.map((item, i) => {
                 const randomMotivation = getRandomElement(MOTIVATION_TITLES);
+                const randomImage = getRandomElement(imagesArr);
                 return (
                   <PipoCard
                     key={item.id}
+                    image={randomImage}
                     title={item.title}
                     subtitle={item.subtitle}
                     index={i}
@@ -578,6 +600,7 @@ export default function NotebookScreen({ navigation }) {
                       navigation.navigate("PipoDetail", {
                         pipo: {
                           id: item.id,
+                          image:randomImage,
                           Motivation: randomMotivation,
                           title: item.title,
                           subtitle: item.subtitle,
@@ -794,8 +817,9 @@ const styles = StyleSheet.create({
   pipoBlob: {
     width: 56,
     height: 56,
-    borderRadius: 28,
-    backgroundColor: "#CFC3FF",
+    resizeMode: "contain"
+    // borderRadius: 28,
+    // backgroundColor: "#CFC3FF",
   },
   pipoTitle: {
     fontSize: 15,
