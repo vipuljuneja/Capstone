@@ -14,11 +14,11 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome';
 import {
   GestureHandlerRootView,
   PanGestureHandler,
 } from 'react-native-gesture-handler';
+import FillNoIcon from '../../assets/icons/Fill=No.svg';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -30,13 +30,28 @@ import {
   getLast7DaysArticles,
   toggleBookmark,
 } from '../services/api';
-import BlobCharacter from '../Components/Articles/BlobCharacter';
 import { useAuth } from '../contexts/AuthContext';
+import { Image } from 'react-native';
+
+import A_Little_Joy_Counts_Too from '../../assets/Illustration/A_Little_Joy_Counts_Too.png';
+import Finding_Stillness_Between_Moments from '../../assets/Illustration/Finding_Stillness_Between_Moments.png';
+import Making_Small from '../../assets/Illustration/Making_Small.png';
+import Practicing_Patience from '../../assets/Illustration/Practicing_Patience.png';
+import Small_Steps from '../../assets/Illustration/Small_Steps.png';
+import Why_5_Minutes from '../../assets/Illustration/Why_5_Minutes.png';
 
 const { width } = Dimensions.get('window');
 
-// Extract ArticleCard as a separate component
-const ArticleCard = ({ article, index, currentIndex, navigation, cardBgColor, underlined, rest, dateLabel }) => {
+const illustrationImages = [
+  A_Little_Joy_Counts_Too,
+  Finding_Stillness_Between_Moments,
+  Making_Small,
+  Practicing_Patience,
+  Small_Steps,
+  Why_5_Minutes,
+];
+
+const ArticleCard = ({ article, index, currentIndex, navigation, cardBgColor, underlined, rest, dateLabel, illustrationImage }) => {
   return (
     <View style={S.cardWrapper}>
       <View style={S.dateWrap}>
@@ -48,14 +63,10 @@ const ArticleCard = ({ article, index, currentIndex, navigation, cardBgColor, un
 
       <View style={[S.card, { backgroundColor: cardBgColor }]}>
         <View style={S.heroContainer}>
-          {/* <View
-            style={[S.glowCircle, { backgroundColor: `${cardBgColor}90` }]}
-          /> */}
-          <BlobCharacter
-            color="transparent"
-            character={article.illustrationData?.character}
+          <Image
+            source={illustrationImage}
             style={S.hero}
-            imageStyle={{ width: '100%', height: '75%' ,borderRadius: 16}}
+            resizeMode="contain"
           />
         </View>
 
@@ -68,7 +79,7 @@ const ArticleCard = ({ article, index, currentIndex, navigation, cardBgColor, un
 
         <View style={S.contentPreview}>
           <Text style={S.cardSummary}>
-            <Text style={S.underlinedText}>{underlined}</Text>
+            {underlined}
             {rest && ' '}
             {rest}
           </Text>
@@ -176,7 +187,7 @@ export default function DailyArticleMain({ route, navigation }) {
           onPress={() => navigation.navigate('BookmarkedArticles')}
           hitSlop={16}
         >
-          <Icon name="bookmark" size={22} color="#111827" />
+          <FillNoIcon width={22} height={22} />
         </TouchableOpacity>
       ),
     });
@@ -217,9 +228,8 @@ export default function DailyArticleMain({ route, navigation }) {
     transform: [{ translateX: translateX.value - currentIndex * width }],
   }));
 
-  // Process article data for all articles
   const processedArticles = useMemo(() => {
-    return articles.map((article) => {
+    return articles.map((article, articleIndex) => {
       const dt = article.date ? new Date(article.date) : null;
       const dateLabel = dt
         ? dt
@@ -248,7 +258,9 @@ export default function DailyArticleMain({ route, navigation }) {
         : preview;
       const rest = hasSplit ? preview.slice(splitIndex).trim() : '';
 
-      return { article, cardBgColor: bg, dateLabel, underlined, rest };
+      const randomImage = illustrationImages[articleIndex % illustrationImages.length];
+
+      return { article, cardBgColor: bg, dateLabel, underlined, rest, illustrationImage: randomImage };
     });
   }, [articles]);
 
@@ -289,6 +301,7 @@ export default function DailyArticleMain({ route, navigation }) {
                     underlined={data.underlined}
                     rest={data.rest}
                     dateLabel={data.dateLabel}
+                    illustrationImage={data.illustrationImage}
                   />
                 </ScrollView>
               </View>
