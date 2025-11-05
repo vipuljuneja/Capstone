@@ -25,6 +25,7 @@ import { ImageBackground } from "react-native";
 import isoWeek from 'dayjs/plugin/isoWeek';
 dayjs.extend(isoWeek);
 import { useFocusEffect } from '@react-navigation/native';
+import ConfirmDialog from '../Components/AlertBox/ConfirmDialog'
 
 
 
@@ -279,6 +280,11 @@ export default function NotebookScreen({ navigation }) {
   const [dotDates, setDotDates] = useState({});
   const [editingSelf, setEditingSelf] = useState(null);
 
+  const [showConfirmSelf, setShowConfirmSelf] = useState(false);
+const [deletingSelf, setDeletingSelf] = useState(false);
+const deleteTargetRef = useRef(null);
+
+
 
   const isSelf = activeTab === "self";
 
@@ -288,24 +294,47 @@ export default function NotebookScreen({ navigation }) {
     setWriterOpen(true);
   };
 
-  const onDeleteSelf = async (item) => {
-    try {
-      await deleteReflection(item.id);
-      await fetchCards();
+  // const onDeleteSelf = async (item) => {
+  //   try {
+  //     await deleteReflection(item.id);
+  //     await fetchCards();
 
-      const key = dayjs(item?.date || selectedDate).format("YYYY-MM-DD");
-      setDotDates((prev) => {
-        const curr = { ...(prev || {}) };
-        const flags = curr[key] || {};
-        delete flags.self;
-        if (!flags.pipo) delete curr[key];
-        else curr[key] = flags;
-        return curr;
-      });
-    } catch (e) {
-      console.error("Delete failed:", e);
-    }
-  };
+  //     const key = dayjs(item?.date || selectedDate).format("YYYY-MM-DD");
+  //     setDotDates((prev) => {
+  //       const curr = { ...(prev || {}) };
+  //       const flags = curr[key] || {};
+  //       delete flags.self;
+  //       if (!flags.pipo) delete curr[key];
+  //       else curr[key] = flags;
+  //       return curr;
+  //     });
+  //   } catch (e) {
+  //     console.error("Delete failed:", e);
+  //   }
+  // };
+
+  const onDeleteSelf = (item) => {
+  if (!item?.id || deletingSelf) return;
+  deleteTargetRef.current = item;
+  setShowConfirmSelf(true);
+};
+const confirmDeleteSelf = async () => {
+  const item = deleteTargetRef.current;
+  if (!item?.id) return;
+  setDeletingSelf(true);
+  try {
+    await deleteReflection(item.id);
+    await Promise.all([fetchCards(), fetchDots()]);
+  } catch (e) {
+    console.error("Delete failed:", e);
+  } finally {
+    setDeletingSelf(false);
+    setShowConfirmSelf(false);
+    deleteTargetRef.current = null;
+  }
+};
+
+
 
   const toUICard = useCallback(
     (r, i) => ({
@@ -711,6 +740,22 @@ export default function NotebookScreen({ navigation }) {
           });
         }}
       />
+
+
+        <ConfirmDialog
+  visible={showConfirmSelf}
+  title="Delete note?"
+  message="This action cannot be undone."
+  secondaryMessage="All related data will be permanently removed."
+  confirmText="DELETE"
+  cancelText="CANCEL"
+  loading={deletingSelf}
+  onCancel={() => {
+    setShowConfirmSelf(false);
+    deleteTargetRef.current = null;
+  }}
+  onConfirm={confirmDeleteSelf}
+/>
 
     </SafeAreaView>
   );

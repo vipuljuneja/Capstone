@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"; 
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { updateUserProfile } from "../services/api";
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { auth } from "../firebase";
+import ConfirmDialog from '../Components/AlertBox/ConfirmDialog'
 
 export default function ProfileSettingScreen({ navigation }) {
   const { user, mongoUser, refreshMongoUser } = useAuth();
@@ -27,12 +28,13 @@ export default function ProfileSettingScreen({ navigation }) {
   const [selectedAvatar, setSelectedAvatar] = useState(0);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const avatars = [
     { name: "pipo_set", image: require("../../assets/pipo_set.png") },
     { name: "bro_set", image: require("../../assets/bro_set.png") },
     { name: "cherry_set", image: require("../../assets/cherry_set.png") },
-    { name: "mshrom_set", image: require("../../assets/mshrom_set.png")}
+    { name: "mshrom_set", image: require("../../assets/mshrom_set.png") }
   ];
 
   // Load user data when component mounts
@@ -85,7 +87,7 @@ export default function ProfileSettingScreen({ navigation }) {
 
       //     // Update password
       //     await updatePassword(user, newPassword);
-          
+
       //     Alert.alert(
       //       "Success",
       //       "Profile and password updated successfully!",
@@ -117,7 +119,7 @@ export default function ProfileSettingScreen({ navigation }) {
 
       // Refresh MongoDB user data
       await refreshMongoUser();
-      
+
       setLoading(false);
       navigation.navigate("Home");
     } catch (error) {
@@ -139,7 +141,7 @@ export default function ProfileSettingScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -229,11 +231,11 @@ export default function ProfileSettingScreen({ navigation }) {
           </View>
         </View> */}
 
-        
+
 
         {/* Save Button */}
-        <TouchableOpacity 
-          onPress={handleSave} 
+        <TouchableOpacity
+          onPress={() => setShowConfirm(true)}
           style={[styles.saveButton, loading && styles.saveButtonDisabled]}
           disabled={loading}
         >
@@ -246,13 +248,30 @@ export default function ProfileSettingScreen({ navigation }) {
 
         <View style={{ height: 20 }} />
       </ScrollView>
+      <ConfirmDialog
+        visible={showConfirm}
+        title="Save changes?"
+        message="This will update your profile details."
+        secondaryMessage="You can edit them again anytime."
+        confirmText="SAVE"
+        cancelText="CANCEL"
+        loading={loading}
+        blockDismiss={loading}
+        primaryColor="rgba(62, 49, 83, 1)"
+        onCancel={() => setShowConfirm(false)}
+        onConfirm={async () => {
+          await handleSave();
+          setShowConfirm(false);
+        }}
+      />
+
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#EAF1FF" },
-  scrollContent: { 
+  scrollContent: {
     alignItems: "center",
     paddingBottom: 20,
   },
