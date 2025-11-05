@@ -49,6 +49,8 @@ export default function SignupScreen({
   const [passwordStrength, setPasswordStrength] = useState<
     'weak' | 'medium' | 'strong' | null
   >(null);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
 
   const handleNameChange = (text: string) => {
     setName(text);
@@ -216,7 +218,7 @@ export default function SignupScreen({
     //   enableOnAndroid
     //   extraScrollHeight={20}
     // >
-    <AuthCard title="Sign up" blobTopMargin={110}>
+    <AuthCard title="Sign up" blobTopMargin={110} coverEyes={isPasswordVisible || isConfirmPasswordVisible}>
       <AuthInput
         icon="user"
         iconSize={20}
@@ -262,6 +264,8 @@ export default function SignupScreen({
         onChangeText={handlePasswordChange}
         placeholder="Password"
         isPassword
+        isPasswordVisible={isPasswordVisible}
+        onPasswordVisibilityChange={setIsPasswordVisible}
         editable={!loading}
         error={!!passwordError}
         testID="signup-password-input"
@@ -322,6 +326,8 @@ export default function SignupScreen({
         onChangeText={handleConfirmPasswordChange}
         placeholder="Confirm Password"
         isPassword
+        isPasswordVisible={isConfirmPasswordVisible}
+        onPasswordVisibilityChange={setIsConfirmPasswordVisible}
         editable={!loading}
         error={!!confirmPasswordError}
         testID="signup-confirm-password-input"
