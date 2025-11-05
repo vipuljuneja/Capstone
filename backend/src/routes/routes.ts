@@ -231,6 +231,13 @@ router.get('/reflections/:reflectionId', verifyFirebaseToken, controllers.getRef
 // PUT /api/reflections/:reflectionId - Update reflection
 router.put('/reflections/:reflectionId', verifyFirebaseToken, controllers.updateReflection);
 
+// PATCH /api/reflections/:reflectionId/read-status - Update reflection read status
+router.patch(
+  '/reflections/:reflectionId/read-status',
+  verifyFirebaseToken,
+  controllers.updateReflectionReadStatus
+);
+
 // DELETE /api/reflections/:reflectionId - Delete reflection
 router.delete('/reflections/:reflectionId', verifyFirebaseToken, controllers.deleteReflection);
 

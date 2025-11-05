@@ -11,7 +11,7 @@ import { generatePipoNote, prepareSessionDataForAI } from '../services/practiceS
  */
 export const createReflection = async (req: Request, res: Response) => {
   try {
-    const { userId, title, description, date, type, imageName } = req.body;
+    const { userId, title, description, date, type, imageName, readAt } = req.body;
 
     // Validate required fields
     if (!userId || !title || !date) {
@@ -39,6 +39,22 @@ export const createReflection = async (req: Request, res: Response) => {
     }
 
     // Create new reflection
+    let parsedReadAt: Date | null | undefined = undefined;
+    if (readAt !== undefined) {
+      if (readAt === null || readAt === '') {
+        parsedReadAt = null;
+      } else {
+        const readAtDate = new Date(readAt);
+        if (Number.isNaN(readAtDate.getTime())) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid readAt value. Expected a valid date string or null.',
+          });
+        }
+        parsedReadAt = readAtDate;
+      }
+    }
+
     const reflection = await SelfReflection.create({
       userId,
       title,
@@ -46,6 +62,7 @@ export const createReflection = async (req: Request, res: Response) => {
       date: new Date(date),
       type: type || 'self',
       imageName: imageName || undefined, // For Pipo avatar image
+      readAt: parsedReadAt ?? undefined,
     });
 
     return res.status(201).json({
@@ -163,7 +180,7 @@ export const getReflectionById = async (req: Request, res: Response) => {
 export const updateReflection = async (req: Request, res: Response) => {
   try {
     const { reflectionId } = req.params;
-    const { title, description, date, type, imageName } = req.body;
+    const { title, description, date, type, imageName, readAt } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(reflectionId)) {
       return res.status(400).json({
@@ -181,6 +198,20 @@ export const updateReflection = async (req: Request, res: Response) => {
       updateData.type = type;
     }
     if (imageName !== undefined) updateData.imageName = imageName;
+    if (readAt !== undefined) {
+      if (readAt === null || readAt === '') {
+        updateData.readAt = null;
+      } else {
+        const readAtDate = new Date(readAt);
+        if (Number.isNaN(readAtDate.getTime())) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid readAt value. Expected a valid date string or null.',
+          });
+        }
+        updateData.readAt = readAtDate;
+      }
+    }
 
     const reflection = await SelfReflection.findByIdAndUpdate(
       reflectionId,
@@ -241,6 +272,72 @@ export const deleteReflection = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       error: error.message || 'Failed to delete reflection',
+    });
+  }
+};
+
+/**
+ * Update read status for a reflection
+ * Allows setting readAt to the current time, a specific date, or null (unread)
+ */
+export const updateReflectionReadStatus = async (req: Request, res: Response) => {
+  try {
+    const { reflectionId } = req.params;
+    const { readAt, read } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(reflectionId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid reflection ID format',
+      });
+    }
+
+    let newReadAt: Date | null;
+
+    if (readAt !== undefined) {
+      if (readAt === null || readAt === '') {
+        newReadAt = null;
+      } else {
+        const parsed = new Date(readAt);
+        if (Number.isNaN(parsed.getTime())) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid readAt value. Expected a valid date string or null.',
+          });
+        }
+        newReadAt = parsed;
+      }
+    } else if (read !== undefined) {
+      newReadAt = read ? new Date() : null;
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'Provide readAt (date/null) or read (boolean) to update status',
+      });
+    }
+
+    const reflection = await SelfReflection.findByIdAndUpdate(
+      reflectionId,
+      { readAt: newReadAt },
+      { new: true }
+    );
+
+    if (!reflection) {
+      return res.status(404).json({
+        success: false,
+        error: 'Reflection not found',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: reflection,
+    });
+  } catch (error: any) {
+    console.error('❌ Error updating reflection read status:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to update reflection read status',
     });
   }
 };
@@ -388,4 +485,3 @@ export const createPipoNoteFromSession = async (req: Request, res: Response) => 
     });
   }
 };
-

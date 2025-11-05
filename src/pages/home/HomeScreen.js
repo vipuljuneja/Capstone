@@ -8,13 +8,15 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import LinearGradient from 'react-native-linear-gradient';
 import supabase from '../../services/supabaseClient';
 import Tooltip from 'react-native-walkthrough-tooltip';
 import TourTipCard from '../../Components/Tooltip/TourTipCard'
-import { updateHasSeenTour } from '../../services/api.ts'
+import { updateHasSeenTour,getReflectionsByUser} from '../../services/api.ts'
 
 import NotebookIcon from '../../../assets/icons/notebook.svg';
 import MailboxIcon from '../../../assets/icons/mailbox.svg';
@@ -54,6 +56,8 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const [tourVisible, setTourVisible] = useState(false);
   const [tourStep, setTourStep] = useState(1);
+  const [hasUnread, setHasUnread] = useState(false);
+
   const TOTAL_STEPS = 4;
 
   const { user, mongoUser } = useAuth();
@@ -120,6 +124,34 @@ export default function HomeScreen() {
       setTourVisible(false);
     }
   }, [mongoUser]);
+
+useFocusEffect(
+  React.useCallback(() => {
+    let stop = false;
+
+    const checkUnread = async () => {
+      try {
+        const reflections = await getReflectionsByUser(mongoUser._id, { type: 'pipo' });
+        console.log(reflections)
+        
+
+        if (!stop) {
+          const hasUnreadReflections = reflections.some(r => r.readAt == null);
+          setHasUnread(hasUnreadReflections);
+        }
+      } catch (err) {
+        console.error('Failed to load reflections:', err);
+      }
+    };
+
+    checkUnread();
+
+    return () => {
+      stop = true;
+    };
+  }, [mongoUser?._id])
+);
+
 
 
   const finishTour = React.useCallback(async () => {
@@ -335,12 +367,15 @@ export default function HomeScreen() {
                 />
               }
             >
-              <CircularIconButton
-                style={{ padding: 24 }}
-                onPress={() => navigation.navigate('Notebook')}
-              >
-                <MailboxIcon width={32} height={32} />
-              </CircularIconButton>
+              <View style={styles.iconWithBadge}>
+                <CircularIconButton
+                  style={{ padding: 24 }}
+                  onPress={() => navigation.navigate('Notebook')}
+                >
+                  <MailboxIcon width={32} height={32} />
+                </CircularIconButton>
+                {hasUnread && <View style={styles.badge} />}
+              </View>
             </Tooltip>
           </View>
           <View>
@@ -587,4 +622,21 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
   },
+  iconWithBadge: {
+  position: 'relative',
+},
+
+badge: {
+  position: 'absolute',
+  top: 10,        
+  right: 10,
+  width: 14,
+  height: 14,
+  borderRadius: 7,
+  backgroundColor: '#E53935',
+  borderWidth: 2,
+  borderColor: '#FFFFFF',  
+  pointerEvents: 'none',   
+},
+
 });
