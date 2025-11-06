@@ -154,7 +154,7 @@ const Level3ResultScreen = () => {
       if (!transcriptionResults || transcriptionResults.length === 0) return;
       try {
         await saveSession({
-          userId: mongoUser._id,
+          userId: mongoUser?._id,
           scenarioId: finalScenarioId,
           level: 3,
           transcriptionResults,
@@ -163,7 +163,7 @@ const Level3ResultScreen = () => {
 
         // Unlock Level 3
         try {
-          await unlockLevel(mongoUser._id, finalScenarioId, 3);
+          await unlockLevel(mongoUser?._id, finalScenarioId, 3);
           console.log('🔓 Level 3 unlocked');
         } catch (e) {
           console.warn(
@@ -199,7 +199,7 @@ const Level3ResultScreen = () => {
         const maxAttempts = 10; // ~5s
         while (!cancelled && attempts < maxAttempts) {
           const progress = await getProgressForScenario(
-            mongoUser._id,
+            mongoUser?._id,
             finalScenarioId,
           );
           const unlocked = Boolean(progress?.levels?.['3']?.unlockedAt);

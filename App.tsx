@@ -39,7 +39,10 @@ function RootApp() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {user ? (
+      <NavigationContainer theme={NAV_THEME}>
+        <MainStack />
+      </NavigationContainer>
+      {/* {user ? (
         <NavigationContainer theme={NAV_THEME}>
           <MainStack />
         </NavigationContainer>
@@ -47,7 +50,7 @@ function RootApp() {
         <SignupScreen onSwitchToLogin={() => setMode('login')} />
       ) : (
         <LoginScreen onSwitchToSignup={() => setMode('signup')} />
-      )}
+      )} */}
       <Toast />
     </SafeAreaView>
   );
