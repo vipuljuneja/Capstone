@@ -13,8 +13,14 @@ const router = Router();
 // POST /api/users - Create new user (public - signup endpoint)
 router.post('/users', controllers.createUser);
 
+// Alias for signup used by some clients/docs
+router.post('/users/register', controllers.createUser);
+
 // GET /api/users/:authUid - Get user by Firebase authUid
 router.get('/users/:authUid', verifyFirebaseToken, verifyUserOwnership, controllers.getUserByAuthUid);
+
+// GET /api/users/me - Get current user based on Firebase token
+router.get('/users/me', verifyFirebaseToken, controllers.getMe);
 
 // PUT /api/users/:authUid - Update user profile
 router.put('/users/:authUid', verifyFirebaseToken, verifyUserOwnership, controllers.updateUserProfile);
