@@ -6,7 +6,8 @@ import {
   ScrollView, 
   ActivityIndicator,
   TouchableOpacity,
-  Linking
+  Linking,
+  Image,
 } from 'react-native';
 import { getArticleById, toggleBookmark } from '../services/api';
 import FillNoIcon from '../../assets/icons/Fill=No.svg';
@@ -21,6 +22,7 @@ export default function ArticleDetail({ route }) {
   const { user } = useAuth();
   const userId = user?.uid;
   const articleId = route?.params?.articleId;
+  const heroIdx = route?.params?.heroIdx ?? 0;
   const [article, setArticle] = useState(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -80,6 +82,22 @@ export default function ArticleDetail({ route }) {
     });
   };
 
+  // Local illustrations to match DailyArticleMain choices
+  const A_Little_Joy_Counts_Too = require('../../assets/Illustration/A_Little_Joy_Counts_Too.png');
+  const Finding_Stillness_Between_Moments = require('../../assets/Illustration/Finding_Stillness_Between_Moments.png');
+  const Making_Small = require('../../assets/Illustration/Making_Small.png');
+  const Practicing_Patience = require('../../assets/Illustration/Practicing_Patience.png');
+  const Small_Steps = require('../../assets/Illustration/Small_Steps.png');
+  const Why_5_Minutes = require('../../assets/Illustration/Why_5_Minutes.png');
+  const illustrationImages = [
+    A_Little_Joy_Counts_Too,
+    Finding_Stillness_Between_Moments,
+    Making_Small,
+    Practicing_Patience,
+    Small_Steps,
+    Why_5_Minutes,
+  ];
+
   return (
     <View style={styles.container}>
   
@@ -89,12 +107,13 @@ export default function ArticleDetail({ route }) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <BlobCharacter
-          character={article.illustrationData?.character}
-          style={styles.heroIllustration}
-          imageStyle={{ borderRadius: 16, height: '90%' }}
-          resizeMode="cover"
-        />
+        <View style={styles.heroIllustration}>
+          <Image
+            source={illustrationImages[heroIdx % illustrationImages.length]}
+            style={{ width: '100%', height: '100%', borderRadius: 16 }}
+            resizeMode="cover"
+          />
+        </View>
 
         <View style={styles.articleHeaderSection}>
           <Text style={styles.title}>{article.title}</Text>

@@ -1,6 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
+import { Platform, BackHandler, Alert } from 'react-native';
+import { HeaderBackButton } from '@react-navigation/elements';
 
 import {
   View,
@@ -11,6 +13,7 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
+  ImageBackground,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { auth } from '../firebase';
@@ -18,7 +21,8 @@ import { signOut } from 'firebase/auth';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ route }) {
+  const backToHomeOnce = route?.params?.backToHomeOnce;
   const { mongoUser, refreshMongoUser } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const navigation = useNavigation();
@@ -37,6 +41,39 @@ export default function ProfileScreen() {
       setSigningOut(false);
     }
   }, [signingOut]);
+
+  useEffect(() => {
+    if (!backToHomeOnce) return;
+    navigation.setOptions({
+      gestureEnabled: false,
+      headerLeft: ({ tintColor, canGoBack }) =>
+        canGoBack ? (
+          <HeaderBackButton
+            tintColor={tintColor}
+            onPress={() => navigation.navigate('Home')}
+          />
+        ) : null,
+    });
+  }, [navigation, backToHomeOnce]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!backToHomeOnce || Platform.OS !== 'android') return;
+      const onBack = () => {
+        navigation.navigate('Home');
+        return true;
+      };
+      BackHandler.addEventListener('hardwareBackPress', onBack);
+      return () => BackHandler.removeEventListener('hardwareBackPress', onBack);
+    }, [navigation, backToHomeOnce]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!backToHomeOnce) return;
+      return () => navigation.setParams({ backToHomeOnce: undefined });
+    }, [navigation, backToHomeOnce]),
+  );
 
   const getFirebaseToken = async () => {
     try {
@@ -66,7 +103,7 @@ export default function ProfileScreen() {
   };
 
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       refreshMongoUser();
     }, []),
   );
@@ -105,6 +142,7 @@ export default function ProfileScreen() {
       title: 'Change Password',
       desc: 'Update your password safely',
       icon: images.set_lock,
+      bg: require('../../assets/gradients/yel-gradient.png'),
       onPress: () =>
         navigation && navigation.navigate?.('ChangePasswordScreen'),
     },
@@ -120,23 +158,33 @@ export default function ProfileScreen() {
   ];
 
   const help = [
-    // {
-    //   title: 'Revisit Guide',
-    //   desc: 'Review the essential steps anytime',
-    //   icon: images.set_revisit,
-    //   onPress: () => navigation && navigation.navigate?.('Guide'),
-    // },
+    {
+      title: 'Revisit Guide',
+      desc: 'Review the essential steps anytime',
+      icon: images.set_revisit,
+      bg: require('../../assets/gradients/purp_gradient.png'),
+      onPress: () => navigation && navigation.navigate?.('Guide'),
+    },
     {
       title: 'Terms Of Use',
       desc: 'App rules at a glance',
       icon: images.set_TOU,
+      bg: require('../../assets/gradients/bl_gradient.png'),
       onPress: () => navigation && navigation.navigate?.('Terms'),
     },
     {
       title: 'Privacy Policy',
       desc: 'How we handle your data',
       icon: images.set_PP,
+      bg: require('../../assets/gradients/gr-gradient.png'),
       onPress: () => navigation && navigation.navigate?.('PrivacyPolicy'),
+    },
+    {
+      title: 'Emotional Support',
+      desc: 'Reach out when it feels heavy',
+      icon: require('../../assets/pipo-heart.png'),
+      bg: require('../../assets/gradients/yel-gradient.png'),
+      onPress: () => navigation && navigation.navigate?.('EmotionalSupport'),
     },
   ];
 
@@ -203,13 +251,15 @@ export default function ProfileScreen() {
   );
 }
 
-function OptionRow({ title, desc, icon, onPress }) {
+function OptionRow({ title, desc, icon, onPress, bg }) {
   const source = icon;
 
   return (
     <Pressable style={S.option} onPress={onPress}>
       <View style={S.optionLeft}>
-        <Image source={source} style={S.optionIcon} />
+        <ImageBackground source={bg} style={S.bg_option}>
+          <Image source={source} style={S.optionIcon} />
+        </ImageBackground>
         <View>
           <Text style={S.optionTitle}>{title}</Text>
           <Text style={S.optionSubtitle}>{desc}</Text>
@@ -272,8 +322,8 @@ const S = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
   },
-  optionLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  optionIcon: { width: 48, height: 48, borderRadius: 12 },
+  optionLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  optionIcon: { width: 50, height: 50, resizeMode: 'contain' },
   optionTitle: { fontSize: 14, fontWeight: '600', color: '#111' },
   optionSubtitle: { fontSize: 12, color: '#6b7280', marginTop: 2 },
   logout: {
@@ -294,5 +344,13 @@ const S = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 1,
+  },
+  bg_option: {
+    height: 70,
+    width: 100,
+    borderRadius: 11,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

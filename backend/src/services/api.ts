@@ -1,23 +1,17 @@
-import { auth } from '../firebase';
+// Note: This file appears to be client-side code. For backend, use Firebase Admin SDK instead.
+// Keeping this for potential client-side usage, but token should be passed as parameter.
 
-const API_BASE_URL = __DEV__ 
+const API_BASE_URL = process.env.NODE_ENV !== 'production'
   ? 'http://localhost:3000/api/v1' 
   : 'https://your-production-api.com/api/v1';
 
 /**
  * Get Firebase ID token for authenticated requests
+ * Note: In backend context, token should be passed from request, not retrieved from auth.currentUser
  */
-const getAuthToken = async (): Promise<string | null> => {
-  const user = auth.currentUser;
-  if (!user) return null;
-  
-  try {
-    const token = await user.getIdToken();
-    return token;
-  } catch (error) {
-    console.error('Error getting auth token:', error);
-    return null;
-  }
+const getAuthToken = async (token?: string): Promise<string | null> => {
+  // In backend, token should be passed as parameter from the request
+  return token || null;
 };
 
 /**
@@ -25,14 +19,15 @@ const getAuthToken = async (): Promise<string | null> => {
  */
 const apiRequest = async (
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  token?: string
 ): Promise<any> => {
-  const token = await getAuthToken();
+  const authToken = await getAuthToken(token);
   
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
-    ...options.headers,
+    ...(authToken && { Authorization: `Bearer ${authToken}` }),
+    ...(options.headers as Record<string, string>),
   };
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -40,7 +35,7 @@ const apiRequest = async (
     headers,
   });
 
-  const data = await response.json();
+  const data = await response.json() as { message?: string; [key: string]: any };
 
   if (!response.ok) {
     throw new Error(data.message || 'API request failed');

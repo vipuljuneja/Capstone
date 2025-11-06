@@ -1,7 +1,10 @@
 import mongoose from 'mongoose';
-import { createSampleScenarios } from './sampleScenarios';
-import EnhancedScenario from '../models/EnhancedScenario';
-import UserPerformance from '../models/UserPerformance';
+// Note: sampleScenarios service doesn't exist yet - commenting out for now
+// import { createSampleScenarios } from './sampleScenarios';
+import Scenario from '../models/Scenario';
+// Note: UserPerformance model doesn't exist - using Progress model instead
+// import UserPerformance from '../models/UserPerformance';
+import Progress from '../models/Progress';
 import PracticeSession from '../models/PracticeSession';
 
 /**
@@ -12,15 +15,16 @@ export const initializeAdaptiveSystem = async (): Promise<void> => {
     console.log('🚀 Initializing Adaptive System...');
     
     // Check if scenarios already exist
-    const existingScenarios = await EnhancedScenario.find({});
+    const existingScenarios = await Scenario.find({});
     
     if (existingScenarios.length > 0) {
       console.log(`✅ Found ${existingScenarios.length} existing scenarios, skipping creation`);
       return;
     }
     
-    // Create sample scenarios
-    await createSampleScenarios();
+    // TODO: Create sample scenarios service
+    // await createSampleScenarios();
+    console.log('⚠️  Sample scenarios creation not yet implemented');
     
     console.log('✅ Adaptive system initialized successfully');
   } catch (error: any) {
@@ -42,13 +46,13 @@ export const checkSystemHealth = async (): Promise<void> => {
     }
     
     // Check if models are accessible
-    const scenarioCount = await EnhancedScenario.countDocuments();
-    const performanceCount = await UserPerformance.countDocuments();
+    const scenarioCount = await Scenario.countDocuments();
+    const performanceCount = await Progress.countDocuments();
     const sessionCount = await PracticeSession.countDocuments();
     
     console.log('📊 System Health Check:');
-    console.log(`   - Enhanced Scenarios: ${scenarioCount}`);
-    console.log(`   - User Performance Records: ${performanceCount}`);
+    console.log(`   - Scenarios: ${scenarioCount}`);
+    console.log(`   - User Progress Records: ${performanceCount}`);
     console.log(`   - Practice Sessions: ${sessionCount}`);
     console.log(`   - Database Status: Connected`);
     

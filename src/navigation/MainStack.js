@@ -17,6 +17,9 @@ import ArticleDetail from '../screens/ArticleDetail.jsx';
 import Onboarding from '../pages/Onboarding';
 import ProfileScreen from '../screens/ProfileScreen.js';
 import ChangePasswordScreen from '../Components/ProfileSettings/ChangePasswordScreen.js';
+import RevisitGuide from '../Components/ProfileSettings/RevisitGuide.js';
+// import Levels from '../pages/levels/Levels.js';
+// import ResultsScreen from '../pages/levels/Results.js';
 import PipoDetailScreen from '../Components/Notebook/PipoDetailScreen';
 import TranscriptScreen from '../screens/TranscriptScreen';
 import EmotionalSupportScreen from '../screens/EmotionalSupportScreen.js';
@@ -262,7 +265,7 @@ export default function MainStack() {
       <Stack.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ title: 'Profile' }}
+        options={{ title: 'Profile', headerBackButtonMenuEnabled: false }}
       />
 
       <Stack.Screen
@@ -283,7 +286,15 @@ export default function MainStack() {
       <Stack.Screen
         name="ProfileSettingScreen"
         component={ProfileSettingScreen}
-        options={{ title: 'Profile Settings' }}
+        options={{
+          title: 'Profile Settings',
+          headerBackButtonMenuEnabled: false,
+        }}
+      />
+      <Stack.Screen
+        name="Guide"
+        component={RevisitGuide}
+        options={{ title: 'Revisit Guide' }}
       />
 
       <Stack.Screen

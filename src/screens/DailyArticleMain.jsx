@@ -32,6 +32,7 @@ import {
 } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { Image } from 'react-native';
+import BlobCharacter from '../Components/Articles/BlobCharacter';
 
 import A_Little_Joy_Counts_Too from '../../assets/Illustration/A_Little_Joy_Counts_Too.png';
 import Finding_Stillness_Between_Moments from '../../assets/Illustration/Finding_Stillness_Between_Moments.png';
@@ -51,7 +52,7 @@ const illustrationImages = [
   Why_5_Minutes,
 ];
 
-const ArticleCard = ({ article, index, currentIndex, navigation, cardBgColor, underlined, rest, dateLabel, illustrationImage }) => {
+const ArticleCard = ({ article, index, currentIndex, navigation, cardBgColor, underlined, rest, dateLabel, heroIdx }) => {
   return (
     <View style={S.cardWrapper}>
       <View style={S.dateWrap}>
@@ -64,7 +65,7 @@ const ArticleCard = ({ article, index, currentIndex, navigation, cardBgColor, un
       <View style={[S.card, { backgroundColor: cardBgColor }]}>
         <View style={S.heroContainer}>
           <Image
-            source={illustrationImage}
+            source={illustrationImages[heroIdx % illustrationImages.length]}
             style={S.hero}
             resizeMode="contain"
           />
@@ -91,6 +92,7 @@ const ArticleCard = ({ article, index, currentIndex, navigation, cardBgColor, un
           onPress={() =>
             navigation.push('ArticleDetail', {
               articleId: article._id,
+              heroIdx,
             })
           }
         >
@@ -258,9 +260,8 @@ export default function DailyArticleMain({ route, navigation }) {
         : preview;
       const rest = hasSplit ? preview.slice(splitIndex).trim() : '';
 
-      const randomImage = illustrationImages[articleIndex % illustrationImages.length];
-
-      return { article, cardBgColor: bg, dateLabel, underlined, rest, illustrationImage: randomImage };
+      const heroIdx = articleIndex; // stable per render order
+      return { article, cardBgColor: bg, dateLabel, underlined, rest, heroIdx };
     });
   }, [articles]);
 
@@ -301,7 +302,7 @@ export default function DailyArticleMain({ route, navigation }) {
                     underlined={data.underlined}
                     rest={data.rest}
                     dateLabel={data.dateLabel}
-                    illustrationImage={data.illustrationImage}
+                    heroIdx={data.heroIdx}
                   />
                 </ScrollView>
               </View>
