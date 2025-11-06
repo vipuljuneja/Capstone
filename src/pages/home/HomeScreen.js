@@ -338,7 +338,7 @@ useFocusEffect(
                   navigation.navigate('Article', { userId: user?.uid });
                 }}
               >
-                <NotebookIcon width={32} height={32} />
+                <NotebookIcon width={28} height={28} />
               </CircularIconButton>
             </Tooltip>
             <Tooltip
@@ -372,7 +372,7 @@ useFocusEffect(
                   style={{ padding: 24 }}
                   onPress={() => navigation.navigate('Notebook')}
                 >
-                  <MailboxIcon width={32} height={32} />
+                  <MailboxIcon width={28} height={28} />
                 </CircularIconButton>
                 {hasUnread && <View style={styles.badge} />}
               </View>
