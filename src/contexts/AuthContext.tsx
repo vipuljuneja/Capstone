@@ -83,7 +83,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (nextUser) {
         // User signed in - fetch their MongoDB profile with retry logic
-        // await fetchMongoUser(nextUser);
+        // Call asynchronously without blocking to prevent crashes during login/signup
+        // Add a small delay to handle race conditions during signup
+        setTimeout(() => {
+          fetchMongoUser(nextUser).catch(error => {
+            // Silently handle errors - don't crash the app
+            // The HomeScreen will retry when it loads
+            console.log('⚠️ Failed to fetch MongoDB user in auth callback:', error.message);
+          });
+        });
       } else {
         // User signed out
         setMongoUser(null);

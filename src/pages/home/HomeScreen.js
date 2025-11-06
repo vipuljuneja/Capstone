@@ -130,24 +130,47 @@ useFocusEffect(
     let stop = false;
 
     const checkUnread = async () => {
+      // Validate mongoUser and _id before making the API call
+      if (!mongoUser || !mongoUser._id) {
+        console.log('⚠️ Skipping reflections check: mongoUser or _id not available');
+        return;
+      }
+
+      // Validate MongoDB ObjectId format (24 hex characters)
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(mongoUser._id);
+      if (!isValidObjectId) {
+        console.log('⚠️ Skipping reflections check: Invalid _id format');
+        return;
+      }
+
       try {
         const reflections = await getReflectionsByUser(mongoUser._id, { type: 'pipo' });
-        console.log(reflections)
-        
+        console.log(reflections);
 
         if (!stop) {
           const hasUnreadReflections = reflections.some(r => r.readAt == null);
           setHasUnread(hasUnreadReflections);
         }
       } catch (err) {
-        console.error('Failed to load reflections:', err);
+        // Silently handle errors - don't crash the app
+        // The error is already logged by the API service
+        console.log('⚠️ Failed to load reflections (non-blocking):', err.message || err);
+        // Set to false on error to avoid showing unread badge incorrectly
+        if (!stop) {
+          setHasUnread(false);
+        }
       }
     };
 
-    checkUnread();
+    // Add a small delay to ensure mongoUser is fully loaded
+    // This prevents race conditions during login/signup
+    const timeoutId = setTimeout(() => {
+      checkUnread();
+    }, 500);
 
     return () => {
       stop = true;
+      clearTimeout(timeoutId);
     };
   }, [mongoUser?._id])
 );
