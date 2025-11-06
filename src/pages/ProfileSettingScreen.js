@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 
 import { auth } from "../firebase";
 import LinearGradient from 'react-native-linear-gradient';
 import { ImageBackground } from "react-native";
+import { usePreventRemove } from '@react-navigation/native';
 
 
 import ConfirmDialog from '../Components/AlertBox/ConfirmDialog'
@@ -34,6 +35,9 @@ export default function ProfileSettingScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [initialName, setInitialName] = useState("");
+  const [initialAvatarIndex, setInitialAvatarIndex] = useState(0);
 
   const avatars = [
     // { name: "pipo_set", image: require("../../assets/pipo_set.png") },
@@ -58,15 +62,39 @@ export default function ProfileSettingScreen({ navigation }) {
 
   // Load user data when component mounts
   useEffect(() => {
-    if (mongoUser) {
-      setName(mongoUser.name || "");
-      const avatarIndex = avatars.findIndex(a => a.name === mongoUser.avatarImage);
-      if (avatarIndex !== -1) {
-        setSelectedAvatar(avatarIndex);
-      }
-      setInitialLoading(false);
-    }
+    if (!mongoUser) return;
+
+    const safeName = mongoUser.name || "";
+    const avatarIndex = Math.max(
+      0,
+      avatars.findIndex(a => a.name === mongoUser.avatarImage)
+    );
+
+    setName(safeName);
+    setSelectedAvatar(avatarIndex);
+
+
+    setInitialName(safeName);
+    setInitialAvatarIndex(avatarIndex);
+
+    setInitialLoading(false);
   }, [mongoUser]);
+
+  const isDirty = useMemo(
+    () => name.trim() !== initialName.trim() || selectedAvatar !== initialAvatarIndex,
+    [name, selectedAvatar, initialName, initialAvatarIndex]
+  );
+
+  usePreventRemove(isDirty, () => {
+    if (!isDirty) return;
+    setShowLeaveConfirm(true);
+  });
+  const leaveWithoutSaving = () => {
+    setShowLeaveConfirm(false);
+    navigation.navigate("Profile", { backToHomeOnce: true });
+  };
+
+
 
   const handleSave = async () => {
     if (!user) {
@@ -138,6 +166,8 @@ export default function ProfileSettingScreen({ navigation }) {
 
       // Refresh MongoDB user data
       await refreshMongoUser();
+      setInitialName(name.trim());
+      setInitialAvatarIndex(selectedAvatar);
 
       setLoading(false);
       navigation.navigate("Home");
@@ -330,6 +360,20 @@ export default function ProfileSettingScreen({ navigation }) {
           setShowConfirm(false);
         }}
       />
+      <ConfirmDialog
+        visible={showLeaveConfirm}
+        title="Discard changes?"
+        message="You have unsaved changes. If you leave now, they’ll be lost."
+        secondaryMessage="Save your changes or continue without saving."
+        confirmText="LEAVE"
+        cancelText="STAY"
+        loading={false}
+        blockDismiss={false}
+        primaryColor="rgba(62, 49, 83, 1)"
+        onCancel={() => setShowLeaveConfirm(false)}
+        onConfirm={leaveWithoutSaving}
+      />
+
 
     </SafeAreaView>
   );

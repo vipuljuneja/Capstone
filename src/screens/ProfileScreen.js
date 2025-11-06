@@ -1,6 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
+import { Platform, BackHandler, Alert } from 'react-native';
+import { HeaderBackButton } from '@react-navigation/elements';
+
 
 import {
   View,
@@ -18,7 +21,8 @@ import { signOut } from 'firebase/auth';
 import LinearGradient from 'react-native-linear-gradient';
 
 
-export default function ProfileScreen({ navigation }) {
+export default function ProfileScreen({ navigation, route }) {
+  const backToHomeOnce = route?.params?.backToHomeOnce;
   const { mongoUser, refreshMongoUser } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const handleSignOut = useCallback(async () => {
@@ -39,6 +43,42 @@ export default function ProfileScreen({ navigation }) {
       setSigningOut(false);
     }
   }, [signingOut]);
+
+  useEffect(() => {
+    if (!backToHomeOnce) return;
+    navigation.setOptions({
+      gestureEnabled: false,
+      headerLeft: ({ tintColor, canGoBack }) =>
+        canGoBack ? (
+          <HeaderBackButton
+            tintColor={tintColor}
+            onPress={() => navigation.navigate('Home')}
+          />
+        ) : null,
+    });
+  }, [navigation, backToHomeOnce]);
+
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!backToHomeOnce || Platform.OS !== 'android') return;
+      const onBack = () => {
+        navigation.navigate('Home');
+        return true;
+      };
+      BackHandler.addEventListener('hardwareBackPress', onBack);
+      return () => BackHandler.removeEventListener('hardwareBackPress', onBack);
+    }, [navigation, backToHomeOnce])
+  );
+
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!backToHomeOnce) return;
+      return () => navigation.setParams({ backToHomeOnce: undefined });
+    }, [navigation, backToHomeOnce])
+  );
+
 
   const getFirebaseToken = async () => {
     try {
@@ -68,7 +108,7 @@ export default function ProfileScreen({ navigation }) {
   };
 
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       refreshMongoUser();
     }, []),
   );
