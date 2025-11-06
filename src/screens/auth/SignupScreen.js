@@ -195,7 +195,11 @@ export default function SignupScreen({ navigation, onSwitchToLogin }) {
       });
 
       console.log('✅ MongoDB user created successfully.');
-      // Navigation will be handled by AuthContext automatically
+      
+      // Navigate to Home after successful signup (same as login)
+      if (navigation) {
+        navigation.navigate('Home');
+      }
     } catch (err) {
       console.error('❌ Signup error:', err);
 

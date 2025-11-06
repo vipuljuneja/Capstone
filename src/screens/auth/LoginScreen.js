@@ -134,6 +134,10 @@ export default function LoginScreen({
     setGoogleLoading(true);
     try {
       await signInWithGoogle({ ensureBackendUser: true });
+      // Navigate to Home after successful Google login (same as regular login)
+      if (navigation) {
+        navigation.navigate('Home');
+      }
     } catch (err) {
       console.error('❌ Google sign-in error:', err);
       setError('Failed to sign in with Google. Please try again.');
