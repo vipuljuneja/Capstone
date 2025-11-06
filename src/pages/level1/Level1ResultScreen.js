@@ -52,7 +52,7 @@ const Level1ResultScreen = () => {
         const maxAttempts = 8; // ~4s total
         while (!cancelled && attempts < maxAttempts) {
           const progress = await getProgressForScenario(
-            mongoUser._id,
+            mongoUser?._id,
             finalScenarioId,
           );
           const unlocked = Boolean(progress?.levels?.['2']?.unlockedAt);
@@ -141,7 +141,7 @@ const Level1ResultScreen = () => {
         console.log('💾 Auto-saving Level 1 session...');
 
         await saveSession({
-          userId: mongoUser._id,
+          userId: mongoUser?._id,
           scenarioId: finalScenarioId,
           level: 1,
           transcriptionResults: transcriptionResults,
@@ -152,7 +152,7 @@ const Level1ResultScreen = () => {
 
         // Unlock Level 2
         try {
-          await unlockLevel(mongoUser._id, finalScenarioId, 2);
+          await unlockLevel(mongoUser?._id, finalScenarioId, 2);
           console.log('🔓 Level 2 unlocked');
           setNextLevelUnlocked(true);
         } catch (e) {

@@ -163,15 +163,18 @@ const Results = ({ navigation, route }) => {
         console.log('Scenario ID:', scenarioId);
         console.log('Level:', level);
         console.log('Steps count:', transcriptionResults.length);
-        console.log('Overall score:', facialAnalysis?.summary?.overallScore || 0);
+        console.log(
+          'Overall score:',
+          facialAnalysis?.summary?.overallScore || 0,
+        );
 
         // Format data for backend
         const sessionData = formatCompleteSessionData(
-          mongoUser._id,
+          mongoUser?._id,
           scenarioId,
           level,
           transcriptionResults,
-          facialAnalysis
+          facialAnalysis,
         );
 
         console.log('📦 Formatted session data:', {
@@ -189,7 +192,10 @@ const Results = ({ navigation, route }) => {
         console.log('✅ SESSION SAVED');
         console.log('Session ID:', savedSession._id);
         console.log('Status:', savedSession.status);
-        console.log('Feedback Cards:', savedSession.aiFeedbackCards?.length || 0);
+        console.log(
+          'Feedback Cards:',
+          savedSession.aiFeedbackCards?.length || 0,
+        );
         console.log('Pipo Note ID:', savedSession.pipoNoteId);
         console.groupEnd();
 
@@ -255,7 +261,6 @@ const Results = ({ navigation, route }) => {
 
   const handleGoHome = () => navigation.navigate('Home');
   const handleRetry = () => navigation.navigate('Levels');
-
 
   return (
     <SafeAreaView style={styles.container}>

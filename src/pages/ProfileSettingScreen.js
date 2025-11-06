@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -10,25 +10,28 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
-} from "react-native";
-import Feather from "react-native-vector-icons/Feather";
-import { useAuth } from "../contexts/AuthContext";
-import { updateUserProfile } from "../services/api";
-import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
-import { auth } from "../firebase";
+} from 'react-native';
+import Feather from 'react-native-vector-icons/Feather';
+import { useAuth } from '../contexts/AuthContext';
+import { updateUserProfile } from '../services/api';
+import {
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+} from 'firebase/auth';
+import { auth } from '../firebase';
 import LinearGradient from 'react-native-linear-gradient';
-import { ImageBackground } from "react-native";
+import { ImageBackground } from 'react-native';
 import { usePreventRemove } from '@react-navigation/native';
 
-
-import ConfirmDialog from '../Components/AlertBox/ConfirmDialog'
+import ConfirmDialog from '../Components/AlertBox/ConfirmDialog';
 const TILE_SIZE = 97;
 const TILE_RADIUS = 18;
 export default function ProfileSettingScreen({ navigation }) {
   const { user, mongoUser, refreshMongoUser } = useAuth();
-  const [name, setName] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
+  const [name, setName] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState(0);
@@ -36,43 +39,41 @@ export default function ProfileSettingScreen({ navigation }) {
   const [initialLoading, setInitialLoading] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
-  const [initialName, setInitialName] = useState("");
+  const [initialName, setInitialName] = useState('');
   const [initialAvatarIndex, setInitialAvatarIndex] = useState(0);
 
   const avatars = [
     // { name: "pipo_set", image: require("../../assets/pipo_set.png") },
-    { name: "bro_set", image: require("../../assets/bro_set.png") },
-    { name: "cherry_set", image: require("../../assets/cherry_set.png") },
-    { name: "mshrom_set", image: require("../../assets/mshrom_set.png") }
+    { name: 'bro_set', image: require('../../assets/bro_set.png') },
+    { name: 'cherry_set', image: require('../../assets/cherry_set.png') },
+    { name: 'mshrom_set', image: require('../../assets/mshrom_set.png') },
   ];
   const miniBg = [
     require('../../assets/gradients/bl_gradient.png'),
     require('../../assets/gradients/purp_gradient.png'),
-    require('../../assets/gradients/yel-gradient.png')
-  ]
+    require('../../assets/gradients/yel-gradient.png'),
+  ];
 
   function getRandomElement(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
   }
 
   const [avatarBgSources] = useState(() =>
-    avatars.map(() => getRandomElement(miniBg))
+    avatars.map(() => getRandomElement(miniBg)),
   );
-
 
   // Load user data when component mounts
   useEffect(() => {
     if (!mongoUser) return;
 
-    const safeName = mongoUser.name || "";
+    const safeName = mongoUser.name || '';
     const avatarIndex = Math.max(
       0,
-      avatars.findIndex(a => a.name === mongoUser.avatarImage)
+      avatars.findIndex(a => a.name === mongoUser.avatarImage),
     );
 
     setName(safeName);
     setSelectedAvatar(avatarIndex);
-
 
     setInitialName(safeName);
     setInitialAvatarIndex(avatarIndex);
@@ -81,8 +82,10 @@ export default function ProfileSettingScreen({ navigation }) {
   }, [mongoUser]);
 
   const isDirty = useMemo(
-    () => name.trim() !== initialName.trim() || selectedAvatar !== initialAvatarIndex,
-    [name, selectedAvatar, initialName, initialAvatarIndex]
+    () =>
+      name.trim() !== initialName.trim() ||
+      selectedAvatar !== initialAvatarIndex,
+    [name, selectedAvatar, initialName, initialAvatarIndex],
   );
 
   usePreventRemove(isDirty, () => {
@@ -91,19 +94,17 @@ export default function ProfileSettingScreen({ navigation }) {
   });
   const leaveWithoutSaving = () => {
     setShowLeaveConfirm(false);
-    navigation.navigate("Profile", { backToHomeOnce: true });
+    navigation.navigate('Profile', { backToHomeOnce: true });
   };
-
-
 
   const handleSave = async () => {
     if (!user) {
-      Alert.alert("Error", "You must be logged in to update your profile.");
+      Alert.alert('Error', 'You must be logged in to update your profile.');
       return;
     }
 
     if (!name.trim()) {
-      Alert.alert("Error", "Name cannot be empty.");
+      Alert.alert('Error', 'Name cannot be empty.');
       return;
     }
 
@@ -170,20 +171,22 @@ export default function ProfileSettingScreen({ navigation }) {
       setInitialAvatarIndex(selectedAvatar);
 
       setLoading(false);
-      navigation.navigate("Home");
+      navigation.navigate('Home');
     } catch (error) {
-      console.error("Save error:", error);
-      Alert.alert("Error", "Failed to update profile. Please try again.");
+      console.error('Save error:', error);
+      Alert.alert('Error', 'Failed to update profile. Please try again.');
       setLoading(false);
     }
   };
 
-
-
   if (initialLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <ActivityIndicator size="large" color="#4A90E2" style={{ marginTop: 50 }} />
+        <ActivityIndicator
+          size="large"
+          color="#4A90E2"
+          style={{ marginTop: 50 }}
+        />
       </SafeAreaView>
     );
   }
@@ -200,7 +203,6 @@ export default function ProfileSettingScreen({ navigation }) {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-
           {/* Big avatar */}
           <Image source={avatars[selectedAvatar].image} style={styles.avatar} />
 
@@ -229,11 +231,13 @@ export default function ProfileSettingScreen({ navigation }) {
                   onPress={() => setSelectedAvatar(index)}
                   style={styles.tileTouch}
                 >
-
-                  <View style={[styles.tileRing, isSelected && styles.tileRingSelected]}>
-
+                  <View
+                    style={[
+                      styles.tileRing,
+                      isSelected && styles.tileRingSelected,
+                    ]}
+                  >
                     <View style={styles.tileShadow}>
-
                       <View style={styles.tileCard}>
                         <ImageBackground
                           source={avatarBgSources[index]}
@@ -252,7 +256,6 @@ export default function ProfileSettingScreen({ navigation }) {
             })}
           </View>
 
-
           {/* Name Field */}
 
           <View style={styles.nameFieldWrapper}>
@@ -268,7 +271,6 @@ export default function ProfileSettingScreen({ navigation }) {
               />
             </View>
           </View>
-
 
           {/* <View style={styles.divider} />
 
@@ -325,8 +327,6 @@ export default function ProfileSettingScreen({ navigation }) {
           </View>
         </View> */}
 
-
-
           {/* Save Button */}
           <TouchableOpacity
             onPress={() => setShowConfirm(true)}
@@ -341,7 +341,6 @@ export default function ProfileSettingScreen({ navigation }) {
           </TouchableOpacity>
 
           <View style={{ height: 20 }} />
-
         </ScrollView>
       </LinearGradient>
       <ConfirmDialog
@@ -373,8 +372,6 @@ export default function ProfileSettingScreen({ navigation }) {
         onCancel={() => setShowLeaveConfirm(false)}
         onConfirm={leaveWithoutSaving}
       />
-
-
     </SafeAreaView>
   );
 }
@@ -382,13 +379,13 @@ export default function ProfileSettingScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: {
-    alignItems: "center",
+    alignItems: 'center',
     paddingBottom: 20,
   },
   avatar: {
     width: 160,
     height: 160,
-    resizeMode: "contain",
+    resizeMode: 'contain',
     marginBottom: 20,
     marginTop: 30,
   },
@@ -400,8 +397,8 @@ const styles = StyleSheet.create({
   //   marginBottom: 30,
   // },
   avatarPicker: {
-    flexDirection: "row",
-    backgroundColor: "rgba(255,255,255,0.3)",
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.3)',
     padding: 10,
     borderRadius: 20,
     marginBottom: 30,
@@ -415,81 +412,88 @@ const styles = StyleSheet.create({
   },
   tileRingSelected: {
     borderWidth: 2,
-    borderColor: "#6FA0FF",
-    shadowColor: "#6FA0FF",
+    borderColor: '#6FA0FF',
+    shadowColor: '#6FA0FF',
     shadowOpacity: 0.25,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
   tileShadow: {
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOpacity: 0.12,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
     elevation: 6,
     borderRadius: TILE_RADIUS,
-    backgroundColor: "transparent",
-  }, tileCard: {
+    backgroundColor: 'transparent',
+  },
+  tileCard: {
     width: TILE_SIZE,
     height: TILE_SIZE,
     borderRadius: TILE_RADIUS,
-    overflow: "hidden",
-    backgroundColor: "#FFF",
+    overflow: 'hidden',
+    backgroundColor: '#FFF',
     borderWidth: 1,
-    borderColor: "#E3DDF4",
+    borderColor: '#E3DDF4',
   },
-
 
   tileBg: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tileBgImg: {
     borderRadius: TILE_RADIUS,
-    resizeMode: "cover",
+    resizeMode: 'cover',
   },
-
 
   tileIcon: {
     width: 60,
     height: 60,
-    resizeMode: "contain",
+    resizeMode: 'contain',
   },
   tileInnerStroke: {
-    position: "absolute",
-    top: 0, left: 0, right: 0, bottom: 0,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     borderRadius: TILE_RADIUS,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.7)",
+    borderColor: 'rgba(255,255,255,0.7)',
   },
 
-  avatarOption: { borderRadius: 16, padding: 6, marginHorizontal: 8, backgroundColor: "red" },
-  selectedAvatar: { backgroundColor: "#FFF6D9" },
-  smallAvatar: { width: 60, height: 60, resizeMode: "contain" },
-  field: { width: "85%", marginBottom: 20 },
+  avatarOption: {
+    borderRadius: 16,
+    padding: 6,
+    marginHorizontal: 8,
+    backgroundColor: 'red',
+  },
+  selectedAvatar: { backgroundColor: '#FFF6D9' },
+  smallAvatar: { width: 60, height: 60, resizeMode: 'contain' },
+  field: { width: '85%', marginBottom: 20 },
   label: {
     fontSize: 15,
-    color: "#222",
+    color: '#222',
     marginBottom: 8,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   nameFieldWrapper: {
-    width: "85%",
+    width: '85%',
     marginBottom: 20,
   },
 
   nameInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F0F4FF",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F4FF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E3E9FB",
+    borderColor: '#E3E9FB',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
@@ -497,86 +501,86 @@ const styles = StyleSheet.create({
   },
   nameLabel: {
     fontSize: 15,
-    color: "#000",
-    fontWeight: "600",
+    color: '#000',
+    fontWeight: '600',
     marginRight: 10,
   },
   nameInput: {
     fontSize: 16,
-    color: "#000",
-    fontWeight: "500",
+    color: '#000',
+    fontWeight: '500',
     paddingVertical: 10,
   },
   nameTextInput: {
     flex: 1,
     fontSize: 15,
-    color: "#000",
-    fontWeight: "500",
-    textAlign: "right",
+    color: '#000',
+    fontWeight: '500',
+    textAlign: 'right',
     paddingVertical: 0,
   },
 
   input: {
-    backgroundColor: "#F7FAFF",
+    backgroundColor: '#F7FAFF',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
-    color: "#000",
-    shadowColor: "#000",
+    color: '#000',
+    shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowOffset: { width: 0, height: 1 },
     shadowRadius: 2,
   },
-  passwordRow: { flexDirection: "row", alignItems: "center" },
+  passwordRow: { flexDirection: 'row', alignItems: 'center' },
   eyeButton: {
-    position: "absolute",
+    position: 'absolute',
     right: 12,
-    height: "100%",
-    justifyContent: "center",
+    height: '100%',
+    justifyContent: 'center',
   },
   divider: {
-    width: "85%",
+    width: '85%',
     height: 1,
-    backgroundColor: "#D0D9E8",
+    backgroundColor: '#D0D9E8',
     marginVertical: 20,
   },
   sectionTitle: {
     fontSize: 16,
-    color: "#222",
-    fontWeight: "600",
+    color: '#222',
+    fontWeight: '600',
     marginBottom: 5,
-    width: "85%",
+    width: '85%',
   },
   sectionSubtitle: {
     fontSize: 13,
-    color: "#666",
+    color: '#666',
     marginBottom: 15,
-    width: "85%",
+    width: '85%',
   },
   saveButton: {
-    backgroundColor: "rgba(62, 49, 83, 1)",
+    backgroundColor: 'rgba(62, 49, 83, 1)',
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 20,
     marginTop: 30,
-    width: "85%",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
+    width: '85%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     elevation: 3,
   },
   saveButtonDisabled: {
-    backgroundColor: "#9CA3AF",
+    backgroundColor: '#9CA3AF',
     opacity: 0.7,
   },
   saveButtonText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 16,
-    fontWeight: "600",
-    fontFamily: "Roboto",
+    fontWeight: '600',
+    fontFamily: 'Roboto',
   },
 });

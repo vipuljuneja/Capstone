@@ -6,9 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { HeaderBackButton } from '@react-navigation/elements';
 
-// import HomeScreen from '../screens/HomeScreen';
 import DailyArticleMain from '../screens/DailyArticleMain';
-// import LevelsScreen from '../screens/LevelsScreen.js';
 import NotebookScreen from '../screens/NotebookScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen.js';
 import TermsScreen from '../screens/TermsScreen.js';
@@ -42,6 +40,9 @@ import Level3IntroScreen from '../pages/level3/Level3IntroScreen';
 import Level3Screen from '../pages/level3/Level3Screen';
 import Level3ResultScreen from '../pages/level3/Level3ResultScreen';
 
+import SignupScreen from '../screens/auth/SignupScreen.js';
+import LoginScreen from '../screens/auth/LoginScreen.js';
+
 import BackIcon from '../../assets/icons/back.svg';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -49,35 +50,53 @@ import { useAuth } from '../contexts/AuthContext';
 const Stack = createNativeStackNavigator();
 export default function MainStack() {
   const { user, mongoUser, loading } = useAuth();
-  const [initialRoute, setInitialRoute] = useState('Home');
+  const [initialRoute, setInitialRoute] = useState('Login');
+  const [mode, setMode] = useState('login');
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const navigation = useNavigation();
 
   useEffect(() => {
+    console.log('Userrr', user, mode, mongoUser, loading);
+
     if (loading) {
       setCheckingOnboarding(true);
       return;
     }
 
+    if (!user) {
+      console.log('Hereee');
+      mode === 'signup' ? setInitialRoute('Signup') : setInitialRoute('Login');
+      setCheckingOnboarding(false);
+
+      return;
+    }
+
     if (!user?.uid) {
+      console.log('Hereee');
       setInitialRoute('Home');
       setCheckingOnboarding(false);
       return;
     }
 
     if (!mongoUser) {
+      console.log('Hereee');
       setInitialRoute('Onboarding');
       setCheckingOnboarding(false);
       return;
     }
 
+    if (user) {
+      console.log('Hereee');
+      setInitialRoute('Home');
+      setCheckingOnboarding(false);
+      return;
+    }
+
     const completed = mongoUser?.onboarding?.completed;
-    console.log(mongoUser)
+    console.log(mongoUser);
     setInitialRoute(completed ? 'Home' : 'Onboarding');
     setCheckingOnboarding(false);
   }, [user?.uid, mongoUser, loading]);
-
-
 
   if (checkingOnboarding) {
     return (
@@ -95,7 +114,8 @@ export default function MainStack() {
   }
 
   return (
-    <Stack.Navigator initialRouteName={initialRoute}
+    <Stack.Navigator
+      initialRouteName={initialRoute}
       screenOptions={{
         headerStyle: { backgroundColor: '#ffffff' },
         headerTintColor: '#111827',
@@ -111,11 +131,6 @@ export default function MainStack() {
         headerBackTitle: Platform.OS === 'ios' ? ' ' : undefined,
         headerTruncatedBackTitle: ' ',
         headerBackTitleStyle: { display: 'none' },
-        // headerLeft: () => (
-        //   <TouchableOpacity onPress={() => navigation.goBack()}>
-        //     <BackIcon width={16} height={16} />
-        //   </TouchableOpacity>
-        // ),
       }}
     >
       {/* <Stack.Screen
@@ -123,6 +138,18 @@ export default function MainStack() {
         component={HomeScreen}
         options={{ title: 'Home' }}
       /> */}
+
+      <Stack.Screen
+        name="Signup"
+        component={SignupScreen}
+        options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={{ headerShown: false }}
+      />
 
       <Stack.Screen
         name="Article"
@@ -164,7 +191,7 @@ export default function MainStack() {
       <Stack.Screen
         name="Home"
         component={HomeScreenLevels}
-        options={{ title: 'Home', headerShown: false ,gestureEnabled: false }}
+        options={{ title: 'Home', headerShown: false, gestureEnabled: false }}
       />
 
       {/* <Stack.Screen
@@ -238,7 +265,7 @@ export default function MainStack() {
       <Stack.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ title: 'Profile',headerBackButtonMenuEnabled: false,  }}
+        options={{ title: 'Profile', headerBackButtonMenuEnabled: false }}
       />
 
       <Stack.Screen
@@ -259,10 +286,10 @@ export default function MainStack() {
       <Stack.Screen
         name="ProfileSettingScreen"
         component={ProfileSettingScreen}
-        options={{ title: 'Profile Settings',
-           headerBackButtonMenuEnabled: false, 
-         }}
-        
+        options={{
+          title: 'Profile Settings',
+          headerBackButtonMenuEnabled: false,
+        }}
       />
       <Stack.Screen
         name="Guide"

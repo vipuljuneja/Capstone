@@ -4,7 +4,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { Platform, BackHandler, Alert } from 'react-native';
 import { HeaderBackButton } from '@react-navigation/elements';
 
-
 import {
   View,
   Text,
@@ -14,29 +13,27 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
-  ImageBackground
+  ImageBackground,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
 import LinearGradient from 'react-native-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
 
-
-export default function ProfileScreen({ navigation, route }) {
+export default function ProfileScreen({ route }) {
   const backToHomeOnce = route?.params?.backToHomeOnce;
   const { mongoUser, refreshMongoUser } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
+  const navigation = useNavigation();
+
   const handleSignOut = useCallback(async () => {
     if (signingOut) return;
     setSigningOut(true);
     try {
-      await signOut(auth);
-      //   navigation.dispatch(
-      //   CommonActions.reset({
-      //     index: 0,
-      //     routes: [{ name: 'Login' }],
-      //   })
-      // );
+      await signOut(auth).then(() => {
+        navigation.navigate('Login');
+      });
     } catch (e) {
       console.error('Sign out error:', e);
       Alert.alert('Sign out failed', 'Please try again.');
@@ -59,7 +56,6 @@ export default function ProfileScreen({ navigation, route }) {
     });
   }, [navigation, backToHomeOnce]);
 
-
   useFocusEffect(
     useCallback(() => {
       if (!backToHomeOnce || Platform.OS !== 'android') return;
@@ -69,17 +65,15 @@ export default function ProfileScreen({ navigation, route }) {
       };
       BackHandler.addEventListener('hardwareBackPress', onBack);
       return () => BackHandler.removeEventListener('hardwareBackPress', onBack);
-    }, [navigation, backToHomeOnce])
+    }, [navigation, backToHomeOnce]),
   );
-
 
   useFocusEffect(
     useCallback(() => {
       if (!backToHomeOnce) return;
       return () => navigation.setParams({ backToHomeOnce: undefined });
-    }, [navigation, backToHomeOnce])
+    }, [navigation, backToHomeOnce]),
   );
-
 
   const getFirebaseToken = async () => {
     try {
@@ -203,7 +197,8 @@ export default function ProfileScreen({ navigation, route }) {
             colors={['#FAFAFA', '#C7DFFF']}
             start={{ x: 0.5, y: 0 }}
             end={{ x: 0.5, y: 1 }}
-            style={S.gradient}>
+            style={S.gradient}
+          >
             <Image source={getUserAvatar()} style={S.avatar} />
           </LinearGradient>
           <Pressable
@@ -256,14 +251,13 @@ export default function ProfileScreen({ navigation, route }) {
   );
 }
 
-function OptionRow({ title, desc, icon, onPress,bg }) {
+function OptionRow({ title, desc, icon, onPress, bg }) {
   const source = icon;
 
   return (
     <Pressable style={S.option} onPress={onPress}>
       <View style={S.optionLeft}>
-
-        <ImageBackground source={bg} style={S.bg_option} >
+        <ImageBackground source={bg} style={S.bg_option}>
           <Image source={source} style={S.optionIcon} />
         </ImageBackground>
         <View>
@@ -278,10 +272,11 @@ function OptionRow({ title, desc, icon, onPress,bg }) {
 
 const S = StyleSheet.create({
   gradient: {
-    width: 120, height: 120,
+    width: 120,
+    height: 120,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 60
+    borderRadius: 60,
   },
   container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 20 },
   header: {
@@ -328,7 +323,7 @@ const S = StyleSheet.create({
     marginBottom: 12,
   },
   optionLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  optionIcon: { width: 50, height: 50 ,resizeMode: 'contain'},
+  optionIcon: { width: 50, height: 50, resizeMode: 'contain' },
   optionTitle: { fontSize: 14, fontWeight: '600', color: '#111' },
   optionSubtitle: { fontSize: 12, color: '#6b7280', marginTop: 2 },
   logout: {
@@ -350,15 +345,12 @@ const S = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
   },
-  bg_option:{
-    height:70,
-    width:100,
-    borderRadius:11,
-    overflow: 'hidden', 
-    alignItems:'center',
+  bg_option: {
+    height: 70,
+    width: 100,
+    borderRadius: 11,
+    overflow: 'hidden',
+    alignItems: 'center',
     justifyContent: 'center',
-    
-    
-
-  }
+  },
 });

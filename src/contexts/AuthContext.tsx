@@ -83,7 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (nextUser) {
         // User signed in - fetch their MongoDB profile with retry logic
-        await fetchMongoUser(nextUser);
+        // await fetchMongoUser(nextUser);
       } else {
         // User signed out
         setMongoUser(null);
@@ -97,7 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, mongoUser, refreshMongoUser }}
+      value={{ user, loading, mongoUser: mongoUser || {}, refreshMongoUser }}
     >
       {children}
     </AuthContext.Provider>
