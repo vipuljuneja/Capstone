@@ -423,8 +423,8 @@ const confirmDeleteSelf = async () => {
       const flags = dotDates[ds] || {};
       const dots = [];
 
-      if (flags.pipo) dots.push({ key: 'pipo', color: '#E53935', selectedDotColor: '#E53935' });
-      if (flags.self) dots.push({ key: 'self', color: '#1E88E5', selectedDotColor: '#1E88E5' });
+      if (flags.pipo) dots.push({ key: 'pipo', color: 'rgba(23, 155, 255, 1)', selectedDotColor: 'rgba(23, 155, 255, 1)' });
+      if (flags.self) dots.push({ key: 'self', color: 'rgba(112, 73, 196, 1)', selectedDotColor: 'rgba(112, 73, 196, 1)' });
 
       if (dots.length) {
 
@@ -437,7 +437,7 @@ const confirmDeleteSelf = async () => {
     marks[sel] = {
       ...(marks[sel] || {}),
       selected: true,
-      selectedColor: '#CFCFCF',
+      selectedColor: 'rgba(244, 239, 255, 1)',
       selectedTextColor: '#111',
     };
 
@@ -662,14 +662,14 @@ const confirmDeleteSelf = async () => {
             style={[styles.tabButton, activeTab === "pipo" && styles.tabActive]}
             onPress={() => setActiveTab("pipo")}
           >
-            <Text style={[styles.tabText, activeTab === "pipo" && styles.tabTextActive]}>From Pipo</Text>
+            <Text style={[styles.tabText, activeTab === "pipo" && styles.tabTextActive]}>FROM PIPO</Text>
           </Pressable>
 
           <Pressable
             style={[styles.tabButton, activeTab === "self" && styles.tabActive]}
             onPress={() => setActiveTab("self")}
           >
-            <Text style={[styles.tabText, activeTab === "self" && styles.tabTextActive]}>Self Reflection</Text>
+            <Text style={[styles.tabText, activeTab === "self" && styles.tabTextActive]}>TO MYSELF</Text>
           </Pressable>
         </ImageBackground>
       </View>
