@@ -14,6 +14,7 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
+  ImageBackground
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { auth } from '../firebase';
@@ -147,6 +148,7 @@ export default function ProfileScreen({ navigation, route }) {
       title: 'Change Password',
       desc: 'Update your password safely',
       icon: images.set_lock,
+      bg: require('../../assets/gradients/yel-gradient.png'),
       onPress: () =>
         navigation && navigation.navigate?.('ChangePasswordScreen'),
     },
@@ -162,22 +164,25 @@ export default function ProfileScreen({ navigation, route }) {
   ];
 
   const help = [
-    // {
-    //   title: 'Revisit Guide',
-    //   desc: 'Review the essential steps anytime',
-    //   icon: images.set_revisit,
-    //   onPress: () => navigation && navigation.navigate?.('Guide'),
-    // },
+    {
+      title: 'Revisit Guide',
+      desc: 'Review the essential steps anytime',
+      icon: images.set_revisit,
+      bg: require('../../assets/gradients/purp_gradient.png'),
+      onPress: () => navigation && navigation.navigate?.('Guide'),
+    },
     {
       title: 'Terms Of Use',
       desc: 'App rules at a glance',
       icon: images.set_TOU,
+      bg: require('../../assets/gradients/bl_gradient.png'),
       onPress: () => navigation && navigation.navigate?.('Terms'),
     },
     {
       title: 'Privacy Policy',
       desc: 'How we handle your data',
       icon: images.set_PP,
+      bg: require('../../assets/gradients/gr-gradient.png'),
       onPress: () => navigation && navigation.navigate?.('PrivacyPolicy'),
     },
   ];
@@ -244,13 +249,16 @@ export default function ProfileScreen({ navigation, route }) {
   );
 }
 
-function OptionRow({ title, desc, icon, onPress }) {
+function OptionRow({ title, desc, icon, onPress,bg }) {
   const source = icon;
 
   return (
     <Pressable style={S.option} onPress={onPress}>
       <View style={S.optionLeft}>
-        <Image source={source} style={S.optionIcon} />
+
+        <ImageBackground source={bg} style={S.bg_option} >
+          <Image source={source} style={S.optionIcon} />
+        </ImageBackground>
         <View>
           <Text style={S.optionTitle}>{title}</Text>
           <Text style={S.optionSubtitle}>{desc}</Text>
@@ -312,8 +320,8 @@ const S = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
   },
-  optionLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  optionIcon: { width: 48, height: 48, borderRadius: 12 },
+  optionLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  optionIcon: { width: 50, height: 50 ,resizeMode: 'contain'},
   optionTitle: { fontSize: 14, fontWeight: '600', color: '#111' },
   optionSubtitle: { fontSize: 12, color: '#6b7280', marginTop: 2 },
   logout: {
@@ -335,4 +343,15 @@ const S = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
   },
+  bg_option:{
+    height:70,
+    width:100,
+    borderRadius:11,
+    overflow: 'hidden', 
+    alignItems:'center',
+    justifyContent: 'center',
+    
+    
+
+  }
 });
