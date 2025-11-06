@@ -237,7 +237,7 @@ export default function MainStack() {
       <Stack.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ title: 'Profile' }}
+        options={{ title: 'Profile',headerBackButtonMenuEnabled: false,  }}
       />
 
       <Stack.Screen
@@ -258,7 +258,10 @@ export default function MainStack() {
       <Stack.Screen
         name="ProfileSettingScreen"
         component={ProfileSettingScreen}
-        options={{ title: 'Profile Settings' }}
+        options={{ title: 'Profile Settings',
+           headerBackButtonMenuEnabled: false, 
+         }}
+        
       />
 
       <Stack.Screen
