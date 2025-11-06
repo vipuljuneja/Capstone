@@ -471,10 +471,7 @@ export const getReflectionsByUser = async (
 
     return response.data.data;
   } catch (error: any) {
-    console.error(
-      '❌ Failed to get reflections:',
-      error.response?.data || error.message,
-    );
+   
     throw error;
   }
 };
