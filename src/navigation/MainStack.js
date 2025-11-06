@@ -19,6 +19,7 @@ import ArticleDetail from '../screens/ArticleDetail.jsx';
 import Onboarding from '../pages/Onboarding';
 import ProfileScreen from '../screens/ProfileScreen.js';
 import ChangePasswordScreen from '../Components/ProfileSettings/ChangePasswordScreen.js';
+import RevisitGuide from '../Components/ProfileSettings/RevisitGuide.js';
 // import Levels from '../pages/levels/Levels.js';
 // import ResultsScreen from '../pages/levels/Results.js';
 import PipoDetailScreen from '../Components/Notebook/PipoDetailScreen';
@@ -262,6 +263,11 @@ export default function MainStack() {
            headerBackButtonMenuEnabled: false, 
          }}
         
+      />
+      <Stack.Screen
+        name="Guide"
+        component={RevisitGuide}
+        options={{ title: 'Revisit Guide' }}
       />
 
       <Stack.Screen
