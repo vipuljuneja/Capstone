@@ -185,6 +185,13 @@ export default function ProfileScreen({ navigation, route }) {
       bg: require('../../assets/gradients/gr-gradient.png'),
       onPress: () => navigation && navigation.navigate?.('PrivacyPolicy'),
     },
+    {
+      title: 'Emotional Support',
+      desc: 'Reach out when it feels heavy',
+      icon: require('../../assets/pipo-heart.png'),
+      bg: require('../../assets/gradients/yel-gradient.png'),
+      onPress: () => navigation && navigation.navigate?.('EmotionalSupport'),
+    },
   ];
 
   return (
