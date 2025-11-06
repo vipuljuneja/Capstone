@@ -59,6 +59,27 @@ export const getUserByAuthUid = async (req: Request, res: Response): Promise<voi
   }
 };
 
+// Return the currently authenticated user (from Firebase token)
+export const getMe = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user?.uid) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const user = await User.findOne({ authUid: req.user.uid });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    res.json({ success: true, data: user });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export const updateUserProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     const { authUid } = req.params;
