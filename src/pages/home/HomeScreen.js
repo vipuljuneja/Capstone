@@ -15,8 +15,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import LinearGradient from 'react-native-linear-gradient';
 import supabase from '../../services/supabaseClient';
 import Tooltip from 'react-native-walkthrough-tooltip';
-import TourTipCard from '../../Components/Tooltip/TourTipCard'
-import { updateHasSeenTour,getReflectionsByUser} from '../../services/api.ts'
+import TourTipCard from '../../Components/Tooltip/TourTipCard';
+import { updateHasSeenTour, getReflectionsByUser } from '../../services/api.ts';
 
 import NotebookIcon from '../../../assets/icons/notebook.svg';
 import MailboxIcon from '../../../assets/icons/mailbox.svg';
@@ -105,77 +105,87 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    if (!mongoUser) return;
-    //  updateHasSeenTour (mongoUser.authUid, true);
+    // Don't show tour if mongoUser is not loaded (empty object or no _id)
+    if (!mongoUser || !mongoUser._id) {
+      setTourVisible(false);
+      return;
+    }
 
-
+    // Only show tour if hasSeenTour is explicitly false or undefined (new users)
+    // If hasSeenTour is true, user has already seen it
     const hasSeen = mongoUser.hasSeenTour === true;
 
-
     if (!hasSeen) {
-
+      // Only show tour for users who haven't seen it yet
       const t = setTimeout(() => {
         setTourStep(1);
         setTourVisible(true);
-
-      }, 500);
+      }, 200);
       return () => clearTimeout(t);
     } else {
+      // User has already seen the tour
       setTourVisible(false);
     }
   }, [mongoUser]);
 
-useFocusEffect(
-  React.useCallback(() => {
-    let stop = false;
+  useFocusEffect(
+    React.useCallback(() => {
+      let stop = false;
 
-    const checkUnread = async () => {
-      // Validate mongoUser and _id before making the API call
-      if (!mongoUser || !mongoUser._id) {
-        console.log('⚠️ Skipping reflections check: mongoUser or _id not available');
-        return;
-      }
-
-      // Validate MongoDB ObjectId format (24 hex characters)
-      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(mongoUser._id);
-      if (!isValidObjectId) {
-        console.log('⚠️ Skipping reflections check: Invalid _id format');
-        return;
-      }
-
-      try {
-        const reflections = await getReflectionsByUser(mongoUser._id, { type: 'pipo' });
-        console.log(reflections);
-
-        if (!stop) {
-          const hasUnreadReflections = reflections.some(r => r.readAt == null);
-          setHasUnread(hasUnreadReflections);
+      const checkUnread = async () => {
+        // Validate mongoUser and _id before making the API call
+        if (!mongoUser || !mongoUser._id) {
+          console.log(
+            '⚠️ Skipping reflections check: mongoUser or _id not available',
+          );
+          return;
         }
-      } catch (err) {
-        // Silently handle errors - don't crash the app
-        // The error is already logged by the API service
-        console.log('⚠️ Failed to load reflections (non-blocking):', err.message || err);
-        // Set to false on error to avoid showing unread badge incorrectly
-        if (!stop) {
-          setHasUnread(false);
+
+        // Validate MongoDB ObjectId format (24 hex characters)
+        const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(mongoUser._id);
+        if (!isValidObjectId) {
+          console.log('⚠️ Skipping reflections check: Invalid _id format');
+          return;
         }
-      }
-    };
 
-    // Add a small delay to ensure mongoUser is fully loaded
-    // This prevents race conditions during login/signup
-    const timeoutId = setTimeout(() => {
-      checkUnread();
-    }, 500);
+        try {
+          const reflections = await getReflectionsByUser(mongoUser._id, {
+            type: 'pipo',
+          });
+          console.log(reflections);
 
-    return () => {
-      stop = true;
-      clearTimeout(timeoutId);
-    };
-  }, [mongoUser?._id])
-);
+          if (!stop) {
+            const hasUnreadReflections = reflections.some(
+              r => r.readAt == null,
+            );
+            setHasUnread(hasUnreadReflections);
+          }
+        } catch (err) {
+          // Silently handle errors - don't crash the app
+          // The error is already logged by the API service
+          console.log(
+            '⚠️ Failed to load reflections (non-blocking):',
+            err.message || err,
+          );
+          // Set to false on error to avoid showing unread badge incorrectly
+          if (!stop) {
+            setHasUnread(false);
+          }
+        }
+      };
 
+      // Add a small delay to ensure mongoUser is fully loaded
+      // This prevents race conditions during login/signup
+      const timeoutId = setTimeout(() => {
+        checkUnread();
+      }, 500);
 
+      return () => {
+        stop = true;
+        clearTimeout(timeoutId);
+      };
+    }, [mongoUser?._id]),
+  );
 
   const finishTour = React.useCallback(async () => {
     setTourVisible(false);
@@ -194,9 +204,9 @@ useFocusEffect(
     else finishTour();
   }, [tourStep, finishTour]);
 
-  const skipTour = React.useCallback(() => { finishTour(); }, [finishTour]);
-
-
+  const skipTour = React.useCallback(() => {
+    finishTour();
+  }, [finishTour]);
 
   const testDownload = async () => {
     console.log('🧪 TESTING FILE DOWNLOAD...');
@@ -333,7 +343,7 @@ useFocusEffect(
               isVisible={tourVisible && tourStep === 2}
               placement="bottom"
               useReactNativeModal
-              tooltipStyle={{ backgroundColor: 'transparent', padding: 0, }}
+              tooltipStyle={{ backgroundColor: 'transparent', padding: 0 }}
               contentStyle={{
                 backgroundColor: '#fff',
                 borderRadius: 16,
@@ -348,10 +358,12 @@ useFocusEffect(
               }}
               content={
                 <TourTipCard
-                  step={2} total={TOTAL_STEPS}
+                  step={2}
+                  total={TOTAL_STEPS}
                   title="Read"
                   desc="Explore daily article tailored just for you"
-                  onNext={nextStep} onSkip={skipTour}
+                  onNext={nextStep}
+                  onSkip={skipTour}
                 />
               }
             >
@@ -368,7 +380,7 @@ useFocusEffect(
               isVisible={tourVisible && tourStep === 3}
               placement="bottom"
               useReactNativeModal
-              tooltipStyle={{ backgroundColor: 'transparent', padding: 0, }}
+              tooltipStyle={{ backgroundColor: 'transparent', padding: 0 }}
               contentStyle={{
                 backgroundColor: '#fff',
                 borderRadius: 16,
@@ -383,10 +395,12 @@ useFocusEffect(
               }}
               content={
                 <TourTipCard
-                  step={3} total={TOTAL_STEPS}
+                  step={3}
+                  total={TOTAL_STEPS}
                   title="Mailbox"
                   desc="See notes from Pipo and write a reflection note to yourself"
-                  onNext={nextStep} onSkip={skipTour}
+                  onNext={nextStep}
+                  onSkip={skipTour}
                 />
               }
             >
@@ -407,8 +421,9 @@ useFocusEffect(
               placement="bottom"
               useReactNativeModal
               tooltipStyle={{
-                backgroundColor: 'transparent', padding: 0,
-                marginLeft: -1
+                backgroundColor: 'transparent',
+                padding: 0,
+                marginLeft: -1,
               }}
               arrowStyle={{ right: 40 }}
               contentStyle={{
@@ -435,8 +450,6 @@ useFocusEffect(
                 />
               }
             >
-
-
               <CircularIconButton
                 style={{ padding: 24 }}
                 onPress={() => navigation.navigate('Profile')}
@@ -444,7 +457,6 @@ useFocusEffect(
                 <Image source={avatarSource} style={styles.headerAvatar} />
               </CircularIconButton>
             </Tooltip>
-
           </View>
         </View>
 
@@ -499,7 +511,8 @@ useFocusEffect(
               useReactNativeModal
               tooltipStyle={{
                 backgroundColor: 'transparent',
-                padding: 0, marginTop: 24
+                padding: 0,
+                marginTop: 24,
               }}
               contentStyle={{
                 backgroundColor: '#fff',
@@ -515,7 +528,8 @@ useFocusEffect(
               }}
               content={
                 <TourTipCard
-                  step={1} total={TOTAL_STEPS}
+                  step={1}
+                  total={TOTAL_STEPS}
                   title="Scene Practice"
                   desc="Tap here to select scenes to practice"
                   onNext={() => setTourStep(2)}
@@ -646,20 +660,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   iconWithBadge: {
-  position: 'relative',
-},
+    position: 'relative',
+  },
 
-badge: {
-  position: 'absolute',
-  top: 10,        
-  right: 10,
-  width: 14,
-  height: 14,
-  borderRadius: 7,
-  backgroundColor: '#E53935',
-  borderWidth: 2,
-  borderColor: '#FFFFFF',  
-  pointerEvents: 'none',   
-},
-
+  badge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#E53935',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    pointerEvents: 'none',
+  },
 });

@@ -12,6 +12,7 @@ import {
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { getAuthErrorMessage, validateEmail } from '../../utils/authErrors';
+import { useAuth } from '../../contexts/AuthContext';
 import AuthCard from '../../Components/Auth/AuthCard';
 import AuthInput from '../../Components/Auth/AuthInput';
 import AuthButton from '../../Components/Auth/AuthButton';
@@ -24,6 +25,8 @@ export default function LoginScreen({
   onSwitchToSignup = () => {},
   onSwitchToForgotPassword = () => {},
 }) {
+  const { refreshMongoUser, mongoUser } = useAuth();
+  
   // Handle navigation - use navigation prop if available, otherwise use callbacks
   const handleSwitchToSignup = () => {
     if (navigation) {
@@ -49,6 +52,7 @@ export default function LoginScreen({
   const [emailError, setEmailError] = useState(null);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [shouldNavigateAfterGoogleLogin, setShouldNavigateAfterGoogleLogin] = useState(false);
 
   const handleEmailChange = text => {
     setEmail(text);
@@ -89,6 +93,15 @@ export default function LoginScreen({
       keyboardDidHideListener.remove();
     };
   }, []);
+
+  // Navigate after Google login when mongoUser is loaded
+  useEffect(() => {
+    if (shouldNavigateAfterGoogleLogin && mongoUser?._id && navigation) {
+      const completed = mongoUser?.onboarding?.completed;
+      navigation.navigate(completed ? 'Home' : 'Onboarding');
+      setShouldNavigateAfterGoogleLogin(false);
+    }
+  }, [shouldNavigateAfterGoogleLogin, mongoUser, navigation]);
 
   const handleLogin = async () => {
     setError(null);
@@ -134,10 +147,12 @@ export default function LoginScreen({
     setGoogleLoading(true);
     try {
       await signInWithGoogle({ ensureBackendUser: true });
-      // Navigate to Home after successful Google login (same as regular login)
-      if (navigation) {
-        navigation.navigate('Home');
-      }
+      
+      // Refresh mongoUser to get the latest data
+      await refreshMongoUser();
+      
+      // Set flag to navigate once mongoUser is loaded (handled by useEffect)
+      setShouldNavigateAfterGoogleLogin(true);
     } catch (err) {
       console.error('❌ Google sign-in error:', err);
       setError('Failed to sign in with Google. Please try again.');
