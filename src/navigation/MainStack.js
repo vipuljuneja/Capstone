@@ -59,7 +59,7 @@ export default function MainStack() {
   const navigation = useNavigation();
 
   useEffect(() => {
-    console.log('Userrr', user, mode, mongoUser, loading);
+    // console.log('Userrr', user, mode, mongoUser, loading);
 
     if (loading) {
       setCheckingOnboarding(true);
@@ -67,7 +67,7 @@ export default function MainStack() {
     }
 
     if (!user) {
-      console.log('Hereee');
+      // console.log('Hereee');
       mode === 'signup' ? setInitialRoute('Signup') : setInitialRoute('Login');
       setCheckingOnboarding(false);
 
@@ -75,21 +75,21 @@ export default function MainStack() {
     }
 
     if (!user?.uid) {
-      console.log('Hereee');
+      // console.log('Hereee');
       setInitialRoute('Home');
       setCheckingOnboarding(false);
       return;
     }
 
     if (!mongoUser) {
-      console.log('Hereee');
+      // console.log('Hereee');
       setInitialRoute('Onboarding');
       setCheckingOnboarding(false);
       return;
     }
 
     if (user) {
-      console.log('Hereee');
+      // console.log('Hereee');
       setInitialRoute('Home');
       setCheckingOnboarding(false);
       return;
