@@ -5,7 +5,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from 'react';
-import { View, Text, StyleSheet, NativeModules } from 'react-native';
+import { View, Text, StyleSheet, NativeModules, Platform } from 'react-native';
 import {
   Camera,
   useCameraDevice,
@@ -14,6 +14,47 @@ import {
 
 import { extractFrameMetrics } from '../../utils/facialAnalysis';
 import { generateInsights } from '../../utils/insightGenerator';
+
+const sanitizePath = rawPath => {
+  if (!rawPath) {
+    return null;
+  }
+
+  return rawPath.startsWith('file://') ? rawPath.replace('file://', '') : rawPath;
+};
+
+const extractPhotoPath = photo => {
+  if (!photo) {
+    return null;
+  }
+
+  if (typeof photo.path === 'string') {
+    return sanitizePath(photo.path);
+  }
+
+  if (typeof photo.filePath === 'string') {
+    return sanitizePath(photo.filePath);
+  }
+
+  if (typeof photo.uri === 'string') {
+    // Some devices return a file URI in `uri`
+    if (photo.uri.startsWith('file://')) {
+      return sanitizePath(photo.uri);
+    }
+
+    // Handle Photos framework URIs on iOS (ph://...) – not directly usable by UIImage
+    if (Platform.OS === 'ios' && photo.uri.startsWith('ph://')) {
+      return null;
+    }
+  }
+
+  return null;
+};
+
+const sleep = ms =>
+  new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
 
 const { FaceLandmarkModule } = NativeModules;
 
@@ -63,7 +104,25 @@ const CameraDetector = forwardRef(({ onAnalysisComplete }, ref) => {
     try {
       setIsProcessing(true);
       const photo = await camera.current.takePhoto();
-      const result = await FaceLandmarkModule.processImage(photo.path);
+      const imagePath = extractPhotoPath(photo);
+
+      if (!imagePath) {
+        console.warn('CameraDetector: No valid photo path returned', photo);
+        Toast.show({
+          type: 'error',
+          text1: 'Camera error',
+          text2: 'Unable to access captured photo. Please try again.',
+          position: 'bottom',
+          visibilityTime: 2000,
+        });
+
+        return;
+      }
+
+      // Ensure the native side has time to write the image to disk before processing it
+      await sleep(120);
+
+      const result = await FaceLandmarkModule.processImage(imagePath);
 
       console.log('results----', result);
 
@@ -87,6 +146,16 @@ const CameraDetector = forwardRef(({ onAnalysisComplete }, ref) => {
       console.log(`Frame ${frameCount + 1} captured`);
     } catch (error) {
       console.error('Error capturing frame:', error);
+
+      if (error?.message?.includes('Cannot load image')) {
+        Toast.show({
+          type: 'error',
+          text1: 'Camera error',
+          text2: 'Unable to process the captured frame. Please try again.',
+          position: 'bottom',
+          visibilityTime: 2000,
+        });
+      }
     } finally {
       setIsProcessing(false);
     }
