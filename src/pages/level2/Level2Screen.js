@@ -46,10 +46,13 @@ const Level2Screen = () => {
           const questionsData = await getUserLevelQuestions(
             mongoUser._id,
             scenarioId,
-            'level2'
+            'level2',
           );
-          
-          console.log('📹 Loaded user questions with video URLs:', questionsData);
+
+          console.log(
+            '📹 Loaded user questions with video URLs:',
+            questionsData,
+          );
           setUserQuestions(questionsData.questions || []);
 
           // Update orb state with question count
@@ -161,7 +164,7 @@ const Level2Screen = () => {
       speaking: false,
       loading: false,
       idx: 0,
-      totalLines: scenarioData?.level1?.questions?.length || 5,
+      totalLines: scenarioData?.level2?.questions?.length || 5,
     });
 
     transcriptionResultsRef.current = [];
@@ -482,8 +485,9 @@ const Level2Screen = () => {
             (scenarioData?.level2?.questions || []).map(q => q.text)
           }
           videoUrls={
-            userQuestions?.map(q => q.videoUrl).filter(url => url && url.startsWith('http')) ||
-            null
+            userQuestions
+              ?.map(q => q.videoUrl)
+              .filter(url => url && url.startsWith('http')) || null
           }
         />
 

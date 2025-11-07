@@ -1,3 +1,4 @@
+// src/screens/levels/Level2Screen.js
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
@@ -7,6 +8,7 @@ import {
   Animated,
   PanResponder,
   Dimensions,
+  Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AvatarGenerator from '../../Components/Avatar/AvatarGenerate';
@@ -17,6 +19,9 @@ import AudioWaveform from '../../Components/Audio/AudioWaveform';
 import scenarioService from '../../services/scenarioService';
 import { getUserLevelQuestions } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import BackIcon from '../../../assets/icons/back.svg';
+import MicIcon from '../../../assets/icons/mic-white.svg';
+import DeleteIcon from '../../../assets/icons/delete-filled.svg';
 
 const { width, height } = Dimensions.get('window');
 
@@ -41,10 +46,13 @@ const Level3Screen = () => {
           const questionsData = await getUserLevelQuestions(
             mongoUser._id,
             scenarioId,
-            'level3'
+            'level3',
           );
-          
-          console.log('📹 Loaded user questions with video URLs:', questionsData);
+
+          console.log(
+            '📹 Loaded user questions with video URLs:',
+            questionsData,
+          );
           setUserQuestions(questionsData.questions || []);
 
           // Update orb state with question count
@@ -67,7 +75,7 @@ const Level3Screen = () => {
         if (scenarioId) {
           try {
             const scenario = await scenarioService.getScenarioById(scenarioId);
-          setScenarioData(scenario);
+            setScenarioData(scenario);
             const questionCount = scenario?.level3?.questions?.length || 5;
             setOrbState(prev => ({ ...prev, totalLines: questionCount }));
           } catch (fallbackError) {
@@ -147,28 +155,30 @@ const Level3Screen = () => {
   }, []);
 
   const resetLevel = useCallback(() => {
+    console.log('🔄 Resetting level to start');
+
+    // Reset local state
     setIsRecording(false);
     setTranscriptionResults([]);
-    setFacialAnalysisResults([]);
-    transcriptionResultsRef.current = [];
-    facialAnalysisResultsRef.current = [];
-
-    // Reset flags and refs
-    setLastTranscriptionReceived(false);
-    setLastFacialAnalysisReceived(false);
-    waitingForFinalResult.current = false;
-
-    if (avatarRef.current?.reset) {
-      avatarRef.current.reset();
-    }
-
-    setOrbState(prev => ({
-      ...prev,
-      idx: 0,
+    setOrbState({
       speaking: false,
       loading: false,
-    }));
-  }, []);
+      idx: 0,
+      totalLines: scenarioData?.level3?.questions?.length || 5,
+    });
+
+    transcriptionResultsRef.current = [];
+
+    // Reset VoiceOrb
+    if (voiceOrbRef.current?.reset) {
+      voiceOrbRef.current.reset();
+    }
+
+    // Reset AudioRecorder
+    if (audioRecorderRef.current?.reset) {
+      audioRecorderRef.current.reset();
+    }
+  }, [scenarioData]);
 
   // Handle transcription result arrival
   const handleTranscriptionComplete = useCallback(
@@ -185,6 +195,8 @@ const Level3Screen = () => {
           newResults.length,
           orbState.totalLines,
         );
+
+        console.log('Here', waitingForFinalResult, newResults, orbState);
 
         if (
           waitingForFinalResult.current &&
@@ -230,7 +242,6 @@ const Level3Screen = () => {
     },
     [orbState.totalLines],
   );
-  console.log('Level33333');
 
   // useEffect to watch for both flags and navigate once both are true
   useEffect(() => {
@@ -394,12 +405,16 @@ const Level3Screen = () => {
         // Check if results already present
         setLastTranscriptionReceived(true);
         setLastFacialAnalysisReceived(true);
+        // console.log(
+        //   'Hereee',
+        //   transcriptionResultsRef,
+        //   facialAnalysisResultsRef,
+        // );
         // if (
         //   transcriptionResultsRef.current.length === currentState.totalLines &&
         //   facialAnalysisResultsRef.current.length === currentState.totalLines
         // ) {
-        //   setLastTranscriptionReceived(true);
-        //   setLastFacialAnalysisReceived(true);
+
         // }
       };
 
@@ -422,7 +437,7 @@ const Level3Screen = () => {
   return (
     <View style={styles.container}>
       {/* Header with Progress */}
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <View style={styles.progressBar}>
           <View
             style={[
@@ -430,6 +445,29 @@ const Level3Screen = () => {
               { width: `${((orbState.idx + 1) / orbState.totalLines) * 100}%` },
             ]}
           />
+        </View>
+      </View> */}
+
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => {
+            navigation.navigate('LevelOptions', route.params);
+          }}
+          style={styles.backButtonContainer}
+        >
+          <BackIcon width={20} height={20} style={styles.backButton} />
+        </TouchableOpacity>
+        <View style={styles.progressBarContainer}>
+          <View style={styles.progressBarTrack}>
+            <View
+              style={[
+                styles.progressBarFill,
+                {
+                  width: `${((orbState.idx + 1) / orbState.totalLines) * 100}%`,
+                },
+              ]}
+            />
+          </View>
         </View>
       </View>
 
@@ -447,8 +485,9 @@ const Level3Screen = () => {
             (scenarioData?.level3?.questions || []).map(q => q.text)
           }
           videoUrls={
-            userQuestions?.map(q => q.videoUrl).filter(url => url && url.startsWith('http')) ||
-            null
+            userQuestions
+              ?.map(q => q.videoUrl)
+              .filter(url => url && url.startsWith('http')) || null
           }
         />
 
@@ -470,11 +509,11 @@ const Level3Screen = () => {
       </View>
 
       {/* Waveform */}
-      {/* <View
+      <View
         style={isRecording ? styles.waveformVisible : styles.waveformHidden}
       >
         <AudioWaveform ref={waveformRef} />
-      </View> */}
+      </View>
 
       {/* Bottom Controls */}
       <View style={styles.bottomSection}>
@@ -489,7 +528,13 @@ const Level3Screen = () => {
           onPress={isRecording ? handleStop : handleStart}
           disabled={!avatarReady && !isRecording}
         >
-          <Text style={styles.buttonEmoji}>{isRecording ? '⏹️' : '🎤'}</Text>
+          <Text style={styles.buttonEmoji}>
+            {isRecording ? (
+              <DeleteIcon height={24} width={24} />
+            ) : (
+              <MicIcon height={24} width={24} />
+            )}
+          </Text>
         </TouchableOpacity>
 
         {/* Next/Done Button */}
@@ -524,20 +569,32 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     gap: 15,
   },
+  backButtonContainer: {
+    marginRight: 12,
+  },
   backButton: {
     fontSize: 28,
   },
-  progressBar: {
+  progressBarContainer: {
     flex: 1,
-    height: 8,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 4,
+    marginLeft: 12,
+    justifyContent: 'center',
+  },
+  progressBarTrack: {
+    width: '95%',
+    height: 14,
+    borderRadius: 9,
+    backgroundColor: '#e2e2e2',
+    alignSelf: 'center',
     overflow: 'hidden',
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#6B5B95',
-    borderRadius: 4,
+  progressBarFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#463855',
+    borderRadius: 9,
   },
   middleSection: {
     flex: 1,
@@ -609,6 +666,27 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.5,
+  },
+  progressBarContainer: {
+    flex: 1,
+    marginLeft: 12,
+    justifyContent: 'center',
+  },
+  progressBarTrack: {
+    width: '95%',
+    height: 14,
+    borderRadius: 9,
+    backgroundColor: '#e2e2e2',
+    alignSelf: 'center',
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#463855',
+    borderRadius: 9,
   },
 });
 
