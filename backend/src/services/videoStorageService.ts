@@ -37,7 +37,7 @@ const supabase = supabaseServiceKey
     })
   : null;
 
-const BUCKET_NAME = 'capstone';
+const BUCKET_NAME = 'videos';
 const TEMP_DIR = path.join(process.cwd(), 'temp-videos');
 
 // Ensure temp directory exists
