@@ -169,11 +169,6 @@ const Level3Screen = () => {
 
     transcriptionResultsRef.current = [];
 
-    // Reset VoiceOrb
-    if (voiceOrbRef.current?.reset) {
-      voiceOrbRef.current.reset();
-    }
-
     // Reset AudioRecorder
     if (audioRecorderRef.current?.reset) {
       audioRecorderRef.current.reset();
@@ -317,40 +312,59 @@ const Level3Screen = () => {
   };
 
   // Stop recording and reset state
-  const handleStop = useCallback(async () => {
-    console.log('🛑 Stopping and resetting...');
-    try {
-      if (waveformRef.current) {
-        await waveformRef.current.stop();
-      }
-    } catch (error) {
-      console.error('Waveform stop error:', error);
-    }
+  const handleStop = useCallback(
+    async (options = {}) => {
+      const { waitForTranscription = true } = options;
 
-    if (cameraRef.current) {
-      cameraRef.current.stopRecording();
-    }
-    if (avatarRef.current?.stop) {
-      avatarRef.current.stop();
-    }
+      waitingForFinalResult.current = false;
+      setLastTranscriptionReceived(false);
+      setLastFacialAnalysisReceived(false);
 
-    const transcriptionPromise = new Promise(resolve => {
-      transcriptionPromiseRef.current = { resolve };
-      setTimeout(() => {
-        if (transcriptionPromiseRef.current) {
-          transcriptionPromiseRef.current.resolve(null);
-          transcriptionPromiseRef.current = null;
+      console.log('🛑 Stopping and resetting...');
+      try {
+        if (waveformRef.current) {
+          await waveformRef.current.stop();
         }
-      }, 5000);
-    });
+      } catch (error) {
+        console.error('Waveform stop error:', error);
+      }
 
-    if (audioRecorderRef.current) {
-      audioRecorderRef.current.stopRecording();
-    }
+      if (cameraRef.current) {
+        cameraRef.current.stopRecording();
+      }
+      if (avatarRef.current?.stop) {
+        avatarRef.current.stop();
+      }
 
-    await transcriptionPromise;
-    resetLevel();
-  }, [resetLevel]);
+      let transcriptionPromise;
+
+      if (waitForTranscription) {
+        transcriptionPromise = new Promise(resolve => {
+          transcriptionPromiseRef.current = { resolve };
+          setTimeout(() => {
+            if (transcriptionPromiseRef.current) {
+              transcriptionPromiseRef.current.resolve(null);
+              transcriptionPromiseRef.current = null;
+            }
+          }, 5000);
+        });
+      } else if (transcriptionPromiseRef.current) {
+        transcriptionPromiseRef.current.resolve(null);
+        transcriptionPromiseRef.current = null;
+      }
+
+      if (audioRecorderRef.current) {
+        audioRecorderRef.current.stopRecording();
+      }
+
+      if (transcriptionPromise) {
+        await transcriptionPromise;
+      }
+
+      resetLevel();
+    },
+    [resetLevel],
+  );
 
   // Handle "Next" button press in conversation
   const handleNext = useCallback(() => {
@@ -424,6 +438,20 @@ const Level3Screen = () => {
     }
   }, [isRecording]);
 
+  const handleBackPress = useCallback(async () => {
+    try {
+      if (isRecording) {
+        await handleStop({ waitForTranscription: false });
+      } else if (cameraRef.current?.isRecording) {
+        cameraRef.current.stopRecording();
+      }
+    } catch (error) {
+      console.error('Error stopping session before navigating back:', error);
+    } finally {
+      navigation.navigate('LevelOptions', route.params);
+    }
+  }, [isRecording, handleStop, navigation, route.params]);
+
   const isLastQuestion = orbState.idx === orbState.totalLines - 1;
 
   if (loading) {
@@ -450,9 +478,7 @@ const Level3Screen = () => {
 
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => {
-            navigation.navigate('LevelOptions', route.params);
-          }}
+          onPress={handleBackPress}
           style={styles.backButtonContainer}
         >
           <BackIcon width={20} height={20} style={styles.backButton} />
