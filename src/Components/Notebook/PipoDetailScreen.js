@@ -1,8 +1,9 @@
 import React, { useEffect, useLayoutEffect, useState } from "react";
-import { SafeAreaView, View, Text, StyleSheet, Pressable, ScrollView, Image, Alert } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Image, Alert } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { deleteReflection,updateReflectionReadStatus } from "../../services/api";
 import ConfirmDialog from '../AlertBox/ConfirmDialog'
+import { SafeAreaView } from "react-native-safe-area-context";
 
 
 const getPipoImage = (filename) => {
@@ -130,7 +131,7 @@ export default function PipoDetailScreen({ route, navigation }) {
 
   if (!pipo) {
     return (
-      <SafeAreaView style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+      <SafeAreaView style={{ flex: 1, alignItems: "center", justifyContent: "center" }} edges={['bottom', 'left', 'right']}>
         <Text>No data found</Text>
       </SafeAreaView>
     );
@@ -150,11 +151,11 @@ export default function PipoDetailScreen({ route, navigation }) {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFF" }}>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 80 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFF" }} edges={['bottom', 'left', 'right']}>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 8, paddingBottom: 80 }}>
         {isDeleted ? (
           
-          <View style={{ alignItems: "center", marginTop: 60 }}>
+          <View style={{ alignItems: "center", marginTop: 40 }}>
             <MaterialIcons name="check-circle" size={64} color="#4CAF50" />
             <Text style={{ marginTop: 12, fontSize: 18, fontWeight: "700", color: "#1A1A1A" }}>
               Note deleted
@@ -165,7 +166,7 @@ export default function PipoDetailScreen({ route, navigation }) {
           </View>
         ) : (
           <>
-            <View style={{ alignItems: "center", marginTop: 20, marginBottom: 10 }}>
+            <View style={{ alignItems: "center", marginTop: 8, marginBottom: 10 }}>
               {safeImage && <Image style={{ width: 126, height: 126 }} source={safeImage} resizeMode="contain" />}
             </View>
 
