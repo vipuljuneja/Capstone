@@ -235,6 +235,21 @@ const Level3ResultScreen = () => {
     });
   };
 
+  const getResultTitle = () => {
+    // You can customize this logic based on your metrics, here is an example:
+    if (
+      avgWpm >= 100 &&
+      avgWpm <= 150 &&
+      totalFillers <= 3 &&
+      avgEyeContact >= 40 &&
+      avgSmile >= 40 &&
+      avgPosture >= 40
+    ) {
+      return 'Great job! Keep up the good work!';
+    }
+    return 'Good attempt! Some areas can be improved.';
+  };
+
   // Page logic
   return (
     <View style={styles.container}>
@@ -265,7 +280,7 @@ const Level3ResultScreen = () => {
             style={styles.characterImage}
             resizeMode="contain"
           />
-          <Text style={styles.title}>That was smooth!</Text>
+          <Text style={styles.title}>{getResultTitle()}</Text>
         </View>
 
         {/* Voice Feedback Card */}
