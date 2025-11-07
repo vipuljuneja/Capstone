@@ -9,6 +9,7 @@ import {
   generateNextLevelQuestions
 } from '../services/practiceSessionAIService';
 import UserScenarioOverrides from '../models/UserScenarioOverrides';
+import { generateAndStoreVideos } from '../services/videoStorageService';
 
 /**
  * Helper function to generate AI feedback cards from facial analysis
@@ -495,6 +496,40 @@ export const createCompleteSession = async (req: Request, res: Response): Promis
             count: nextQuestions.length,
             preview: nextQuestions.slice(0, 2)
           });
+
+          // Generate and store videos in background (fire-and-forget)
+          // This runs asynchronously and updates the questions with Supabase URLs
+          (async () => {
+            try {
+              console.log('🎬 Starting background video generation and storage...');
+              const updatedQuestions = await generateAndStoreVideos(
+                nextQuestions,
+                userId.toString(),
+                scenarioId.toString(),
+                nextLevel
+              );
+
+              // Update UserScenarioOverrides with new video URLs
+              const updatedLevelKey = nextLevel === 2 ? 'level2' : 'level3';
+              const updatedUpdate: any = {};
+              updatedUpdate[updatedLevelKey] = { questions: updatedQuestions };
+              
+              await UserScenarioOverrides.findOneAndUpdate(
+                { userId, scenarioId },
+                { $set: updatedUpdate }
+              );
+
+              console.log('✅ Successfully updated questions with Supabase video URLs', {
+                userId,
+                scenarioId,
+                nextLevel,
+                updatedCount: updatedQuestions.filter(q => q.videoUrl.startsWith('http')).length
+              });
+            } catch (error: any) {
+              console.error('❌ Background video generation/storage failed:', error.message);
+              // Don't throw - this is a background process, failures shouldn't affect the main flow
+            }
+          })();
         } else {
           console.log('ℹ️ No next-level questions generated. Skipping save.');
         }
