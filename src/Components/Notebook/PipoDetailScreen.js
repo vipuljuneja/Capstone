@@ -4,6 +4,29 @@ import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { deleteReflection,updateReflectionReadStatus } from "../../services/api";
 import ConfirmDialog from '../AlertBox/ConfirmDialog'
 
+
+const getPipoImage = (filename) => {
+  if (!filename) return require('../../../assets/pipo-for-note/pipo-hi.png');
+  
+  try {
+    
+    const imageMap = {
+      'articlePipo.png': require('../../../assets/pipo-for-note/articlePipo.png'),
+      'pipo-coffee.png': require('../../../assets/pipo-for-note/pipo-coffee.png'),
+      'pipo-hi.png': require('../../../assets/pipo-for-note/pipo-hi.png'),
+      'pipo-job.png': require('../../../assets/pipo-for-note/pipo-job.png'),
+      'pipo-loading.png': require('../../../assets/pipo-for-note/pipo-loading.png'),
+      'pipo-complete.png': require('../../../assets/pipo-for-note/pipo-complete.png'),
+      'loginPipo.png': require('../../../assets/pipo-for-note/loginPipo.png'),
+    };
+    
+    return imageMap[filename] || require('../../../assets/pipo-for-note/pipo-hi.png');
+  } catch (e) {
+    console.error('Error loading image:', filename, e);
+    return require('../../../assets/pipo-for-note/pipo-hi.png');
+  }
+};
+
 export default function PipoDetailScreen({ route, navigation }) {
   const { pipo } = route.params || {};
   const [deleting, setDeleting] = useState(false);
@@ -113,10 +136,18 @@ export default function PipoDetailScreen({ route, navigation }) {
     );
   }
 
-  // Ensure image is valid, provide fallback
-  const safeImage = pipo.image && (typeof pipo.image === 'object' || typeof pipo.image === 'number') 
-    ? pipo.image 
-    : require('../../../assets/pipo/pipo-hi.png'); // Fallback image
+
+  let safeImage;
+  if (pipo.imageFilename) {
+    
+    safeImage = getPipoImage(pipo.imageFilename);
+  } else if (pipo.image && (typeof pipo.image === 'object' || typeof pipo.image === 'number')) {
+   
+    safeImage = pipo.image;
+  } else {
+    
+    safeImage = require('../../../assets/pipo-for-note/pipo-hi.png');
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#FFF" }}>
@@ -143,7 +174,7 @@ export default function PipoDetailScreen({ route, navigation }) {
             </Text>
 
             <Text style={{ textAlign: "center", fontSize: 20, fontWeight: "700", color: "#1A1A1A", marginBottom: 10 }}>
-              {pipo.Motivation}
+              {pipo.motivation || pipo.Motivation || "You've got this"}
             </Text>
 
             <View style={{ alignSelf: "center", backgroundColor: "#E6E0FF", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8, marginBottom: 20 }}>
