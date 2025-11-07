@@ -30,6 +30,7 @@ const AvatarGenerator = forwardRef((props, ref) => {
     onInitialized,
     lines = [],
     imgURL = AVATAR_IMAGE_URL,
+    videoUrls = null, // Optional: pre-generated video URLs (array of strings)
   } = props;
 
   const QUESTIONS = lines;
@@ -100,7 +101,7 @@ const AvatarGenerator = forwardRef((props, ref) => {
 
   useEffect(() => {
     initializeVideos();
-  }, [QUESTIONS]);
+  }, [QUESTIONS, videoUrls]);
 
   // Notify parent when initialization completes
   useEffect(() => {
@@ -174,26 +175,35 @@ const AvatarGenerator = forwardRef((props, ref) => {
     throw new Error('Timed out waiting for video (4 minutes)');
   };
 
-  // Initialize all videos (generate them in background)
+  // Initialize all videos (generate them in background OR use provided URLs)
   const initializeVideos = async () => {
     if (isInitialized || loading) return;
 
+    // If videoUrls are provided, use them directly (no generation needed)
+    if (videoUrls && Array.isArray(videoUrls) && videoUrls.length > 0) {
+      console.log('✅ Using provided video URLs (pre-generated videos)');
+      setUrls(videoUrls);
+      setIsInitialized(true);
+      return;
+    }
+
+    // Otherwise, generate videos using D-ID API
     setLoading(true);
     setGenerationProgress(0);
     console.log('🎬 Pre-generating all avatar videos...');
 
     try {
-      const videoUrls = [];
+      const generatedUrls = [];
 
       // Generate all videos
       for (let k = 0; k < QUESTIONS.length; k++) {
         console.log(`Generating video ${k + 1}/${QUESTIONS.length}...`);
         const url = await makeVideo(QUESTIONS[k], k);
-        videoUrls.push(url);
+        generatedUrls.push(url);
         setGenerationProgress(((k + 1) / QUESTIONS.length) * 100);
       }
 
-      setUrls(videoUrls);
+      setUrls(generatedUrls);
       setIsInitialized(true);
       console.log('✅ All videos pre-generated and ready!');
     } catch (e) {

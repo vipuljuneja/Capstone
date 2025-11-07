@@ -17,6 +17,8 @@ import AudioRecorder from '../../Components/Audio/AudioRecorder';
 import AudioWaveform from '../../Components/Audio/AudioWaveform';
 
 import scenarioService from '../../services/scenarioService';
+import { getUserLevelQuestions } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 import BackIcon from '../../../assets/icons/back.svg';
 import MicIcon from '../../../assets/icons/mic-white.svg';
 import DeleteIcon from '../../../assets/icons/delete-filled.svg';
@@ -27,33 +29,63 @@ const Level2Screen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { scenarioTitle, scenarioId } = route.params || {};
+  const { mongoUser } = useAuth();
 
   //Scenario States
   const [scenarioData, setScenarioData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [userQuestions, setUserQuestions] = useState(null); // User-specific questions with video URLs
 
-  //Fetch Scenario Data
+  //Fetch User-Specific Questions (with Supabase video URLs)
   useEffect(() => {
-    const loadScenarioData = async () => {
+    const loadUserQuestions = async () => {
       try {
         setLoading(true);
-        if (scenarioId) {
+        if (scenarioId && mongoUser?._id) {
+          // Fetch user-specific questions (includes Supabase video URLs)
+          const questionsData = await getUserLevelQuestions(
+            mongoUser._id,
+            scenarioId,
+            'level2'
+          );
+          
+          console.log('📹 Loaded user questions with video URLs:', questionsData);
+          setUserQuestions(questionsData.questions || []);
+
+          // Update orb state with question count
+          const questionCount = questionsData.questions?.length || 5;
+          setOrbState(prev => ({ ...prev, totalLines: questionCount }));
+
+          // Also load scenario data for fallback
           const scenario = await scenarioService.getScenarioById(scenarioId);
           setScenarioData(scenario);
-
-          // Update orb state with question count from loaded data
+        } else if (scenarioId) {
+          // Fallback: use default scenario if no user
+          const scenario = await scenarioService.getScenarioById(scenarioId);
+          setScenarioData(scenario);
           const questionCount = scenario?.level2?.questions?.length || 5;
           setOrbState(prev => ({ ...prev, totalLines: questionCount }));
         }
       } catch (error) {
-        console.error('Failed to load scenario data:', error);
+        console.error('Failed to load questions:', error);
+        // Fallback to default scenario
+        if (scenarioId) {
+          try {
+            const scenario = await scenarioService.getScenarioById(scenarioId);
+            setScenarioData(scenario);
+            const questionCount = scenario?.level2?.questions?.length || 5;
+            setOrbState(prev => ({ ...prev, totalLines: questionCount }));
+          } catch (fallbackError) {
+            console.error('Failed to load fallback scenario:', fallbackError);
+          }
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    loadScenarioData();
-  }, [scenarioId]);
+    loadUserQuestions();
+  }, [scenarioId, mongoUser?._id]);
 
   const [isRecording, setIsRecording] = useState(false);
   const [avatarReady, setAvatarReady] = useState(false);
@@ -445,9 +477,14 @@ const Level2Screen = () => {
           imgURL={
             'https://tujrvclzhnflmqkkotem.supabase.co/storage/v1/object/public/capstone/sula.png'
           }
-          lines={(scenarioData?.level2?.questions || [])
-            .map(q => q.text)
-            .slice(0, 2)}
+          lines={
+            userQuestions?.map(q => q.text) ||
+            (scenarioData?.level2?.questions || []).map(q => q.text)
+          }
+          videoUrls={
+            userQuestions?.map(q => q.videoUrl).filter(url => url && url.startsWith('http')) ||
+            null
+          }
         />
 
         {/* Draggable Camera Overlay */}

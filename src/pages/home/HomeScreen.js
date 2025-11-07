@@ -118,7 +118,7 @@ export default function HomeScreen() {
         setTourStep(1);
         setTourVisible(true);
 
-      }, 200);
+      }, 500);
       return () => clearTimeout(t);
     } else {
       setTourVisible(false);
