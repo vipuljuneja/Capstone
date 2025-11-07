@@ -44,6 +44,7 @@ import SpecialMissionScreen from '../pages/Levels/SpecialMissionScreen';
 
 import SignupScreen from '../screens/auth/SignupScreen.js';
 import LoginScreen from '../screens/auth/LoginScreen.js';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 
 import BackIcon from '../../assets/icons/back.svg';
 
@@ -150,6 +151,12 @@ export default function MainStack() {
       <Stack.Screen
         name="Login"
         component={LoginScreen}
+        options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="ForgotPassword"
+        component={ForgotPasswordScreen}
         options={{ headerShown: false }}
       />
 

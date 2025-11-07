@@ -62,6 +62,11 @@ const SelfReflectionSchema = new mongoose_1.Schema({
         required: true,
         default: 'self',
     },
+    readAt: {
+        type: Date,
+        default: null,
+        // Null until the user views the note
+    },
     imageName: {
         type: String,
         trim: true,
@@ -94,6 +99,7 @@ SelfReflectionSchema.index({ userId: 1, date: -1 });
 SelfReflectionSchema.index({ userId: 1, type: 1, date: -1 });
 SelfReflectionSchema.index({ linkedSessionId: 1 });
 SelfReflectionSchema.index({ userId: 1, scenarioId: 1, level: 1 });
+SelfReflectionSchema.index({ userId: 1, type: 1, readAt: 1 });
 const SelfReflection = mongoose_1.default.model('SelfReflection', SelfReflectionSchema);
 exports.default = SelfReflection;
 //# sourceMappingURL=SelfReflection.js.map

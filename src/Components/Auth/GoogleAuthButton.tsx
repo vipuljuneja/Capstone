@@ -1,13 +1,27 @@
 import React from 'react';
-import { TouchableOpacity, Image, ViewStyle, StyleSheet, View } from 'react-native';
+import {
+  TouchableOpacity,
+  Image,
+  ViewStyle,
+  StyleSheet,
+  View,
+  Text,
+  ActivityIndicator,
+} from 'react-native';
 
 type GoogleAuthButtonProps = {
   onPress: () => void;
   loading?: boolean;
   style?: ViewStyle;
+  label?: string;
 };
 
-export default function GoogleAuthButton({ onPress, loading, style }: GoogleAuthButtonProps) {
+export default function GoogleAuthButton({
+  onPress,
+  loading,
+  style,
+  label = 'Sign in with Google',
+}: GoogleAuthButtonProps) {
   return (
     <TouchableOpacity
       activeOpacity={0.7}
@@ -16,22 +30,28 @@ export default function GoogleAuthButton({ onPress, loading, style }: GoogleAuth
       style={[styles.box, loading && styles.disabledBox, style]}
       testID="google-auth-button"
     >
-      <View style={styles.iconWrapper}>
-        <Image
-          source={require('../../../assets/icons/google.png')}
-          style={styles.icon}
-          resizeMode="contain"
-        />
-      </View>
+      {loading ? (
+        <ActivityIndicator size="small" color="#4285F4" />
+      ) : (
+        <>
+          <View style={styles.iconWrapper}>
+            <Image
+              source={require('../../../assets/icons/google.png')}
+              style={styles.icon}
+              resizeMode="contain"
+            />
+          </View>
+          <Text style={styles.label}>{label}</Text>
+        </>
+      )}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   box: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
+    minHeight: 52,
+    borderRadius: 28,
     borderWidth: 1,
     borderColor: '#DADCE0',
     backgroundColor: '#FFFFFF',
@@ -42,6 +62,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowRadius: 2,
     elevation: 2,
+    flexDirection: 'row',
+    paddingHorizontal: 18,
+    width: '100%',
   },
   disabledBox: {
     opacity: 0.6,
@@ -49,15 +72,21 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
   },
   iconWrapper: {
-    width: 26,
-    height: 26,
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
   icon: {
-    width: 26,
-    height: 26,
+    width: 24,
+    height: 24,
+  },
+  label: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#202124',
+    marginLeft: 12,
   },
 });
-
-

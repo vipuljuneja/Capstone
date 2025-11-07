@@ -47,8 +47,12 @@ const router = (0, express_1.Router)();
 // ============================================
 // POST /api/users - Create new user (public - signup endpoint)
 router.post('/users', controllers.createUser);
+// Alias for signup used by some clients/docs
+router.post('/users/register', controllers.createUser);
 // GET /api/users/:authUid - Get user by Firebase authUid
 router.get('/users/:authUid', authMiddleware_1.verifyFirebaseToken, authMiddleware_1.verifyUserOwnership, controllers.getUserByAuthUid);
+// GET /api/users/me - Get current user based on Firebase token
+router.get('/users/me', authMiddleware_1.verifyFirebaseToken, controllers.getMe);
 // PUT /api/users/:authUid - Update user profile
 router.put('/users/:authUid', authMiddleware_1.verifyFirebaseToken, authMiddleware_1.verifyUserOwnership, controllers.updateUserProfile);
 // PUT /api/users/:authUid/onboarding - Update onboarding completion flag
@@ -197,6 +201,8 @@ router.get('/reflections/user/:userId/dates', authMiddleware_1.verifyFirebaseTok
 router.get('/reflections/:reflectionId', authMiddleware_1.verifyFirebaseToken, controllers.getReflectionById);
 // PUT /api/reflections/:reflectionId - Update reflection
 router.put('/reflections/:reflectionId', authMiddleware_1.verifyFirebaseToken, controllers.updateReflection);
+// PATCH /api/reflections/:reflectionId/read-status - Update reflection read status
+router.patch('/reflections/:reflectionId/read-status', authMiddleware_1.verifyFirebaseToken, controllers.updateReflectionReadStatus);
 // DELETE /api/reflections/:reflectionId - Delete reflection
 router.delete('/reflections/:reflectionId', authMiddleware_1.verifyFirebaseToken, controllers.deleteReflection);
 // ============================================

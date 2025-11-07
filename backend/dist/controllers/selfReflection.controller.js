@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createPipoNoteFromSession = exports.getReflectionDates = exports.deleteReflection = exports.updateReflection = exports.getReflectionById = exports.getReflectionsByUser = exports.createReflection = void 0;
+exports.createPipoNoteFromSession = exports.getReflectionDates = exports.updateReflectionReadStatus = exports.deleteReflection = exports.updateReflection = exports.getReflectionById = exports.getReflectionsByUser = exports.createReflection = void 0;
 const SelfReflection_1 = __importDefault(require("../models/SelfReflection"));
 const User_1 = __importDefault(require("../models/User"));
 const PracticeSession_1 = __importDefault(require("../models/PracticeSession"));
@@ -15,7 +15,7 @@ const practiceSessionAIService_1 = require("../services/practiceSessionAIService
  */
 const createReflection = async (req, res) => {
     try {
-        const { userId, title, description, date, type, imageName } = req.body;
+        const { userId, title, description, date, type, imageName, readAt } = req.body;
         // Validate required fields
         if (!userId || !title || !date) {
             return res.status(400).json({
@@ -39,6 +39,22 @@ const createReflection = async (req, res) => {
             });
         }
         // Create new reflection
+        let parsedReadAt = undefined;
+        if (readAt !== undefined) {
+            if (readAt === null || readAt === '') {
+                parsedReadAt = null;
+            }
+            else {
+                const readAtDate = new Date(readAt);
+                if (Number.isNaN(readAtDate.getTime())) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Invalid readAt value. Expected a valid date string or null.',
+                    });
+                }
+                parsedReadAt = readAtDate;
+            }
+        }
         const reflection = await SelfReflection_1.default.create({
             userId,
             title,
@@ -46,6 +62,7 @@ const createReflection = async (req, res) => {
             date: new Date(date),
             type: type || 'self',
             imageName: imageName || undefined, // For Pipo avatar image
+            readAt: parsedReadAt ?? undefined,
         });
         return res.status(201).json({
             success: true,
@@ -153,7 +170,7 @@ exports.getReflectionById = getReflectionById;
 const updateReflection = async (req, res) => {
     try {
         const { reflectionId } = req.params;
-        const { title, description, date, type, imageName } = req.body;
+        const { title, description, date, type, imageName, readAt } = req.body;
         if (!mongoose_1.default.Types.ObjectId.isValid(reflectionId)) {
             return res.status(400).json({
                 success: false,
@@ -173,6 +190,21 @@ const updateReflection = async (req, res) => {
         }
         if (imageName !== undefined)
             updateData.imageName = imageName;
+        if (readAt !== undefined) {
+            if (readAt === null || readAt === '') {
+                updateData.readAt = null;
+            }
+            else {
+                const readAtDate = new Date(readAt);
+                if (Number.isNaN(readAtDate.getTime())) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Invalid readAt value. Expected a valid date string or null.',
+                    });
+                }
+                updateData.readAt = readAtDate;
+            }
+        }
         const reflection = await SelfReflection_1.default.findByIdAndUpdate(reflectionId, updateData, { new: true, runValidators: true });
         if (!reflection) {
             return res.status(404).json({
@@ -228,6 +260,66 @@ const deleteReflection = async (req, res) => {
     }
 };
 exports.deleteReflection = deleteReflection;
+/**
+ * Update read status for a reflection
+ * Allows setting readAt to the current time, a specific date, or null (unread)
+ */
+const updateReflectionReadStatus = async (req, res) => {
+    try {
+        const { reflectionId } = req.params;
+        const { readAt, read } = req.body;
+        if (!mongoose_1.default.Types.ObjectId.isValid(reflectionId)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid reflection ID format',
+            });
+        }
+        let newReadAt;
+        if (readAt !== undefined) {
+            if (readAt === null || readAt === '') {
+                newReadAt = null;
+            }
+            else {
+                const parsed = new Date(readAt);
+                if (Number.isNaN(parsed.getTime())) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Invalid readAt value. Expected a valid date string or null.',
+                    });
+                }
+                newReadAt = parsed;
+            }
+        }
+        else if (read !== undefined) {
+            newReadAt = read ? new Date() : null;
+        }
+        else {
+            return res.status(400).json({
+                success: false,
+                error: 'Provide readAt (date/null) or read (boolean) to update status',
+            });
+        }
+        const reflection = await SelfReflection_1.default.findByIdAndUpdate(reflectionId, { readAt: newReadAt }, { new: true });
+        if (!reflection) {
+            return res.status(404).json({
+                success: false,
+                error: 'Reflection not found',
+            });
+        }
+        return res.status(200).json({
+            success: true,
+            data: reflection,
+        });
+    }
+    catch (error) {
+        console.error('❌ Error updating reflection read status:', error);
+        return res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to update reflection read status',
+        });
+    }
+};
+exports.updateReflectionReadStatus = updateReflectionReadStatus;
 /**
  * Get dates that have reflections for a user (for calendar markers)
  */
