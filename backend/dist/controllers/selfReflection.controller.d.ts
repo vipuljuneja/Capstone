@@ -20,6 +20,11 @@ export declare const updateReflection: (req: Request, res: Response) => Promise<
  */
 export declare const deleteReflection: (req: Request, res: Response) => Promise<Response<any, Record<string, any>>>;
 /**
+ * Update read status for a reflection
+ * Allows setting readAt to the current time, a specific date, or null (unread)
+ */
+export declare const updateReflectionReadStatus: (req: Request, res: Response) => Promise<Response<any, Record<string, any>>>;
+/**
  * Get dates that have reflections for a user (for calendar markers)
  */
 export declare const getReflectionDates: (req: Request, res: Response) => Promise<Response<any, Record<string, any>>>;

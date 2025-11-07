@@ -13,6 +13,8 @@ router.get('/user/:userId/dates', selfReflection_controller_1.getReflectionDates
 router.get('/:reflectionId', selfReflection_controller_1.getReflectionById);
 // Update a reflection
 router.put('/:reflectionId', selfReflection_controller_1.updateReflection);
+// Update read status for a reflection
+router.patch('/:reflectionId/read-status', selfReflection_controller_1.updateReflectionReadStatus);
 // Delete a reflection
 router.delete('/:reflectionId', selfReflection_controller_1.deleteReflection);
 exports.default = router;

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 export declare const createUser: (req: Request, res: Response) => Promise<void>;
 export declare const getUserByAuthUid: (req: Request, res: Response) => Promise<void>;
+export declare const getMe: (req: Request, res: Response) => Promise<void>;
 export declare const updateUserProfile: (req: Request, res: Response) => Promise<void>;
 export declare const updateOnboardingStatus: (req: Request, res: Response) => Promise<void>;
 export declare const updateHasSeenTour: (req: Request, res: Response) => Promise<void>;

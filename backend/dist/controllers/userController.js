@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUser = exports.addUserAchievement = exports.updateUserStreak = exports.updateSeverityLevel = exports.updateHasSeenTour = exports.updateOnboardingStatus = exports.updateUserProfile = exports.getUserByAuthUid = exports.createUser = void 0;
+exports.deleteUser = exports.addUserAchievement = exports.updateUserStreak = exports.updateSeverityLevel = exports.updateHasSeenTour = exports.updateOnboardingStatus = exports.updateUserProfile = exports.getMe = exports.getUserByAuthUid = exports.createUser = void 0;
 const models_1 = require("../models");
 const createUser = async (req, res) => {
     try {
@@ -50,6 +50,25 @@ const getUserByAuthUid = async (req, res) => {
     }
 };
 exports.getUserByAuthUid = getUserByAuthUid;
+// Return the currently authenticated user (from Firebase token)
+const getMe = async (req, res) => {
+    try {
+        if (!req.user?.uid) {
+            res.status(401).json({ error: 'Authentication required' });
+            return;
+        }
+        const user = await models_1.User.findOne({ authUid: req.user.uid });
+        if (!user) {
+            res.status(404).json({ error: 'User not found' });
+            return;
+        }
+        res.json({ success: true, data: user });
+    }
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+exports.getMe = getMe;
 const updateUserProfile = async (req, res) => {
     try {
         const { authUid } = req.params;

@@ -201,7 +201,7 @@ const prepareSessionDataForAI = (session, scenarioTitle) => {
     };
 };
 exports.prepareSessionDataForAI = prepareSessionDataForAI;
-// Generate 3–4 next-level questions based on transcript and session context
+// Generate 3–4 next-level questions based on scenario and level (independent questions, not dependent on previous answers)
 const generateNextLevelQuestions = async (sessionData) => {
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
     if (!OPENAI_API_KEY) {
@@ -219,7 +219,7 @@ Create ${nextLevel === 2 ? '3-4' : '3-4'} next-step questions for a user practic
 Context:
 - Current Level: ${level}
 - Next Level: ${nextLevel}
-- Transcript (what they said): "${transcriptText.slice(0, 3000)}"
+- Transcript (what they said): "${transcriptText}"
 
 Guidelines:
 - Voice and Perspective: Choose the role that naturally asks the user questions, based on scenario:
@@ -230,7 +230,9 @@ Guidelines:
 - Preferred patterns: Service → "Would you like...", "Do you prefer..."; Interview → "Can you tell me...", "How did you...", "What would you..."; Facilitator → "Could you try...", "Tell me about...".
 - Make the questions slightly more advanced than the previous level.
 - Keep each question short and natural.
-- Avoid repeating their exact words; build on their intent.
+
+- IMPORTANT: Questions must be INDEPENDENT and GENERAL. Each question should stand alone and make sense.
+- Questions should be appropriate for the scenario 
 - Include a videoUrl placeholder like "${scenarioTitle.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_level${nextLevel}_q{n}.mp4".
 - Provide an ordered list starting at 1.
 
