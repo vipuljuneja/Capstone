@@ -674,7 +674,7 @@ const confirmDeleteSelf = async () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       <View style={styles.header}>
         <Text></Text>
         <Text style={styles.headerTitle}>
@@ -967,7 +967,7 @@ const styles = StyleSheet.create({
 
   header: {
     paddingHorizontal: 16,
-    paddingTop: 4,
+    paddingTop: 8,
     paddingBottom: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -975,6 +975,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 14,
+    
     fontWeight: "700",
     letterSpacing: 0.5,
     alignItems: "center",
