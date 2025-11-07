@@ -13,19 +13,26 @@ const streamPipeline = promisify(pipeline);
 // D-ID API configuration
 const DID_API_KEY = process.env.DID_API_KEY || process.env.AVATAR_API_KEY;
 // Avatar images for different levels
-const AVATAR_IMAGE_LEVEL2 = process.env.AVATAR_IMAGE_LEVEL2 || 'https://tiapdsojkbqjucmjmjri.supabase.co/storage/v1/object/public/images/avatar-videos/690d2cffd0cad/6901a891dd02f9e665ba3de8/2/Hitina_Square.png';
-const AVATAR_IMAGE_LEVEL3 = process.env.AVATAR_IMAGE_LEVEL3 || 'https://tujrvclzhnflmqkkotem.supabase.co/storage/v1/object/public/capstone/sula.png';
+const AVATAR_IMAGE_LEVEL2 =
+  'https://tiapdsojkbqjucmjmjri.supabase.co/storage/v1/object/public/images/Hitina_Square.png';
+const AVATAR_IMAGE_LEVEL3 =
+  'https://create-images-results.d-id.com/api_docs/assets/noelle.jpeg';
 
 // Supabase configuration
-const supabaseUrl = process.env.SUPABASE_URL || 'https://tiapdsojkbqjucmjmjri.supabase.co';
+const supabaseUrl =
+  process.env.SUPABASE_URL || 'https://tiapdsojkbqjucmjmjri.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseServiceKey) {
-  console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY not found. Video uploads will fail.');
+  console.warn(
+    '⚠️ SUPABASE_SERVICE_ROLE_KEY not found. Video uploads will fail.',
+  );
 }
 
 if (!DID_API_KEY) {
-  console.warn('⚠️ DID_API_KEY or AVATAR_API_KEY not found. Video generation will fail.');
+  console.warn(
+    '⚠️ DID_API_KEY or AVATAR_API_KEY not found. Video generation will fail.',
+  );
 }
 
 const supabase = supabaseServiceKey
@@ -102,7 +109,7 @@ async function generateDIDVideo(
   text: string,
   sourceImageUrl: string,
   retryCount = 0,
-  maxRetries = 3
+  maxRetries = 3,
 ): Promise<string> {
   if (!DID_API_KEY) {
     throw new Error('DID_API_KEY not configured');
@@ -132,12 +139,23 @@ async function generateDIDVideo(
     // Handle rate limit errors
     if (createResponse.status === 429) {
       const retryAfter = createResponse.headers.get('retry-after');
-      const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : (retryCount + 1) * 10000; // Default: 10s, 20s, 30s
-      
+      const waitTime = retryAfter
+        ? parseInt(retryAfter) * 1000
+        : (retryCount + 1) * 10000; // Default: 10s, 20s, 30s
+
       if (retryCount < maxRetries) {
-        console.log(`⏳ Rate limited. Waiting ${waitTime / 1000}s before retry ${retryCount + 1}/${maxRetries}...`);
+        console.log(
+          `⏳ Rate limited. Waiting ${waitTime / 1000}s before retry ${
+            retryCount + 1
+          }/${maxRetries}...`,
+        );
         await sleep(waitTime);
-        return generateDIDVideo(text, sourceImageUrl, retryCount + 1, maxRetries);
+        return generateDIDVideo(
+          text,
+          sourceImageUrl,
+          retryCount + 1,
+          maxRetries,
+        );
       } else {
         throw new Error('Rate limit exceeded. Max retries reached.');
       }
@@ -148,18 +166,31 @@ async function generateDIDVideo(
       const errorText = await createResponse.text();
       if (retryCount < maxRetries) {
         const waitTime = (retryCount + 1) * 15000; // 15s, 30s, 45s for server errors
-        console.log(`⏳ D-ID server error (${createResponse.status}). Waiting ${waitTime / 1000}s before retry ${retryCount + 1}/${maxRetries}...`);
+        console.log(
+          `⏳ D-ID server error (${createResponse.status}). Waiting ${
+            waitTime / 1000
+          }s before retry ${retryCount + 1}/${maxRetries}...`,
+        );
         console.log(`   Error details: ${errorText.substring(0, 200)}`);
         await sleep(waitTime);
-        return generateDIDVideo(text, sourceImageUrl, retryCount + 1, maxRetries);
+        return generateDIDVideo(
+          text,
+          sourceImageUrl,
+          retryCount + 1,
+          maxRetries,
+        );
       } else {
-        throw new Error(`D-ID server error (${createResponse.status}): ${errorText}`);
+        throw new Error(
+          `D-ID server error (${createResponse.status}): ${errorText}`,
+        );
       }
     }
 
     if (!createResponse.ok) {
       const errorText = await createResponse.text();
-      throw new Error(`Create talk failed (${createResponse.status}): ${errorText}`);
+      throw new Error(
+        `Create talk failed (${createResponse.status}): ${errorText}`,
+      );
     }
 
     const { id } = await createResponse.json();
@@ -180,7 +211,9 @@ async function generateDIDVideo(
       if (statusResponse.status === 429) {
         const retryAfter = statusResponse.headers.get('retry-after');
         const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 10000;
-        console.log(`⏳ Rate limited during polling. Waiting ${waitTime / 1000}s...`);
+        console.log(
+          `⏳ Rate limited during polling. Waiting ${waitTime / 1000}s...`,
+        );
         await sleep(waitTime);
         continue; // Retry the same poll
       }
@@ -188,7 +221,9 @@ async function generateDIDVideo(
       // Handle server errors during polling
       if (statusResponse.status >= 500 && statusResponse.status < 600) {
         const errorText = await statusResponse.text();
-        console.log(`⏳ Server error during polling (${statusResponse.status}). Waiting 10s before retry...`);
+        console.log(
+          `⏳ Server error during polling (${statusResponse.status}). Waiting 10s before retry...`,
+        );
         console.log(`   Error: ${errorText.substring(0, 200)}`);
         await sleep(10000);
         continue; // Retry the same poll
@@ -196,7 +231,9 @@ async function generateDIDVideo(
 
       if (!statusResponse.ok) {
         const errorText = await statusResponse.text();
-        throw new Error(`Status check failed (${statusResponse.status}): ${errorText}`);
+        throw new Error(
+          `Status check failed (${statusResponse.status}): ${errorText}`,
+        );
       }
 
       const statusData = await statusResponse.json();
@@ -206,7 +243,9 @@ async function generateDIDVideo(
       }
 
       if (statusData.status === 'error') {
-        throw new Error(statusData.error?.description || statusData.error || 'D-ID job error');
+        throw new Error(
+          statusData.error?.description || statusData.error || 'D-ID job error',
+        );
       }
     }
 
@@ -215,20 +254,28 @@ async function generateDIDVideo(
     // Retry on rate limit errors
     if (isRateLimitError(error) && retryCount < maxRetries) {
       const waitTime = (retryCount + 1) * 10000; // Exponential backoff: 10s, 20s, 30s
-      console.log(`⏳ Rate limit error. Waiting ${waitTime / 1000}s before retry ${retryCount + 1}/${maxRetries}...`);
+      console.log(
+        `⏳ Rate limit error. Waiting ${waitTime / 1000}s before retry ${
+          retryCount + 1
+        }/${maxRetries}...`,
+      );
       await sleep(waitTime);
       return generateDIDVideo(text, sourceImageUrl, retryCount + 1, maxRetries);
     }
-    
+
     // Retry on server errors (5xx)
     if (isRetryableError(error) && retryCount < maxRetries) {
       const waitTime = (retryCount + 1) * 15000; // Exponential backoff: 15s, 30s, 45s
-      console.log(`⏳ Server error detected. Waiting ${waitTime / 1000}s before retry ${retryCount + 1}/${maxRetries}...`);
+      console.log(
+        `⏳ Server error detected. Waiting ${waitTime / 1000}s before retry ${
+          retryCount + 1
+        }/${maxRetries}...`,
+      );
       console.log(`   Error: ${error?.message?.substring(0, 200)}`);
       await sleep(waitTime);
       return generateDIDVideo(text, sourceImageUrl, retryCount + 1, maxRetries);
     }
-    
+
     throw error;
   }
 }
@@ -256,7 +303,7 @@ async function downloadVideo(url: string, filePath: string): Promise<void> {
  */
 async function uploadToSupabase(
   filePath: string,
-  storagePath: string
+  storagePath: string,
 ): Promise<string> {
   if (!supabase) {
     throw new Error('Supabase client not initialized');
@@ -302,10 +349,11 @@ export async function generateAndStoreVideos(
   userId: string,
   scenarioId: string,
   level: 2 | 3,
-  sourceImageUrl?: string
+  sourceImageUrl?: string,
 ): Promise<Question[]> {
   // Use level-specific avatar image if not provided
-  const avatarImageUrl = sourceImageUrl || (level === 2 ? AVATAR_IMAGE_LEVEL2 : AVATAR_IMAGE_LEVEL3);
+  const avatarImageUrl =
+    sourceImageUrl || (level === 2 ? AVATAR_IMAGE_LEVEL2 : AVATAR_IMAGE_LEVEL3);
   if (!DID_API_KEY) {
     console.error('❌ DID_API_KEY not configured. Skipping video generation.');
     return questions; // Return original questions with placeholder URLs
@@ -317,22 +365,30 @@ export async function generateAndStoreVideos(
   }
 
   const updatedQuestions: Question[] = [];
-  
+
   // Rate limiting: Process videos one at a time with delays
-  const DELAY_BETWEEN_VIDEOS = 5000; // 5 seconds between video generation requests
+  const DELAY_BETWEEN_VIDEOS = 500; // 5 seconds between video generation requests
   const DELAY_AFTER_ERROR = 10000; // 10 seconds after an error
 
   for (let i = 0; i < questions.length; i++) {
     const question = questions[i];
-    
+
     // Add delay before each video (except the first one)
     if (i > 0) {
-      console.log(`⏳ Waiting ${DELAY_BETWEEN_VIDEOS / 1000}s before next video to avoid rate limits...`);
+      console.log(
+        `⏳ Waiting ${
+          DELAY_BETWEEN_VIDEOS / 1000
+        }s before next video to avoid rate limits...`,
+      );
       await sleep(DELAY_BETWEEN_VIDEOS);
     }
-    
+
     try {
-      console.log(`🎬 Generating video ${i + 1}/${questions.length} for question ${question.order}: "${question.text.substring(0, 50)}..."`);
+      console.log(
+        `🎬 Generating video ${i + 1}/${questions.length} for question ${
+          question.order
+        }: "${question.text.substring(0, 50)}..."`,
+      );
 
       // Generate video using D-ID (with built-in retry logic)
       const didVideoUrl = await generateDIDVideo(question.text, avatarImageUrl);
@@ -366,7 +422,10 @@ export async function generateAndStoreVideos(
           console.warn(`⚠️ Failed to delete temp file: ${cleanupError}`);
         }
       } catch (error: any) {
-        console.error(`❌ Failed to process video for question ${question.order}:`, error.message);
+        console.error(
+          `❌ Failed to process video for question ${question.order}:`,
+          error.message,
+        );
         // Keep original placeholder URL
         updatedQuestions.push(question);
         // Wait after error to avoid hammering the API
@@ -376,11 +435,11 @@ export async function generateAndStoreVideos(
       const isRateLimit = isRateLimitError(error);
       console.error(
         `❌ Failed to generate video for question ${question.order}: ${error.message}`,
-        isRateLimit ? '(Rate limit - will wait longer before next video)' : ''
+        isRateLimit ? '(Rate limit - will wait longer before next video)' : '',
       );
       // Keep original placeholder URL
       updatedQuestions.push(question);
-      
+
       // If rate limited, wait longer before next video
       const waitTime = isRateLimit ? DELAY_AFTER_ERROR * 2 : DELAY_AFTER_ERROR;
       console.log(`⏳ Waiting ${waitTime / 1000}s before next video...`);
@@ -390,4 +449,3 @@ export async function generateAndStoreVideos(
 
   return updatedQuestions;
 }
-

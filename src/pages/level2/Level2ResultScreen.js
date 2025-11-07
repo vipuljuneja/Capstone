@@ -279,12 +279,12 @@ const Level2ResultScreen = () => {
             <Text style={styles.sectionTitle}>PACE</Text>
             <Text style={styles.sectionText}>{getPaceFeedback(avgWpm)}</Text>
           </View>
-          <View style={styles.section}>
+          {/* <View style={styles.section}>
             <Text style={styles.sectionTitle}>TONE</Text>
             <Text style={styles.sectionText}>
               {getToneFeedback(transcriptionResults)}
             </Text>
-          </View>
+          </View> */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>FILLER WORDS</Text>
             <Text style={styles.sectionText}>
