@@ -113,6 +113,11 @@ export default function PipoDetailScreen({ route, navigation }) {
     );
   }
 
+  // Ensure image is valid, provide fallback
+  const safeImage = pipo.image && (typeof pipo.image === 'object' || typeof pipo.image === 'number') 
+    ? pipo.image 
+    : require('../../../assets/pipo/pipo-hi.png'); // Fallback image
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#FFF" }}>
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 80 }}>
@@ -130,7 +135,7 @@ export default function PipoDetailScreen({ route, navigation }) {
         ) : (
           <>
             <View style={{ alignItems: "center", marginTop: 20, marginBottom: 10 }}>
-              <Image style={{ width: 126, height: 126 }} source={pipo.image} />
+              {safeImage && <Image style={{ width: 126, height: 126 }} source={safeImage} resizeMode="contain" />}
             </View>
 
             <Text style={{ textAlign: "center", color: "#999", fontSize: 13, marginBottom: 4 }}>
