@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, Platform } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -39,6 +39,8 @@ import Level3NoticeScreen from '../pages/level3/Level3NoticeScreen';
 import Level3IntroScreen from '../pages/level3/Level3IntroScreen';
 import Level3Screen from '../pages/level3/Level3Screen';
 import Level3ResultScreen from '../pages/level3/Level3ResultScreen';
+
+import SpecialMissionScreen from '../pages/Levels/SpecialMissionScreen';
 
 import SignupScreen from '../screens/auth/SignupScreen.js';
 import LoginScreen from '../screens/auth/LoginScreen.js';
@@ -259,6 +261,12 @@ export default function MainStack() {
       <Stack.Screen
         name="Level3ResultScreen"
         component={Level3ResultScreen}
+        options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="SpecialMissionScreen"
+        component={SpecialMissionScreen}
         options={{ headerShown: false }}
       />
 

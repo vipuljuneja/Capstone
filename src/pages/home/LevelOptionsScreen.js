@@ -33,6 +33,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
   const [locks, setLocks] = useState({
     level2Locked: true,
     level3Locked: true,
+    specialMissionLocked: true,
   });
   const userId = mongoUser?._id;
 
@@ -76,18 +77,20 @@ export default function LevelOptionsScreen({ route, navigation }) {
 
         const level2Unlocked = Boolean(progress.levels?.['2']?.unlockedAt);
         const level3Unlocked = Boolean(progress.levels?.['3']?.unlockedAt);
+        const level3Completed = Boolean(progress.levels?.['3']?.lastCompletedAt);
         setLocks({
           level2Locked: !level2Unlocked,
           level3Locked: !level3Unlocked,
+          specialMissionLocked: !level3Completed,
         });
 
         // If unlocked or we were just checking, break; else wait and retry (handles race after save)
-        if (level2Unlocked || level3Unlocked) break;
+        if (level2Unlocked || level3Unlocked || level3Completed) break;
         attempts += 1;
         await new Promise(r => setTimeout(r, 500));
       }
     } catch (e) {
-      setLocks({ level2Locked: true, level3Locked: true });
+      setLocks({ level2Locked: true, level3Locked: true, specialMissionLocked: true });
     } finally {
       ensureInFlightRef.current = false;
     }
@@ -274,18 +277,41 @@ export default function LevelOptionsScreen({ route, navigation }) {
         <View style={styles.levelRow}>
           <View style={styles.timelineColumn}>
             <View
-              style={[styles.timelineCircle, { backgroundColor: '#B0A0C0' }]}
+              style={[
+                styles.timelineCircle,
+                { backgroundColor: locks.specialMissionLocked ? '#B0A0C0' : '#6B5B95' },
+              ]}
             >
-              <Text style={styles.lockIcon}>🔒</Text>
+              {locks.specialMissionLocked ? (
+                <Text style={styles.lockIcon}>🔒</Text>
+              ) : (
+                <View style={styles.timelineDot} />
+              )}
             </View>
           </View>
 
-          <View style={styles.specialMission}>
+          <TouchableOpacity
+            style={[
+              styles.specialMission,
+              { opacity: locks.specialMissionLocked ? 0.6 : 1 },
+            ]}
+            onPress={() => {
+              if (!locks.specialMissionLocked) {
+                navigation.navigate('SpecialMissionScreen', {
+                  scenarioTitle: scenarioTitle,
+                  scenarioEmoji: scenarioEmoji,
+                });
+              }
+            }}
+            disabled={locks.specialMissionLocked}
+          >
             <Text style={styles.levelTitle}>Special Mission</Text>
             <Text style={styles.levelDescription}>
-              Complete all 3 levels to unlock
+              {locks.specialMissionLocked
+                ? 'Complete Level 3 to unlock'
+                : 'Your real-life mission awaits!'}
             </Text>
-          </View>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
