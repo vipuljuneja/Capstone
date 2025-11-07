@@ -17,6 +17,7 @@ import AudioWaveform from '../../Components/Audio/AudioWaveform';
 import scenarioService from '../../services/scenarioService';
 import { getUserLevelQuestions } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import BackIcon from '../../../assets/icons/back.svg';
 
 const { width, height } = Dimensions.get('window');
 
@@ -423,13 +424,27 @@ const Level3Screen = () => {
     <View style={styles.container}>
       {/* Header with Progress */}
       <View style={styles.header}>
-        <View style={styles.progressBar}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${((orbState.idx + 1) / orbState.totalLines) * 100}%` },
-            ]}
-          />
+        <TouchableOpacity
+          onPress={async () => {
+            // If recording is active, stop recording and camera first
+            if (isRecording) {
+              await handleStop();
+            }
+            navigation.goBack();
+          }}
+          style={styles.backButtonContainer}
+        >
+          <BackIcon width={20} height={20} style={styles.backButton} />
+        </TouchableOpacity>
+        <View style={styles.progressBarContainer}>
+          <View style={styles.progressBarTrack}>
+            <View
+              style={[
+                styles.progressBarFill,
+                { width: `${((orbState.idx + 1) / orbState.totalLines) * 100}%` },
+              ]}
+            />
+          </View>
         </View>
       </View>
 
@@ -524,20 +539,32 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     gap: 15,
   },
+  backButtonContainer: {
+    marginRight: 12,
+  },
   backButton: {
     fontSize: 28,
   },
-  progressBar: {
+  progressBarContainer: {
     flex: 1,
-    height: 8,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 4,
+    marginLeft: 12,
+    justifyContent: 'center',
+  },
+  progressBarTrack: {
+    width: '95%',
+    height: 14,
+    borderRadius: 9,
+    backgroundColor: '#e2e2e2',
+    alignSelf: 'center',
     overflow: 'hidden',
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#6B5B95',
-    borderRadius: 4,
+  progressBarFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#463855',
+    borderRadius: 9,
   },
   middleSection: {
     flex: 1,

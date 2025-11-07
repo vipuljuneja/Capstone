@@ -447,7 +447,11 @@ const Level2Screen = () => {
 
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => {
+          onPress={async () => {
+            // If recording is active, stop recording and camera first
+            if (isRecording) {
+              await handleStop();
+            }
             navigation.navigate('LevelOptions', route.params);
           }}
           style={styles.backButtonContainer}
