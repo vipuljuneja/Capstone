@@ -9,6 +9,7 @@ import {
   PanResponder,
   Dimensions,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AvatarGenerator from '../../Components/Avatar/AvatarGenerate';
@@ -27,6 +28,7 @@ const Level2Screen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { scenarioTitle, scenarioId } = route.params || {};
+  const [isNavigating, setIsNavigating] = useState(false);
 
   //Scenario States
   const [scenarioData, setScenarioData] = useState(null);
@@ -227,6 +229,35 @@ const Level2Screen = () => {
   }, [lastTranscriptionReceived, lastFacialAnalysisReceived]);
 
   // Navigation helper - called when both results are ready
+  // const finishAndNavigate = useCallback(() => {
+  //   console.log('Executing finishAndNavigate...');
+  //   waitingForFinalResult.current = false;
+  //   setLastTranscriptionReceived(false);
+  //   setLastFacialAnalysisReceived(false);
+
+  //   const currentState = avatarRef.current?.getState();
+  //   console.log('Current avatar state before navigation:', currentState);
+  //   const { scenarioEmoji } = route.params || {};
+
+  //   console.log(
+  //     'Here My Data',
+  //     transcriptionResultsRef.current,
+  //     facialAnalysisResultsRef.current,
+  //   );
+
+  //   setTimeout(() => {
+  //     navigation.navigate('Level2ResultScreen', {
+  //       totalQuestions: currentState?.totalLines || 5,
+  //       transcriptionResults: transcriptionResultsRef.current,
+  //       facialAnalysisResults: facialAnalysisResultsRef.current,
+  //       scenarioTitle: scenarioTitle || 'Ordering Coffee',
+  //       scenarioEmoji: scenarioEmoji || '☕',
+  //       scenarioId: scenarioId,
+  //     });
+  //     console.log('Navigation triggered');
+  //   }, 10000);
+  // }, [navigation, route.params]);
+
   const finishAndNavigate = useCallback(() => {
     console.log('Executing finishAndNavigate...');
     waitingForFinalResult.current = false;
@@ -237,11 +268,7 @@ const Level2Screen = () => {
     console.log('Current avatar state before navigation:', currentState);
     const { scenarioEmoji } = route.params || {};
 
-    console.log(
-      'Here My Data',
-      transcriptionResultsRef.current,
-      facialAnalysisResultsRef.current,
-    );
+    setIsNavigating(true); // Start navigation loading
 
     setTimeout(() => {
       navigation.navigate('Level2ResultScreen', {
@@ -253,7 +280,7 @@ const Level2Screen = () => {
         scenarioId: scenarioId,
       });
       console.log('Navigation triggered');
-    }, 10000);
+    }, 7000);
   }, [navigation, route.params]);
 
   // Start recording and processing
@@ -443,7 +470,7 @@ const Level2Screen = () => {
           onStateChange={handleStateChange}
           onInitialized={handleAvatarInitialized}
           imgURL={
-            'https://tujrvclzhnflmqkkotem.supabase.co/storage/v1/object/public/capstone/sula.png'
+            'https://tiapdsojkbqjucmjmjri.supabase.co/storage/v1/object/public/images/Hitina_Square.png'
           }
           lines={(scenarioData?.level2?.questions || [])
             .map(q => q.text)
@@ -468,11 +495,11 @@ const Level2Screen = () => {
       </View>
 
       {/* Waveform */}
-      <View
+      {/* <View
         style={isRecording ? styles.waveformVisible : styles.waveformHidden}
       >
         <AudioWaveform ref={waveformRef} />
-      </View>
+      </View> */}
 
       {/* Bottom Controls */}
       <View style={styles.bottomSection}>
@@ -485,7 +512,7 @@ const Level2Screen = () => {
         <TouchableOpacity
           style={isRecording ? styles.stopButton : styles.micButton}
           onPress={isRecording ? handleStop : handleStart}
-          disabled={!avatarReady && !isRecording}
+          disabled={(!avatarReady && !isRecording) || isNavigating} // disable during navigation loading
         >
           <Text style={styles.buttonEmoji}>
             {isRecording ? (
@@ -500,14 +527,23 @@ const Level2Screen = () => {
         {isRecording && (
           <TouchableOpacity
             onPress={handleNext}
-            disabled={orbState.speaking || orbState.loading}
+            disabled={orbState.speaking || orbState.loading || isNavigating} // disable during navigation loading
             style={[
               styles.nextButton,
-              (orbState.speaking || orbState.loading) && styles.buttonDisabled,
+              (orbState.speaking || orbState.loading || isNavigating) &&
+                styles.buttonDisabled,
             ]}
           >
             <Text style={styles.nextButtonText}>
-              {isLastQuestion ? '✓' : '→'}
+              {isLastQuestion ? (
+                isNavigating ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  '✓'
+                )
+              ) : (
+                '→'
+              )}
             </Text>
           </TouchableOpacity>
         )}

@@ -89,7 +89,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           fetchMongoUser(nextUser).catch(error => {
             // Silently handle errors - don't crash the app
             // The HomeScreen will retry when it loads
-            console.log('⚠️ Failed to fetch MongoDB user in auth callback:', error.message);
+            console.log(
+              '⚠️ Failed to fetch MongoDB user in auth callback:',
+              error.message,
+            );
           });
         });
       } else {

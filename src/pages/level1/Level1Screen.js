@@ -1,5 +1,11 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 import VoiceOrb from '../../Components/Avatar/VoiceORB';
 import AudioRecorder from '../../Components/Audio/AudioRecorder';
 import AudioWaveform from '../../Components/Audio/AudioWaveform';
@@ -17,6 +23,7 @@ const Level1Screen = () => {
   const [transcriptionResults, setTranscriptionResults] = useState([]);
   const [scenarioData, setScenarioData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const voiceOrbRef = useRef(null);
   const audioRecorderRef = useRef(null);
@@ -164,6 +171,89 @@ const Level1Screen = () => {
     resetLevel();
   }, [resetLevel]);
 
+  // const handleNext = useCallback(() => {
+  //   const currentState = voiceOrbRef.current?.getState();
+
+  //   if (!currentState) {
+  //     console.warn('⚠️ VoiceOrb state not available');
+  //     return;
+  //   }
+
+  //   console.log('➡️ Current state:', currentState);
+
+  //   if (currentState.idx === currentState.totalLines - 1) {
+  //     // Last question - wait for transcription then navigate
+  //     const navigateToResults = async () => {
+  //       console.log('✅ Last question completed, waiting for transcription...');
+
+  //       if (isRecording) {
+  //         // Stop recording
+  //         try {
+  //           if (waveformRef.current) {
+  //             await waveformRef.current.stop();
+  //           }
+  //         } catch (error) {
+  //           console.error('Waveform stop error:', error);
+  //         }
+
+  //         if (voiceOrbRef.current?.stop) {
+  //           voiceOrbRef.current.stop();
+  //         }
+
+  //         // Wait for transcription to complete
+  //         const transcriptionPromise = new Promise(resolve => {
+  //           transcriptionPromiseRef.current = { resolve };
+
+  //           // Timeout after 30 seconds
+  //           setTimeout(() => {
+  //             if (transcriptionPromiseRef.current) {
+  //               console.warn('⚠️ Transcription timeout, navigating anyway');
+  //               transcriptionPromiseRef.current.resolve(null);
+  //               transcriptionPromiseRef.current = null;
+  //             }
+  //           }, 30000);
+  //         });
+
+  //         if (audioRecorderRef.current) {
+  //           audioRecorderRef.current.stopRecording();
+  //         }
+
+  //         console.log('⏳ Waiting for final transcription...');
+  //         await transcriptionPromise;
+  //         console.log('✅ Transcription received!');
+
+  //         setIsRecording(false);
+  //       }
+
+  //       await new Promise(resolve => setTimeout(resolve, 500));
+
+  //       let finalResults = transcriptionResultsRef.current;
+  //       if (!finalResults || finalResults.length === 0) {
+  //         // If we timed out just before the transcript landed, give it a brief grace window
+  //         await new Promise(resolve => setTimeout(resolve, 1000));
+  //         finalResults = transcriptionResultsRef.current;
+  //       }
+  //       console.log('📤 Navigating with results:', finalResults);
+
+  //       const { scenarioEmoji } = route.params || {};
+
+  //       navigation.navigate('Level1ResultScreen', {
+  //         totalQuestions: currentState.totalLines,
+  //         transcriptionResults: finalResults,
+  //         scenarioTitle: scenarioTitle || 'Ordering Coffee',
+  //         scenarioEmoji: scenarioEmoji || '☕',
+  //         scenarioId: scenarioId,
+  //         ...route.params,
+  //       });
+  //     };
+
+  //     navigateToResults();
+  //   } else {
+  //     console.log('⏭️ Moving to next question');
+  //     voiceOrbRef.current?.next();
+  //   }
+  // }, [navigation, isRecording]);
+
   const handleNext = useCallback(() => {
     const currentState = voiceOrbRef.current?.getState();
 
@@ -175,12 +265,12 @@ const Level1Screen = () => {
     console.log('➡️ Current state:', currentState);
 
     if (currentState.idx === currentState.totalLines - 1) {
-      // Last question - wait for transcription then navigate
       const navigateToResults = async () => {
         console.log('✅ Last question completed, waiting for transcription...');
 
+        setIsNavigating(true); // Start loader and disable buttons
+
         if (isRecording) {
-          // Stop recording
           try {
             if (waveformRef.current) {
               await waveformRef.current.stop();
@@ -193,11 +283,9 @@ const Level1Screen = () => {
             voiceOrbRef.current.stop();
           }
 
-          // Wait for transcription to complete
           const transcriptionPromise = new Promise(resolve => {
             transcriptionPromiseRef.current = { resolve };
 
-            // Timeout after 30 seconds
             setTimeout(() => {
               if (transcriptionPromiseRef.current) {
                 console.warn('⚠️ Transcription timeout, navigating anyway');
@@ -218,14 +306,15 @@ const Level1Screen = () => {
           setIsRecording(false);
         }
 
+        // Small delay for UX smoothness
         await new Promise(resolve => setTimeout(resolve, 500));
 
         let finalResults = transcriptionResultsRef.current;
         if (!finalResults || finalResults.length === 0) {
-          // If we timed out just before the transcript landed, give it a brief grace window
           await new Promise(resolve => setTimeout(resolve, 1000));
           finalResults = transcriptionResultsRef.current;
         }
+
         console.log('📤 Navigating with results:', finalResults);
 
         const { scenarioEmoji } = route.params || {};
@@ -238,6 +327,9 @@ const Level1Screen = () => {
           scenarioId: scenarioId,
           ...route.params,
         });
+
+        // If needed to reset loader on back, do here; otherwise leave true until unmount
+        // setIsNavigating(false);
       };
 
       navigateToResults();
@@ -301,7 +393,9 @@ const Level1Screen = () => {
         <VoiceOrb
           ref={voiceOrbRef}
           onStateChange={handleStateChange}
-          lines={(scenarioData?.level1?.questions || []).map(q => q.text)}
+          lines={(scenarioData?.level1?.questions || [])
+            .map(q => q.text)
+            .splice(0, 1)}
         />
       </View>
 
@@ -323,6 +417,7 @@ const Level1Screen = () => {
         <TouchableOpacity
           style={isRecording ? styles.stopButton : styles.micButton}
           onPress={isRecording ? resetLevel : handleStart}
+          disabled={isNavigating} // disable during navigation loader
         >
           <Text style={styles.buttonEmoji}>
             {isRecording ? (
@@ -337,14 +432,23 @@ const Level1Screen = () => {
         {isRecording && (
           <TouchableOpacity
             onPress={handleNext}
-            disabled={orbState.speaking || orbState.loading}
+            disabled={orbState.speaking || orbState.loading || isNavigating} // disable buttons during navigation loading
             style={[
               styles.nextButton,
-              (orbState.speaking || orbState.loading) && styles.buttonDisabled,
+              (orbState.speaking || orbState.loading || isNavigating) &&
+                styles.buttonDisabled,
             ]}
           >
             <Text style={styles.nextButtonText}>
-              {isLastQuestion ? '✓' : '→'}
+              {isLastQuestion ? (
+                isNavigating ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  '✓'
+                )
+              ) : (
+                '→'
+              )}
             </Text>
           </TouchableOpacity>
         )}

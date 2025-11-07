@@ -193,6 +193,7 @@ const AvatarGenerator = forwardRef((props, ref) => {
         setGenerationProgress(((k + 1) / QUESTIONS.length) * 100);
       }
 
+      console.log('VideoURLS', videoUrls);
       setUrls(videoUrls);
       setIsInitialized(true);
       console.log('✅ All videos pre-generated and ready!');
