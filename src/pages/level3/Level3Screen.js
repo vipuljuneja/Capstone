@@ -154,6 +154,43 @@ const Level3Screen = () => {
     setAvatarReady(true);
   }, []);
 
+  // Cleanup function to stop all services (used when navigating away)
+  const cleanupServices = useCallback(async () => {
+    console.log('🧹 Cleaning up services...');
+    try {
+      if (waveformRef.current) {
+        await waveformRef.current.stop();
+      }
+    } catch (error) {
+      console.error('Waveform stop error:', error);
+    }
+
+    if (cameraRef.current) {
+      cameraRef.current.stopRecording();
+    }
+    if (avatarRef.current?.stop) {
+      avatarRef.current.stop();
+    }
+    if (audioRecorderRef.current) {
+      audioRecorderRef.current.stopRecording();
+    }
+
+    // Reset state
+    setIsRecording(false);
+    setTranscriptionResults([]);
+    setFacialAnalysisResults([]);
+    transcriptionResultsRef.current = [];
+    facialAnalysisResultsRef.current = [];
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      console.log('🧹 Level3Screen unmounting, cleaning up services...');
+      cleanupServices();
+    };
+  }, [cleanupServices]);
+
   const resetLevel = useCallback(() => {
     console.log('🔄 Resetting level to start');
 
@@ -450,7 +487,8 @@ const Level3Screen = () => {
 
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => {
+          onPress={async () => {
+            await cleanupServices();
             navigation.navigate('LevelOptions', route.params);
           }}
           style={styles.backButtonContainer}
