@@ -50,69 +50,131 @@ interface Question {
 }
 
 /**
- * Generate a video using D-ID API
+ * Sleep/delay utility
  */
-async function generateDIDVideo(text: string, sourceImageUrl: string = AVATAR_IMAGE_URL): Promise<string> {
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Check if error is a rate limit error
+ */
+function isRateLimitError(error: any): boolean {
+  const errorMessage = error?.message || '';
+  const errorText = error?.toString() || '';
+  return (
+    errorMessage.includes('429') ||
+    errorMessage.includes('rate limit') ||
+    errorMessage.includes('too many requests') ||
+    errorText.includes('429') ||
+    errorText.includes('rate limit') ||
+    errorText.includes('too many requests')
+  );
+}
+
+/**
+ * Generate a video using D-ID API with retry logic and rate limit handling
+ */
+async function generateDIDVideo(
+  text: string,
+  sourceImageUrl: string = AVATAR_IMAGE_URL,
+  retryCount = 0,
+  maxRetries = 3
+): Promise<string> {
   if (!DID_API_KEY) {
     throw new Error('DID_API_KEY not configured');
   }
 
   const auth = 'Basic ' + Buffer.from(`${DID_API_KEY}:`).toString('base64');
 
-  // Create talk
-  const createResponse = await fetch('https://api.d-id.com/talks', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: auth,
-    },
-    body: JSON.stringify({
-      script: {
-        type: 'text',
-        input: text,
-        provider: { type: 'microsoft', voice_id: 'en-US-JennyNeural' },
+  try {
+    // Create talk
+    const createResponse = await fetch('https://api.d-id.com/talks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: auth,
       },
-      source_url: sourceImageUrl,
-      config: { stitch: true },
-    }),
-  });
-
-  if (!createResponse.ok) {
-    const errorText = await createResponse.text();
-    throw new Error(`Create talk failed: ${errorText}`);
-  }
-
-  const { id } = await createResponse.json();
-  if (!id) {
-    throw new Error('No talk id returned');
-  }
-
-  // Poll for video completion
-  const maxTries = 120; // 4 minutes max
-  for (let tries = 0; tries < maxTries; tries++) {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    const statusResponse = await fetch(`https://api.d-id.com/talks/${id}`, {
-      headers: { Authorization: auth },
+      body: JSON.stringify({
+        script: {
+          type: 'text',
+          input: text,
+          provider: { type: 'microsoft', voice_id: 'en-US-JennyNeural' },
+        },
+        source_url: sourceImageUrl,
+        config: { stitch: true },
+      }),
     });
 
-    if (!statusResponse.ok) {
-      const errorText = await statusResponse.text();
-      throw new Error(`Status check failed: ${errorText}`);
+    // Handle rate limit errors
+    if (createResponse.status === 429) {
+      const retryAfter = createResponse.headers.get('retry-after');
+      const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : (retryCount + 1) * 10000; // Default: 10s, 20s, 30s
+      
+      if (retryCount < maxRetries) {
+        console.log(`⏳ Rate limited. Waiting ${waitTime / 1000}s before retry ${retryCount + 1}/${maxRetries}...`);
+        await sleep(waitTime);
+        return generateDIDVideo(text, sourceImageUrl, retryCount + 1, maxRetries);
+      } else {
+        throw new Error('Rate limit exceeded. Max retries reached.');
+      }
     }
 
-    const statusData = await statusResponse.json();
-
-    if (statusData.status === 'done' && statusData.result_url) {
-      return statusData.result_url;
+    if (!createResponse.ok) {
+      const errorText = await createResponse.text();
+      throw new Error(`Create talk failed: ${errorText}`);
     }
 
-    if (statusData.status === 'error') {
-      throw new Error(statusData.error?.description || statusData.error || 'D-ID job error');
+    const { id } = await createResponse.json();
+    if (!id) {
+      throw new Error('No talk id returned');
     }
+
+    // Poll for video completion
+    const maxTries = 120; // 4 minutes max
+    for (let tries = 0; tries < maxTries; tries++) {
+      await sleep(2000); // Wait 2 seconds between polls
+
+      const statusResponse = await fetch(`https://api.d-id.com/talks/${id}`, {
+        headers: { Authorization: auth },
+      });
+
+      // Handle rate limit during polling
+      if (statusResponse.status === 429) {
+        const retryAfter = statusResponse.headers.get('retry-after');
+        const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 10000;
+        console.log(`⏳ Rate limited during polling. Waiting ${waitTime / 1000}s...`);
+        await sleep(waitTime);
+        continue; // Retry the same poll
+      }
+
+      if (!statusResponse.ok) {
+        const errorText = await statusResponse.text();
+        throw new Error(`Status check failed: ${errorText}`);
+      }
+
+      const statusData = await statusResponse.json();
+
+      if (statusData.status === 'done' && statusData.result_url) {
+        return statusData.result_url;
+      }
+
+      if (statusData.status === 'error') {
+        throw new Error(statusData.error?.description || statusData.error || 'D-ID job error');
+      }
+    }
+
+    throw new Error('Timed out waiting for video (4 minutes)');
+  } catch (error: any) {
+    // Retry on rate limit errors
+    if (isRateLimitError(error) && retryCount < maxRetries) {
+      const waitTime = (retryCount + 1) * 10000; // Exponential backoff: 10s, 20s, 30s
+      console.log(`⏳ Rate limit error. Waiting ${waitTime / 1000}s before retry ${retryCount + 1}/${maxRetries}...`);
+      await sleep(waitTime);
+      return generateDIDVideo(text, sourceImageUrl, retryCount + 1, maxRetries);
+    }
+    throw error;
   }
-
-  throw new Error('Timed out waiting for video (4 minutes)');
 }
 
 /**
@@ -197,12 +259,24 @@ export async function generateAndStoreVideos(
   }
 
   const updatedQuestions: Question[] = [];
+  
+  // Rate limiting: Process videos one at a time with delays
+  const DELAY_BETWEEN_VIDEOS = 5000; // 5 seconds between video generation requests
+  const DELAY_AFTER_ERROR = 10000; // 10 seconds after an error
 
-  for (const question of questions) {
+  for (let i = 0; i < questions.length; i++) {
+    const question = questions[i];
+    
+    // Add delay before each video (except the first one)
+    if (i > 0) {
+      console.log(`⏳ Waiting ${DELAY_BETWEEN_VIDEOS / 1000}s before next video to avoid rate limits...`);
+      await sleep(DELAY_BETWEEN_VIDEOS);
+    }
+    
     try {
-      console.log(`🎬 Generating video for question ${question.order}: "${question.text.substring(0, 50)}..."`);
+      console.log(`🎬 Generating video ${i + 1}/${questions.length} for question ${question.order}: "${question.text.substring(0, 50)}..."`);
 
-      // Generate video using D-ID
+      // Generate video using D-ID (with built-in retry logic)
       const didVideoUrl = await generateDIDVideo(question.text, sourceImageUrl);
 
       // Create filename: {userId}_{scenarioId}_{level}_{order}.mp4
@@ -237,11 +311,22 @@ export async function generateAndStoreVideos(
         console.error(`❌ Failed to process video for question ${question.order}:`, error.message);
         // Keep original placeholder URL
         updatedQuestions.push(question);
+        // Wait after error to avoid hammering the API
+        await sleep(DELAY_AFTER_ERROR);
       }
     } catch (error: any) {
-      console.error(`❌ Failed to generate video for question ${question.order}:`, error.message);
+      const isRateLimit = isRateLimitError(error);
+      console.error(
+        `❌ Failed to generate video for question ${question.order}: ${error.message}`,
+        isRateLimit ? '(Rate limit - will wait longer before next video)' : ''
+      );
       // Keep original placeholder URL
       updatedQuestions.push(question);
+      
+      // If rate limited, wait longer before next video
+      const waitTime = isRateLimit ? DELAY_AFTER_ERROR * 2 : DELAY_AFTER_ERROR;
+      console.log(`⏳ Waiting ${waitTime / 1000}s before next video...`);
+      await sleep(waitTime);
     }
   }
 
