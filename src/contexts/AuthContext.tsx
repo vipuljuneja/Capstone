@@ -105,7 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, mongoUser: mongoUser || {}, refreshMongoUser }}
+      value={{ user, loading, mongoUser, refreshMongoUser }}
     >
       {children}
     </AuthContext.Provider>

@@ -1,5 +1,5 @@
 // src/screens/levels/Level2Screen.js
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -35,16 +35,31 @@ const Level2Screen = () => {
   const [scenarioData, setScenarioData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userQuestions, setUserQuestions] = useState(null); // User-specific questions with video URLs
+  
+  // Extract stable userId to prevent unnecessary re-renders
+  const userId = mongoUser?._id;
+  const lastLoadKeyRef = useRef(null);
 
   //Fetch User-Specific Questions (with Supabase video URLs)
   useEffect(() => {
+    // Create a unique key for this load attempt
+    const loadKey = `${scenarioId}-${userId || 'no-user'}`;
+    
+    // Prevent duplicate calls for the same scenarioId/userId combination
+    if (lastLoadKeyRef.current === loadKey) {
+      return;
+    }
+    
     const loadUserQuestions = async () => {
       try {
         setLoading(true);
-        if (scenarioId && mongoUser?._id) {
+        lastLoadKeyRef.current = loadKey; // Mark this combination as loading
+        
+        if (scenarioId && userId) {
+          
           // Fetch user-specific questions (includes Supabase video URLs)
           const questionsData = await getUserLevelQuestions(
-            mongoUser._id,
+            userId,
             scenarioId,
             'level2'
           );
@@ -68,6 +83,7 @@ const Level2Screen = () => {
         }
       } catch (error) {
         console.error('Failed to load questions:', error);
+        lastLoadKeyRef.current = null; // Reset on error to allow retry
         // Fallback to default scenario
         if (scenarioId) {
           try {
@@ -85,7 +101,7 @@ const Level2Screen = () => {
     };
 
     loadUserQuestions();
-  }, [scenarioId, mongoUser?._id]);
+  }, [scenarioId, userId]); // Use stable userId instead of mongoUser?._id
 
   const [isRecording, setIsRecording] = useState(false);
   const [avatarReady, setAvatarReady] = useState(false);
@@ -477,14 +493,15 @@ const Level2Screen = () => {
           imgURL={
             'https://tiapdsojkbqjucmjmjri.supabase.co/storage/v1/object/public/images/avatar-videos/690d2cffd0cad/6901a891dd02f9e665ba3de8/2/Hitina_Square.png'
           }
-          lines={
+          lines={useMemo(() => 
             userQuestions?.map(q => q.text) ||
-            (scenarioData?.level2?.questions || []).map(q => q.text)
-          }
-          videoUrls={
-            userQuestions?.map(q => q.videoUrl).filter(url => url && url.startsWith('http')) ||
-            null
-          }
+            (scenarioData?.level2?.questions || []).map(q => q.text) || [],
+            [userQuestions, scenarioData?.level2?.questions]
+          )}
+          videoUrls={useMemo(() => 
+            userQuestions?.map(q => q.videoUrl).filter(url => url && url.startsWith('http')) || null,
+            [userQuestions]
+          )}
         />
 
         {/* Draggable Camera Overlay */}

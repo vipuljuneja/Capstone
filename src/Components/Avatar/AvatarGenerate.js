@@ -33,7 +33,14 @@ const AvatarGenerator = forwardRef((props, ref) => {
     videoUrls = null, // Optional: pre-generated video URLs (array of strings)
   } = props;
 
-  const QUESTIONS = lines;
+  // Memoize questions to prevent unnecessary re-renders
+  const QUESTIONS = useMemo(() => lines, [lines.join(',')]);
+  
+  // Memoize videoUrls to prevent unnecessary re-initialization
+  const stableVideoUrls = useMemo(() => {
+    if (!videoUrls || !Array.isArray(videoUrls)) return null;
+    return videoUrls;
+  }, [videoUrls?.join(',')]);
 
   const [idx, setIdx] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -48,6 +55,7 @@ const AvatarGenerator = forwardRef((props, ref) => {
   const cache = useRef(new Map());
   const AUTH = 'Basic ' + btoa(`${DID_API_KEY}:`);
   const shouldPlayRef = useRef(false);
+  const lastInitKeyRef = useRef(null);
 
   // Expose methods via ref (same API as VoiceOrb)
   useImperativeHandle(ref, () => ({
@@ -100,8 +108,23 @@ const AvatarGenerator = forwardRef((props, ref) => {
   }, [speaking, loading, idx, isInitialized, onStateChange, QUESTIONS.length]);
 
   useEffect(() => {
+    // Create a unique key for this initialization
+    const questionsKey = QUESTIONS.join(',');
+    const urlsKey = stableVideoUrls?.join(',') || 'no-urls';
+    const initKey = `${questionsKey}-${urlsKey}`;
+    
+    // Prevent duplicate initialization for the same questions/videoUrls
+    if (lastInitKeyRef.current === initKey && isInitialized) {
+      return;
+    }
+    
+    lastInitKeyRef.current = initKey;
+    // Reset initialization state when questions/videoUrls change
+    setIsInitialized(false);
+    setUrls([]);
     initializeVideos();
-  }, [QUESTIONS, videoUrls]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questionsKey, urlsKey]);
 
   // Notify parent when initialization completes
   useEffect(() => {
@@ -193,9 +216,9 @@ const AvatarGenerator = forwardRef((props, ref) => {
     if (isInitialized || loading) return;
 
     // If videoUrls are provided, use them directly (no generation needed)
-    if (videoUrls && Array.isArray(videoUrls) && videoUrls.length > 0) {
+    if (stableVideoUrls && Array.isArray(stableVideoUrls) && stableVideoUrls.length > 0) {
       console.log('✅ Using provided video URLs (pre-generated videos)');
-      setUrls(videoUrls);
+      setUrls(stableVideoUrls);
       setIsInitialized(true);
       return;
     }
