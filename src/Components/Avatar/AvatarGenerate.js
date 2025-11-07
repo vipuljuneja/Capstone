@@ -30,6 +30,7 @@ const AvatarGenerator = forwardRef((props, ref) => {
     onInitialized,
     lines = [],
     imgURL = AVATAR_IMAGE_URL,
+    videoUrls = null, // Optional: pre-generated video URLs (array of strings)
   } = props;
 
   const QUESTIONS = lines;
@@ -100,7 +101,7 @@ const AvatarGenerator = forwardRef((props, ref) => {
 
   useEffect(() => {
     initializeVideos();
-  }, [QUESTIONS]);
+  }, [QUESTIONS, videoUrls]);
 
   // Notify parent when initialization completes
   useEffect(() => {
@@ -134,6 +135,12 @@ const AvatarGenerator = forwardRef((props, ref) => {
       }),
     });
 
+    // Handle rate limit errors
+    if (create.status === 429) {
+      const errorText = await create.text();
+      throw new Error('Rate limit exceeded (429): ' + errorText);
+    }
+
     if (!create.ok) {
       const errorText = await create.text();
       throw new Error('Create talk failed: ' + errorText);
@@ -149,6 +156,13 @@ const AvatarGenerator = forwardRef((props, ref) => {
       const res = await fetch(`https://api.d-id.com/talks/${id}`, {
         headers: { Authorization: AUTH },
       });
+
+      // Handle rate limit during polling
+      if (res.status === 429) {
+        console.log('⏳ Rate limited during polling. Waiting 10s...');
+        await new Promise(r => setTimeout(r, 10000));
+        continue; // Retry the same poll
+      }
 
       if (!res.ok) {
         const errorText = await res.text();
@@ -174,26 +188,52 @@ const AvatarGenerator = forwardRef((props, ref) => {
     throw new Error('Timed out waiting for video (4 minutes)');
   };
 
-  // Initialize all videos (generate them in background)
+  // Initialize all videos (generate them in background OR use provided URLs)
   const initializeVideos = async () => {
     if (isInitialized || loading) return;
 
+    // If videoUrls are provided, use them directly (no generation needed)
+    if (videoUrls && Array.isArray(videoUrls) && videoUrls.length > 0) {
+      console.log('✅ Using provided video URLs (pre-generated videos)');
+      setUrls(videoUrls);
+      setIsInitialized(true);
+      return;
+    }
+
+    // Otherwise, generate videos using D-ID API
     setLoading(true);
     setGenerationProgress(0);
     console.log('🎬 Pre-generating all avatar videos...');
 
     try {
-      const videoUrls = [];
+      const generatedUrls = [];
+      const DELAY_BETWEEN_VIDEOS = 5000; // 5 seconds between requests to avoid rate limits
 
-      // Generate all videos
+      // Generate all videos sequentially with delays
       for (let k = 0; k < QUESTIONS.length; k++) {
+        // Add delay before each video (except the first one)
+        if (k > 0) {
+          console.log(`⏳ Waiting ${DELAY_BETWEEN_VIDEOS / 1000}s before next video to avoid rate limits...`);
+          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_VIDEOS));
+        }
+        
         console.log(`Generating video ${k + 1}/${QUESTIONS.length}...`);
-        const url = await makeVideo(QUESTIONS[k], k);
-        videoUrls.push(url);
-        setGenerationProgress(((k + 1) / QUESTIONS.length) * 100);
+        try {
+          const url = await makeVideo(QUESTIONS[k], k);
+          generatedUrls.push(url);
+          setGenerationProgress(((k + 1) / QUESTIONS.length) * 100);
+        } catch (error) {
+          console.error(`❌ Failed to generate video ${k + 1}:`, error);
+          // If rate limited, wait longer before next attempt
+          if (error?.message?.includes('429') || error?.message?.includes('rate limit')) {
+            console.log('⏳ Rate limited. Waiting 15s before next video...');
+            await new Promise(resolve => setTimeout(resolve, 15000));
+          }
+          // Continue with next video even if one fails
+        }
       }
 
-      setUrls(videoUrls);
+      setUrls(generatedUrls);
       setIsInitialized(true);
       console.log('✅ All videos pre-generated and ready!');
     } catch (e) {

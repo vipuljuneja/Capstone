@@ -208,6 +208,21 @@ const Level1ResultScreen = () => {
     });
   };
 
+  const getResultTitle = () => {
+    // You can customize this logic based on your metrics, here is an example:
+    if (
+      avgWpm >= 100 &&
+      avgWpm <= 150 &&
+      totalFillers <= 3 &&
+      avgEyeContact >= 40 &&
+      avgSmile >= 40 &&
+      avgPosture >= 40
+    ) {
+      return 'Great job! Keep up the good work!';
+    }
+    return 'Good attempt! Some areas can be improved.';
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -237,7 +252,7 @@ const Level1ResultScreen = () => {
             style={styles.characterImage}
             resizeMode="contain"
           />
-          <Text style={styles.title}>That was smooth!</Text>
+          <Text style={styles.title}>{getResultTitle()}</Text>
         </View>
 
         {/* Feedback Card */}
@@ -287,56 +302,6 @@ const Level1ResultScreen = () => {
                 : "You're using pauses well! This gives your listener moments to absorb what you're saying."}
             </Text>
           </View>
-        </View>
-
-        {/* Summary Stats */}
-        <View style={styles.statsCard}>
-          <Text style={styles.statsTitle}>Session Summary</Text>
-          <View style={styles.statsRow}>
-            <Text style={styles.statsLabel}>Questions completed:</Text>
-            <Text style={styles.statsValue}>{transcriptionResults.length}</Text>
-          </View>
-          <View style={styles.statsRow}>
-            <Text style={styles.statsLabel}>Average WPM:</Text>
-            <Text style={styles.statsValue}>{metrics.avgWpm}</Text>
-          </View>
-          <View style={styles.statsRow}>
-            <Text style={styles.statsLabel}>Total filler words:</Text>
-            <Text style={styles.statsValue}>{metrics.totalFillers}</Text>
-          </View>
-          <View style={styles.statsRow}>
-            <Text style={styles.statsLabel}>Total pauses:</Text>
-            <Text style={styles.statsValue}>{metrics.totalPauses}</Text>
-          </View>
-
-          {/* Session Save Status */}
-          <View style={styles.statsRow}>
-            <Text style={styles.statsLabel}>Session status:</Text>
-            <Text
-              style={[
-                styles.statsValue,
-                {
-                  color: savedSessionId
-                    ? '#10b981'
-                    : isSaving
-                    ? '#f59e0b'
-                    : '#ef4444',
-                },
-              ]}
-            >
-              {savedSessionId
-                ? 'Saved ✓'
-                : isSaving
-                ? 'Saving...'
-                : 'Not saved'}
-            </Text>
-          </View>
-
-          {saveError && (
-            <View style={styles.errorRow}>
-              <Text style={styles.errorText}>Save failed: {saveError}</Text>
-            </View>
-          )}
         </View>
       </ScrollView>
 
