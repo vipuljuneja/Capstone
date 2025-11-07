@@ -439,6 +439,9 @@ const Level3Screen = () => {
           ref={avatarRef}
           onStateChange={handleStateChange}
           onInitialized={handleAvatarInitialized}
+          imgURL={
+            'https://tujrvclzhnflmqkkotem.supabase.co/storage/v1/object/public/capstone/sula.png'
+          }
           lines={
             userQuestions?.map(q => q.text) ||
             (scenarioData?.level3?.questions || []).map(q => q.text)

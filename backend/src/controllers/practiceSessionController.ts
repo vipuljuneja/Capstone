@@ -186,21 +186,8 @@ export const completeSession = async (req: Request, res: Response): Promise<void
       progress.totalSessions += 1;
       progress.lastPlayedAt = new Date();
 
-      if (aggregate.score >= 70 && session.level < 3) {
-        const nextLevelKey = (session.level + 1).toString();
-        const nextLevelProgress =
-          progress.levels.get(nextLevelKey) || {
-            attempts: 0,
-            lastCompletedAt: null,
-            achievements: [],
-            unlockedAt: null
-          };
-
-        if (!nextLevelProgress.unlockedAt) {
-          nextLevelProgress.unlockedAt = new Date();
-          progress.levels.set(nextLevelKey, nextLevelProgress);
-        }
-      }
+      // Don't unlock next level here - wait for videos to be generated
+      // Unlock will happen after video generation completes
 
       await progress.save();
     }
@@ -229,6 +216,69 @@ export const completeSession = async (req: Request, res: Response): Promise<void
             count: nextQuestions.length,
             preview: nextQuestions.slice(0, 2)
           });
+
+          // Generate and store videos in background, then unlock level
+          (async () => {
+            try {
+              console.log('🎬 Starting background video generation and storage (completeSession)...');
+              const updatedQuestions = await generateAndStoreVideos(
+                nextQuestions,
+                session.userId.toString(),
+                session.scenarioId.toString(),
+                nextLevel
+              );
+
+              // Update UserScenarioOverrides with new video URLs
+              const updatedLevelKey = nextLevel === 2 ? 'level2' : 'level3';
+              const updatedUpdate: any = {};
+              updatedUpdate[updatedLevelKey] = { questions: updatedQuestions };
+              
+              await UserScenarioOverrides.findOneAndUpdate(
+                { userId: session.userId, scenarioId: session.scenarioId },
+                { $set: updatedUpdate }
+              );
+
+              // Count successfully generated videos
+              const successfulVideos = updatedQuestions.filter(q => q.videoUrl && q.videoUrl.startsWith('http')).length;
+              
+              console.log('✅ Successfully updated questions with Supabase video URLs (completeSession)', {
+                userId: session.userId,
+                scenarioId: session.scenarioId,
+                nextLevel,
+                updatedCount: successfulVideos
+              });
+
+              // Unlock next level only after videos are generated
+              if (aggregate && aggregate.score >= 70 && successfulVideos > 0) {
+                const progress = await Progress.findOne({ 
+                  userId: session.userId, 
+                  scenarioId: session.scenarioId 
+                });
+                if (progress) {
+                  const nextLevelKey = nextLevel.toString();
+                  const nextLevelProgress = progress.levels.get(nextLevelKey) || {
+                    attempts: 0,
+                    lastCompletedAt: null,
+                    achievements: [],
+                    unlockedAt: null
+                  };
+
+                  if (!nextLevelProgress.unlockedAt) {
+                    nextLevelProgress.unlockedAt = new Date();
+                    progress.levels.set(nextLevelKey, nextLevelProgress);
+                    await progress.save();
+                    console.log('🔓 Next level unlocked after video generation (completeSession)', {
+                      userId: session.userId,
+                      scenarioId: session.scenarioId,
+                      nextLevel
+                    });
+                  }
+                }
+              }
+            } catch (error: any) {
+              console.error('❌ Background video generation/storage failed (completeSession):', error.message);
+            }
+          })();
         } else {
           console.log('ℹ️ No next-level questions generated in completeSession.');
         }
@@ -455,21 +505,8 @@ export const createCompleteSession = async (req: Request, res: Response): Promis
       progress.totalSessions += 1;
       progress.lastPlayedAt = new Date();
 
-      // Unlock next level if score is high enough
-      if (aggregate && aggregate.score >= 70 && level < 3) {
-        const nextLevelKey = (level + 1).toString();
-        const nextLevelProgress = progress.levels.get(nextLevelKey) || {
-          attempts: 0,
-          lastCompletedAt: null,
-          achievements: [],
-          unlockedAt: null
-        };
-
-        if (!nextLevelProgress.unlockedAt) {
-          nextLevelProgress.unlockedAt = new Date();
-          progress.levels.set(nextLevelKey, nextLevelProgress);
-        }
-      }
+      // Don't unlock next level here - wait for videos to be generated
+      // Unlock will happen after video generation completes
 
       await progress.save();
     }
@@ -499,6 +536,7 @@ export const createCompleteSession = async (req: Request, res: Response): Promis
 
           // Generate and store videos in background (fire-and-forget)
           // This runs asynchronously and updates the questions with Supabase URLs
+          // After videos are generated, unlock the next level
           (async () => {
             try {
               console.log('🎬 Starting background video generation and storage...');
@@ -519,12 +557,57 @@ export const createCompleteSession = async (req: Request, res: Response): Promis
                 { $set: updatedUpdate }
               );
 
+              // Count successfully generated videos (those with Supabase URLs)
+              const successfulVideos = updatedQuestions.filter(q => q.videoUrl && q.videoUrl.startsWith('http')).length;
+              
               console.log('✅ Successfully updated questions with Supabase video URLs', {
                 userId,
                 scenarioId,
                 nextLevel,
-                updatedCount: updatedQuestions.filter(q => q.videoUrl.startsWith('http')).length
+                updatedCount: successfulVideos,
+                totalQuestions: updatedQuestions.length
               });
+
+              // Unlock next level only after videos are generated
+              // Check if score is high enough and if we have successfully generated videos
+              if (aggregate && aggregate.score >= 70 && successfulVideos > 0) {
+                const progress = await Progress.findOne({ userId, scenarioId });
+                if (progress) {
+                  const nextLevelKey = nextLevel.toString();
+                  const nextLevelProgress = progress.levels.get(nextLevelKey) || {
+                    attempts: 0,
+                    lastCompletedAt: null,
+                    achievements: [],
+                    unlockedAt: null
+                  };
+
+                  if (!nextLevelProgress.unlockedAt) {
+                    nextLevelProgress.unlockedAt = new Date();
+                    progress.levels.set(nextLevelKey, nextLevelProgress);
+                    await progress.save();
+                    console.log('🔓 Next level unlocked after video generation', {
+                      userId,
+                      scenarioId,
+                      nextLevel,
+                      unlockedAt: nextLevelProgress.unlockedAt
+                    });
+                  } else {
+                    console.log('ℹ️ Next level already unlocked', {
+                      userId,
+                      scenarioId,
+                      nextLevel
+                    });
+                  }
+                }
+              } else {
+                console.log('⚠️ Cannot unlock next level:', {
+                  userId,
+                  scenarioId,
+                  nextLevel,
+                  scoreHighEnough: aggregate && aggregate.score >= 70,
+                  videosGenerated: successfulVideos > 0
+                });
+              }
             } catch (error: any) {
               console.error('❌ Background video generation/storage failed:', error.message);
               // Don't throw - this is a background process, failures shouldn't affect the main flow

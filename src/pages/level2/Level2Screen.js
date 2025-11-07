@@ -475,7 +475,7 @@ const Level2Screen = () => {
           onStateChange={handleStateChange}
           onInitialized={handleAvatarInitialized}
           imgURL={
-            'https://tujrvclzhnflmqkkotem.supabase.co/storage/v1/object/public/capstone/sula.png'
+            'https://tiapdsojkbqjucmjmjri.supabase.co/storage/v1/object/public/images/avatar-videos/690d2cffd0cad/6901a891dd02f9e665ba3de8/2/Hitina_Square.png'
           }
           lines={
             userQuestions?.map(q => q.text) ||

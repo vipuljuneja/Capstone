@@ -12,7 +12,9 @@ const streamPipeline = promisify(pipeline);
 
 // D-ID API configuration
 const DID_API_KEY = process.env.DID_API_KEY || process.env.AVATAR_API_KEY;
-const AVATAR_IMAGE_URL = process.env.AVATAR_IMAGE_URL || 'https://create-images-results.d-id.com/api_docs/assets/noelle.jpeg';
+// Avatar images for different levels
+const AVATAR_IMAGE_LEVEL2 = process.env.AVATAR_IMAGE_LEVEL2 || 'https://tiapdsojkbqjucmjmjri.supabase.co/storage/v1/object/public/images/avatar-videos/690d2cffd0cad/6901a891dd02f9e665ba3de8/2/Hitina_Square.png';
+const AVATAR_IMAGE_LEVEL3 = process.env.AVATAR_IMAGE_LEVEL3 || 'https://tujrvclzhnflmqkkotem.supabase.co/storage/v1/object/public/capstone/sula.png';
 
 // Supabase configuration
 const supabaseUrl = process.env.SUPABASE_URL || 'https://tiapdsojkbqjucmjmjri.supabase.co';
@@ -77,7 +79,7 @@ function isRateLimitError(error: any): boolean {
  */
 async function generateDIDVideo(
   text: string,
-  sourceImageUrl: string = AVATAR_IMAGE_URL,
+  sourceImageUrl: string,
   retryCount = 0,
   maxRetries = 3
 ): Promise<string> {
@@ -248,6 +250,8 @@ export async function generateAndStoreVideos(
   level: 2 | 3,
   sourceImageUrl?: string
 ): Promise<Question[]> {
+  // Use level-specific avatar image if not provided
+  const avatarImageUrl = sourceImageUrl || (level === 2 ? AVATAR_IMAGE_LEVEL2 : AVATAR_IMAGE_LEVEL3);
   if (!DID_API_KEY) {
     console.error('❌ DID_API_KEY not configured. Skipping video generation.');
     return questions; // Return original questions with placeholder URLs
@@ -277,7 +281,7 @@ export async function generateAndStoreVideos(
       console.log(`🎬 Generating video ${i + 1}/${questions.length} for question ${question.order}: "${question.text.substring(0, 50)}..."`);
 
       // Generate video using D-ID (with built-in retry logic)
-      const didVideoUrl = await generateDIDVideo(question.text, sourceImageUrl);
+      const didVideoUrl = await generateDIDVideo(question.text, avatarImageUrl);
 
       // Create filename: {userId}_{scenarioId}_{level}_{order}.mp4
       const fileName = `${userId}_${scenarioId}_level${level}_${question.order}.mp4`;
