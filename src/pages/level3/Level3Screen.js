@@ -40,7 +40,6 @@ const Level3Screen = () => {
   useEffect(() => {
     const loadUserQuestions = async () => {
       try {
-        setLoading(true);
         if (scenarioId && mongoUser?._id) {
           // Fetch user-specific questions (includes Supabase video URLs)
           const questionsData = await getUserLevelQuestions(
@@ -462,14 +461,6 @@ const Level3Screen = () => {
   }, [isRecording]);
 
   const isLastQuestion = orbState.idx === orbState.totalLines - 1;
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading scenario...</Text>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>

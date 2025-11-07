@@ -463,14 +463,6 @@ const Level2Screen = () => {
 
   const isLastQuestion = orbState.idx === orbState.totalLines - 1;
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading scenario...</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       {/* Header with Progress */}
