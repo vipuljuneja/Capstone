@@ -70,7 +70,7 @@ const Level3Screen = () => {
           setOrbState(prev => ({ ...prev, totalLines: questionCount }));
         }
       } catch (error) {
-        console.error('Failed to load questions:', error);
+        // console.error('Failed to load questions:', error);
         // Fallback to default scenario
         if (scenarioId) {
           try {
@@ -79,7 +79,7 @@ const Level3Screen = () => {
             const questionCount = scenario?.level3?.questions?.length || 5;
             setOrbState(prev => ({ ...prev, totalLines: questionCount }));
           } catch (fallbackError) {
-            console.error('Failed to load fallback scenario:', fallbackError);
+            // console.error('Failed to load fallback scenario:', fallbackError);
           }
         }
       } finally {

@@ -100,7 +100,18 @@ const AvatarGenerator = forwardRef((props, ref) => {
   }, [speaking, loading, idx, isInitialized, onStateChange, QUESTIONS.length]);
 
   useEffect(() => {
-    initializeVideos();
+    let cancelled = false;
+
+    const run = async () => {
+      if (cancelled) return;
+      await initializeVideos(() => cancelled);
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
   }, [QUESTIONS, videoUrls]);
 
   // Notify parent when initialization completes
@@ -189,12 +200,13 @@ const AvatarGenerator = forwardRef((props, ref) => {
   };
 
   // Initialize all videos (generate them in background OR use provided URLs)
-  const initializeVideos = async () => {
+  const initializeVideos = async (isCancelled) => {
     if (isInitialized || loading) return;
 
     // If videoUrls are provided, use them directly (no generation needed)
     if (videoUrls && Array.isArray(videoUrls) && videoUrls.length > 0) {
       console.log('✅ Using provided video URLs (pre-generated videos)');
+      if (isCancelled && isCancelled()) return;
       setUrls(videoUrls);
       setIsInitialized(true);
       return;
@@ -211,15 +223,18 @@ const AvatarGenerator = forwardRef((props, ref) => {
 
       // Generate all videos sequentially with delays
       for (let k = 0; k < QUESTIONS.length; k++) {
+        if (isCancelled && isCancelled()) break;
         // Add delay before each video (except the first one)
         if (k > 0) {
           console.log(`⏳ Waiting ${DELAY_BETWEEN_VIDEOS / 1000}s before next video to avoid rate limits...`);
           await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_VIDEOS));
+          if (isCancelled && isCancelled()) break;
         }
         
         console.log(`Generating video ${k + 1}/${QUESTIONS.length}...`);
         try {
           const url = await makeVideo(QUESTIONS[k], k);
+          if (isCancelled && isCancelled()) break;
           generatedUrls.push(url);
           setGenerationProgress(((k + 1) / QUESTIONS.length) * 100);
         } catch (error) {
@@ -228,11 +243,13 @@ const AvatarGenerator = forwardRef((props, ref) => {
           if (error?.message?.includes('429') || error?.message?.includes('rate limit')) {
             console.log('⏳ Rate limited. Waiting 15s before next video...');
             await new Promise(resolve => setTimeout(resolve, 15000));
+            if (isCancelled && isCancelled()) break;
           }
           // Continue with next video even if one fails
         }
       }
 
+      if (isCancelled && isCancelled()) return;
       setUrls(generatedUrls);
       setIsInitialized(true);
       console.log('✅ All videos pre-generated and ready!');
@@ -240,6 +257,7 @@ const AvatarGenerator = forwardRef((props, ref) => {
       console.error('Error initializing videos:', e);
       setVideoError(e?.message || String(e));
     } finally {
+      if (isCancelled && isCancelled()) return;
       setLoading(false);
     }
   };

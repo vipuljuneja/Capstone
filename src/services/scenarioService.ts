@@ -14,7 +14,7 @@ class ScenarioService {
     try {
       return await getAllScenarios();
     } catch (error) {
-      console.error('Failed to fetch scenarios:', error);
+      // console.error('Failed to fetch scenarios:', error);
       // Return fallback scenarios if API fails
       return this.getFallbackScenarios();
     }
@@ -27,7 +27,7 @@ class ScenarioService {
     try {
       return await getScenarioById(id);
     } catch (error) {
-      console.error(`Failed to fetch scenario ${id}:`, error);
+      // console.error(`Failed to fetch scenario ${id}:`, error);
       throw error;
     }
   }
@@ -39,7 +39,7 @@ class ScenarioService {
     try {
       return await initializeDefaultScenarios();
     } catch (error) {
-      console.error('Failed to initialize default scenarios:', error);
+      // console.error('Failed to initialize default scenarios:', error);
       throw error;
     }
   }
@@ -59,7 +59,7 @@ class ScenarioService {
     try {
       return await updateScenarioQuestions(id, level, questions);
     } catch (error) {
-      console.error(`Failed to update scenario ${id} questions:`, error);
+      // console.error(`Failed to update scenario ${id} questions:`, error);
       throw error;
     }
   }

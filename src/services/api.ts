@@ -937,10 +937,10 @@ export const getScenarioById = async (
 
     return response.data.data;
   } catch (error: any) {
-    console.error(
-      `❌ Failed to fetch scenario ${id}:`,
-      error.response?.data || error.message,
-    );
+    // console.error(
+    //   `❌ Failed to fetch scenario ${id}:`,
+    //   error.response?.data || error.message,
+    // );
     throw error;
   }
 };
