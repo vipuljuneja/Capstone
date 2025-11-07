@@ -45,12 +45,19 @@ const AudioWaveform = forwardRef((props, ref) => {
   };
 
   const stopRecording = async () => {
+    if (!isRecording) {
+      return null;
+    }
+
     try {
       const audioPath = await waveformRef.current?.stopRecord();
       setIsRecording(false);
       console.log('Audio saved at:', audioPath);
+      return audioPath;
     } catch (error) {
-      console.error('Error stopping recording:', error);
+      // console.error('Error stopping recording:', error);
+      setIsRecording(false);
+      return null;
     }
   };
 

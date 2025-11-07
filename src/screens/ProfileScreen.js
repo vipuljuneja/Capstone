@@ -3,6 +3,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { Platform, BackHandler, Alert } from 'react-native';
 import { HeaderBackButton } from '@react-navigation/elements';
+import ConfirmDialog from '../Components/AlertBox/ConfirmDialog';
 
 import {
   View,
@@ -25,6 +26,7 @@ export default function ProfileScreen({ route }) {
   const backToHomeOnce = route?.params?.backToHomeOnce;
   const { mongoUser, refreshMongoUser } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const navigation = useNavigation();
 
   const handleSignOut = useCallback(async () => {
@@ -142,7 +144,7 @@ export default function ProfileScreen({ route }) {
       title: 'Change Password',
       desc: 'Update your password safely',
       icon: images.set_lock,
-      bg: require('../../assets/gradients/yel-gradient.png'),
+      bg: require('../../assets/gradients/yel-gradient-min.png'),
       onPress: () =>
         navigation && navigation.navigate?.('ChangePasswordScreen'),
     },
@@ -162,28 +164,28 @@ export default function ProfileScreen({ route }) {
       title: 'Revisit Guide',
       desc: 'Review the essential steps anytime',
       icon: images.set_revisit,
-      bg: require('../../assets/gradients/purp_gradient.png'),
+      bg: require('../../assets/gradients/purp_gradient-min.png'),
       onPress: () => navigation && navigation.navigate?.('Guide'),
     },
     {
       title: 'Terms Of Use',
       desc: 'App rules at a glance',
       icon: images.set_TOU,
-      bg: require('../../assets/gradients/bl_gradient.png'),
+      bg: require('../../assets/gradients/bl_gradient-min.png'),
       onPress: () => navigation && navigation.navigate?.('Terms'),
     },
     {
       title: 'Privacy Policy',
       desc: 'How we handle your data',
       icon: images.set_PP,
-      bg: require('../../assets/gradients/gr-gradient.png'),
+      bg: require('../../assets/gradients/gr-gradient-min.png'),
       onPress: () => navigation && navigation.navigate?.('PrivacyPolicy'),
     },
     {
       title: 'Emotional Support',
       desc: 'Reach out when it feels heavy',
       icon: require('../../assets/pipo-heart.png'),
-      bg: require('../../assets/gradients/yel-gradient.png'),
+      bg: require('../../assets/gradients/yel-gradient-min.png'),
       onPress: () => navigation && navigation.navigate?.('EmotionalSupport'),
     },
   ];
@@ -236,7 +238,7 @@ export default function ProfileScreen({ route }) {
       </View>
       <View style={{ paddingVertical: 8, paddingBottom: 24 }}>
         <TouchableOpacity
-          onPress={handleSignOut}
+          onPress={() => setShowLogoutDialog(true)}
           style={[S.logout, signingOut && S.disabled]}
           disabled={signingOut}
         >
@@ -247,6 +249,21 @@ export default function ProfileScreen({ route }) {
           )}
         </TouchableOpacity>
       </View>
+
+      <ConfirmDialog
+        visible={showLogoutDialog}
+        title="Leaving so soon?"
+        message="We'll be here when you come back."
+        confirmText="Logout"
+        cancelText="Cancel"
+        onConfirm={() => {
+          setShowLogoutDialog(false);
+          handleSignOut();
+        }}
+        onCancel={() => setShowLogoutDialog(false)}
+        loading={signingOut}
+        primaryColor="rgba(62, 49, 83, 1)"
+      />
     </ScrollView>
   );
 }
