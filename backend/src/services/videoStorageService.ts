@@ -75,6 +75,27 @@ function isRateLimitError(error: any): boolean {
 }
 
 /**
+ * Check if error is a retryable server error (5xx errors)
+ */
+function isRetryableError(error: any, statusCode?: number): boolean {
+  if (statusCode && statusCode >= 500 && statusCode < 600) {
+    return true;
+  }
+  const errorMessage = error?.message || '';
+  const errorText = error?.toString() || '';
+  return (
+    errorMessage.includes('500') ||
+    errorMessage.includes('502') ||
+    errorMessage.includes('503') ||
+    errorMessage.includes('504') ||
+    errorMessage.includes('Internal Server Error') ||
+    errorMessage.includes('UnknownError') ||
+    errorText.includes('500') ||
+    errorText.includes('Internal Server Error')
+  );
+}
+
+/**
  * Generate a video using D-ID API with retry logic and rate limit handling
  */
 async function generateDIDVideo(
@@ -122,9 +143,23 @@ async function generateDIDVideo(
       }
     }
 
+    // Handle server errors (5xx) - retry with exponential backoff
+    if (createResponse.status >= 500 && createResponse.status < 600) {
+      const errorText = await createResponse.text();
+      if (retryCount < maxRetries) {
+        const waitTime = (retryCount + 1) * 15000; // 15s, 30s, 45s for server errors
+        console.log(`⏳ D-ID server error (${createResponse.status}). Waiting ${waitTime / 1000}s before retry ${retryCount + 1}/${maxRetries}...`);
+        console.log(`   Error details: ${errorText.substring(0, 200)}`);
+        await sleep(waitTime);
+        return generateDIDVideo(text, sourceImageUrl, retryCount + 1, maxRetries);
+      } else {
+        throw new Error(`D-ID server error (${createResponse.status}): ${errorText}`);
+      }
+    }
+
     if (!createResponse.ok) {
       const errorText = await createResponse.text();
-      throw new Error(`Create talk failed: ${errorText}`);
+      throw new Error(`Create talk failed (${createResponse.status}): ${errorText}`);
     }
 
     const { id } = await createResponse.json();
@@ -150,9 +185,18 @@ async function generateDIDVideo(
         continue; // Retry the same poll
       }
 
+      // Handle server errors during polling
+      if (statusResponse.status >= 500 && statusResponse.status < 600) {
+        const errorText = await statusResponse.text();
+        console.log(`⏳ Server error during polling (${statusResponse.status}). Waiting 10s before retry...`);
+        console.log(`   Error: ${errorText.substring(0, 200)}`);
+        await sleep(10000);
+        continue; // Retry the same poll
+      }
+
       if (!statusResponse.ok) {
         const errorText = await statusResponse.text();
-        throw new Error(`Status check failed: ${errorText}`);
+        throw new Error(`Status check failed (${statusResponse.status}): ${errorText}`);
       }
 
       const statusData = await statusResponse.json();
@@ -175,6 +219,16 @@ async function generateDIDVideo(
       await sleep(waitTime);
       return generateDIDVideo(text, sourceImageUrl, retryCount + 1, maxRetries);
     }
+    
+    // Retry on server errors (5xx)
+    if (isRetryableError(error) && retryCount < maxRetries) {
+      const waitTime = (retryCount + 1) * 15000; // Exponential backoff: 15s, 30s, 45s
+      console.log(`⏳ Server error detected. Waiting ${waitTime / 1000}s before retry ${retryCount + 1}/${maxRetries}...`);
+      console.log(`   Error: ${error?.message?.substring(0, 200)}`);
+      await sleep(waitTime);
+      return generateDIDVideo(text, sourceImageUrl, retryCount + 1, maxRetries);
+    }
+    
     throw error;
   }
 }
