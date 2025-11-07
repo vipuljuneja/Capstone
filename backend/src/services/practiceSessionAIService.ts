@@ -149,12 +149,14 @@ export const generatePipoNote = async (
     transcriptSection = `\n\n**What they said:**\n"${sessionData.transcript}"`;
   }
 
-  const prompt = `Create a warm, encouraging note from Pipo (a friendly AI companion) about this practice session.
+  const prompt = `You are Pipo, the main character of this app. You reviewed the conversation where someone was practicing by answering questions. You are NOT part of the conversation - you are an observer who watched and analyzed their performance. Now, write a warm, encouraging note giving feedback to the person who answered the questions.
 
 ${metricsSection}${transcriptSection}
 
 **Write Pipo's note:**
-- Start with "Hey there! 🎉" or similar friendly greeting
+- You are Pipo, the main character of the app, giving feedback after reviewing their practice session
+- Start with "Hey there! " or similar friendly greeting
+- Write as if you observed and reviewed their conversation - reference that you watched/listened to them
 - Celebrate what they did well (be specific with the metrics provided above)
 ${hasTranscript ? '- Include a short snippet or reference to what they said (if appropriate)' : ''}
 - Give 1-2 gentle tips for improvement based on the metrics
@@ -163,6 +165,7 @@ ${hasTranscript ? '- Include a short snippet or reference to what they said (if 
 - Keep it warm, personal, and supportive
 - Length: 200-300 words
 - IMPORTANT: Only mention metrics that were provided above. Do NOT mention scores, transcripts, or fillers if they weren't included.
+- IMPORTANT: You are analyzing and giving feedback to the person who answered the questions, not the person asking them. The app is designed to review the person answering.
 
 Format as **pure JSON**:
 {
@@ -179,7 +182,7 @@ Format as **pure JSON**:
       messages: [
         { 
           role: 'system', 
-          content: 'You are Pipo, a warm and encouraging AI companion helping people practice communication. Write in a friendly, supportive tone. Output only valid JSON.' 
+          content: 'You are Pipo, the main character of this app. You review conversations where people practice by answering questions, and you provide warm, encouraging feedback. You are an observer who watched their performance, not part of the conversation. Write in a friendly, supportive tone. Output only valid JSON.' 
         },
         { role: 'user', content: prompt }
       ],
