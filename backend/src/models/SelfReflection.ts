@@ -8,6 +8,7 @@ export interface ISelfReflection extends Document {
   type: 'pipo' | 'self';
   readAt: Date | null;
   imageName?: string; // For Pipo avatar image
+  motivation?: string; // For Pipo motivation message
   linkedSessionId?: mongoose.Types.ObjectId; // Link to PracticeSession
   scenarioId?: mongoose.Types.ObjectId; // Quick reference to scenario
   level?: number; // 1, 2, or 3
@@ -53,6 +54,11 @@ const SelfReflectionSchema = new Schema<ISelfReflection>(
       type: String,
       trim: true,
       // Optional: Used for Pipo messages to store avatar image name
+    },
+    motivation: {
+      type: String,
+      trim: true,
+      // Optional: Used for Pipo messages to store motivation title
     },
     linkedSessionId: {
       type: Schema.Types.ObjectId,

@@ -52,14 +52,39 @@ const MOTIVATION_TITLES = [
   "A small victory, a huge step forward"
 ];
 
-const imagesArr = [
-  require('../../assets/pipo/articlePipo.png'),
-  // require('../../assets/pipo/pipo-coffee.png'),
-  require('../../assets/pipo/pipo-hi.png'),
-  require('../../assets/pipo/pipo-job.png'),
-  require('../../assets/pipo/pipo-loading.png'),
-  require('../../assets/pipo/pipo-onboard1.png'),
+
+const PIPO_NOTE_IMAGES = [
+  'articlePipo.png',
+  'pipo-coffee.png',
+  'pipo-hi.png',
+  'pipo-job.png',
+  'pipo-loading.png',
+  'pipo-complete.png',
+  'loginPipo.png',
 ];
+
+
+const getPipoImage = (filename) => {
+  if (!filename) return require('../../assets/pipo-for-note/pipo-hi.png');
+  
+  try {
+    // Map filename to require statement
+    const imageMap = {
+      'articlePipo.png': require('../../assets/pipo-for-note/articlePipo.png'),
+      'pipo-coffee.png': require('../../assets/pipo-for-note/pipo-coffee.png'),
+      'pipo-hi.png': require('../../assets/pipo-for-note/pipo-hi.png'),
+      'pipo-job.png': require('../../assets/pipo-for-note/pipo-job.png'),
+      'pipo-loading.png': require('../../assets/pipo-for-note/pipo-loading.png'),
+      'pipo-complete.png': require('../../assets/pipo-for-note/pipo-complete.png'),
+      'loginPipo.png': require('../../assets/pipo-for-note/loginPipo.png'),
+    };
+    
+    return imageMap[filename] || require('../../assets/pipo-for-note/pipo-hi.png');
+  } catch (e) {
+    console.error('Error loading image:', filename, e);
+    return require('../../assets/pipo-for-note/pipo-hi.png');
+  }
+};
 
 function getRandomElement(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -242,19 +267,19 @@ function SelfReflectionCard({ title, description, onEdit, onDelete }) {
   );
 }
 
-function PipoCard({ title, subtitle, index, onPress, motivation, image }) {
+function PipoCard({ title, subtitle, index, onPress, motivation, imageFilename }) {
   const isEven = index % 2 === 0;
   const tint = isEven ? "#EEF5FF" : "#FFF8E9";
   const border = isEven ? "#CFE0FF" : "#FFE8B8";
   
-  // Ensure image is always valid, fallback to first image if invalid
-  const safeImage = image && typeof image === 'object' ? image : imagesArr[0];
+  // Get image from filename
+  const imageSource = getPipoImage(imageFilename);
 
   return (
     <Pressable onPress={onPress} style={[styles.pipoCard, { backgroundColor: tint, borderColor: border }]}>
       <View style={styles.pipoIconWrap}>
         {/* <View style={styles.pipoBlob} /> */}
-        {safeImage && <Image source={safeImage} style={styles.pipoBlob} />}
+        {imageSource && <Image source={imageSource} style={styles.pipoBlob} />}
       </View>
       <Text style={styles.pipoTitle} numberOfLines={2}>
         {motivation || "You've got this"}
@@ -352,6 +377,9 @@ const confirmDeleteSelf = async () => {
       sessionId: r?.linkedSessionId || null,
       scenarioId: r?.scenarioId || null,
       level: r?.level || null,
+      imageName: r?.imageName || null, // Get imageName from backend
+      motivation: r?.motivation || null, // Get motivation from backend
+      readAt: r?.readAt || null,
     }),
     [isSelf, selectedDate]
   );
@@ -572,12 +600,12 @@ const confirmDeleteSelf = async () => {
     }, 200); // 200ms debounce - wait for user to stop changing dates
   }, []);
 
-  // Memoize random images and motivations per item to prevent crashes on fast date switching
+  // Use motivation and imageName from backend (with fallback for backward compatibility)
   const pipoCardData = useMemo(() => {
     if (!pipoData.length || !selectedDate) return [];
     
     try {
-      // Use a seeded random function based on item.id and selectedDate for consistency
+      // Use a seeded random function for fallback only (when backend data is missing)
       const seedRandom = (seed) => {
         let value = Math.abs(seed);
         return () => {
@@ -590,28 +618,41 @@ const confirmDeleteSelf = async () => {
         if (!item || !item.id) return null;
         
         try {
-          const seed = parseInt(String(item.id).replace(/\D/g, ''), 10) || 0;
-          const dateSeed = String(selectedDate).split('-').join('');
-          const combinedSeed = seed + (parseInt(dateSeed, 10) || 0);
-          const random = seedRandom(combinedSeed);
+          // Use motivation from backend if available, otherwise fallback to random selection
+          let motivation = item.motivation;
+          if (!motivation) {
+            // Fallback: generate random motivation if backend didn't provide one (for backward compatibility)
+            const seed = parseInt(String(item.id).replace(/\D/g, ''), 10) || 0;
+            const dateSeed = String(selectedDate).split('-').join('');
+            const combinedSeed = seed + (parseInt(dateSeed, 10) || 0);
+            const random = seedRandom(combinedSeed);
+            const motivationIndex = Math.floor(random() * MOTIVATION_TITLES.length);
+            motivation = MOTIVATION_TITLES[Math.max(0, Math.min(motivationIndex, MOTIVATION_TITLES.length - 1))] || MOTIVATION_TITLES[0];
+          }
           
-          const motivationIndex = Math.floor(random() * MOTIVATION_TITLES.length);
-          const imageIndex = Math.floor(random() * imagesArr.length);
-          
-          const randomMotivation = MOTIVATION_TITLES[Math.max(0, Math.min(motivationIndex, MOTIVATION_TITLES.length - 1))] || MOTIVATION_TITLES[0];
-          const randomImage = imagesArr[Math.max(0, Math.min(imageIndex, imagesArr.length - 1))] || imagesArr[0];
+          // Use imageName from backend if available, otherwise fallback to random selection
+          let imageFilename = item.imageName;
+          if (!imageFilename) {
+            // Fallback: generate random image if backend didn't provide one (for backward compatibility)
+            const seed = parseInt(String(item.id).replace(/\D/g, ''), 10) || 0;
+            const dateSeed = String(selectedDate).split('-').join('');
+            const combinedSeed = seed + (parseInt(dateSeed, 10) || 0);
+            const random = seedRandom(combinedSeed);
+            const imageIndex = Math.floor(random() * PIPO_NOTE_IMAGES.length);
+            imageFilename = PIPO_NOTE_IMAGES[Math.max(0, Math.min(imageIndex, PIPO_NOTE_IMAGES.length - 1))] || PIPO_NOTE_IMAGES[0];
+          }
           
           return {
             ...item,
-            motivation: randomMotivation,
-            image: randomImage,
+            motivation: motivation, // Use from backend or fallback
+            imageFilename: imageFilename, // Use from backend or fallback
           };
         } catch (e) {
           console.error('Error generating card data for item:', e);
           return {
             ...item,
-            motivation: MOTIVATION_TITLES[0],
-            image: imagesArr[0],
+            motivation: item.motivation || MOTIVATION_TITLES[0],
+            imageFilename: item.imageName || PIPO_NOTE_IMAGES[0],
           };
         }
       }).filter(Boolean); // Remove any null items
@@ -756,25 +797,18 @@ const confirmDeleteSelf = async () => {
                       return;
                     }
                     
-                    // Ensure image is valid - check if item has image, otherwise use fallback
-                    let safeImage = imagesArr[0]; // Default fallback
-                    if (item.image) {
-                      if (typeof item.image === 'object') {
-                        safeImage = item.image;
-                      } else if (typeof item.image === 'number') {
-                        // Handle require() imports which return numbers
-                        safeImage = item.image;
-                      }
-                    }
+                    // Ensure image filename is valid
+                    const imageFilename = item.imageFilename || PIPO_NOTE_IMAGES[0];
                     
-                    // Ensure motivation is valid
+                    // Use motivation from backend (should already be set in pipoCardData)
                     const safeMotivation = item.motivation || MOTIVATION_TITLES[0];
                     
                     // Ensure all required fields are present
                     const pipoData = {
                       id: String(item.id),
-                      image: safeImage,
-                      Motivation: safeMotivation,
+                      imageFilename: imageFilename, // Pass filename instead of require() object
+                      motivation: safeMotivation, // Use lowercase to match backend field
+                      Motivation: safeMotivation, // Keep uppercase for backward compatibility
                       title: String(item.title || ''),
                       subtitle: String(item.subtitle || ''),
                       dateISO: currentDate,
@@ -788,7 +822,7 @@ const confirmDeleteSelf = async () => {
                     };
                     
                     // Final validation before navigation
-                    if (!pipoData.id || !pipoData.image) {
+                    if (!pipoData.id || !pipoData.imageFilename) {
                       console.warn('Missing required pipo data, cannot navigate');
                       return;
                     }
@@ -802,7 +836,7 @@ const confirmDeleteSelf = async () => {
                 return (
                   <PipoCard
                     key={item.id}
-                    image={item.image}
+                    imageFilename={item.imageFilename}
                     title={item.title}
                     subtitle={item.subtitle}
                     index={i}
