@@ -105,22 +105,25 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    if (!mongoUser) return;
-    //  updateHasSeenTour (mongoUser.authUid, true);
+    // Don't show tour if mongoUser is not loaded (empty object or no _id)
+    if (!mongoUser || !mongoUser._id) {
+      setTourVisible(false);
+      return;
+    }
 
-
+    // Only show tour if hasSeenTour is explicitly false or undefined (new users)
+    // If hasSeenTour is true, user has already seen it
     const hasSeen = mongoUser.hasSeenTour === true;
 
-
     if (!hasSeen) {
-
+      // Only show tour for users who haven't seen it yet
       const t = setTimeout(() => {
         setTourStep(1);
         setTourVisible(true);
-
       }, 200);
       return () => clearTimeout(t);
     } else {
+      // User has already seen the tour
       setTourVisible(false);
     }
   }, [mongoUser]);

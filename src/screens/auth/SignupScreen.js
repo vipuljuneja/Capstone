@@ -12,6 +12,7 @@ import {
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { createUserInBackend } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   getAuthErrorMessage,
   validateEmail,
@@ -24,6 +25,8 @@ import AuthButton from '../../Components/Auth/AuthButton';
 import { authStyles } from '../../Components/Auth/authStyles';
 
 export default function SignupScreen({ navigation, onSwitchToLogin }) {
+  const { refreshMongoUser, mongoUser } = useAuth();
+  
   // Handle navigation - use navigation prop if available, otherwise use callback
   const handleSwitchToLogin = () => {
     if (navigation) {
@@ -196,10 +199,21 @@ export default function SignupScreen({ navigation, onSwitchToLogin }) {
 
       console.log('✅ MongoDB user created successfully.');
       
-      // Navigate to Home after successful signup (same as login)
-      if (navigation) {
-        navigation.navigate('Home');
-      }
+      // Refresh mongoUser to get the latest data
+      await refreshMongoUser();
+      
+      // Wait for mongoUser to be updated, then navigate based on onboarding status
+      // New users from signup won't have completed onboarding, so go to Onboarding
+      const checkAndNavigate = () => {
+        if (navigation) {
+          // For new signups, always go to Onboarding first
+          navigation.navigate('Onboarding');
+        }
+      };
+      
+      // Try immediately, then retry if mongoUser not loaded yet
+      setTimeout(checkAndNavigate, 100);
+      setTimeout(checkAndNavigate, 500);
     } catch (err) {
       console.error('❌ Signup error:', err);
 
