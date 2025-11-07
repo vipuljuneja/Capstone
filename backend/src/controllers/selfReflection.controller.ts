@@ -7,6 +7,20 @@ import mongoose from 'mongoose';
 import { generatePipoNote, prepareSessionDataForAI } from '../services/practiceSessionAIService';
 
 /**
+ * Convert a date to UTC midnight to ensure consistent date alignment
+ * This ensures dates are stored in UTC regardless of server timezone
+ */
+const getUTCMidnightDate = (date: Date): Date => {
+  const utcDate = new Date(Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    0, 0, 0, 0
+  ));
+  return utcDate;
+};
+
+/**
  * Create a new self-reflection entry
  */
 export const createReflection = async (req: Request, res: Response) => {
@@ -455,12 +469,16 @@ export const createPipoNoteFromSession = async (req: Request, res: Response) => 
     const aiData = prepareSessionDataForAI(session, scenarioTitle);
     const pipoMessage = await generatePipoNote(aiData);
 
+    // Use UTC midnight to ensure date alignment with notebooks
+    const dateToUse = session.completedAt || new Date();
+    const utcDate = getUTCMidnightDate(dateToUse);
+
     // Create the Pipo reflection note
     const pipoNote = await SelfReflection.create({
       userId: session.userId,
       title: pipoMessage.title,
       description: pipoMessage.body,
-      date: session.completedAt || new Date(),
+      date: utcDate,
       type: 'pipo',
       imageName: 'articlePipo.png', // Default Pipo image
       linkedSessionId: session._id,

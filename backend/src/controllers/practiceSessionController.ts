@@ -12,6 +12,20 @@ import UserScenarioOverrides from '../models/UserScenarioOverrides';
 import { generateAndStoreVideos } from '../services/videoStorageService';
 
 /**
+ * Convert a date to UTC midnight to ensure consistent date alignment
+ * This ensures dates are stored in UTC regardless of server timezone
+ */
+const getUTCMidnightDate = (date: Date): Date => {
+  const utcDate = new Date(Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    0, 0, 0, 0
+  ));
+  return utcDate;
+};
+
+/**
  * Helper function to generate AI feedback cards from facial analysis
  */
 interface FacialAnalysis {
@@ -626,11 +640,15 @@ export const createCompleteSession = async (req: Request, res: Response): Promis
     if (pipoNoteContent.title && pipoNoteContent.body) {
       try {
         console.log('📝 Creating Pipo note in database...');
+        // Use UTC midnight to ensure date alignment with notebooks
+        const dateToUse = session.completedAt || new Date();
+        const utcDate = getUTCMidnightDate(dateToUse);
+        
         const pipoNote = await SelfReflection.create({
           userId,
           title: pipoNoteContent.title,
           description: pipoNoteContent.body,
-          date: session.completedAt || new Date(),
+          date: utcDate,
           type: 'pipo',
           imageName: 'articlePipo.png',
           linkedSessionId: session._id,
