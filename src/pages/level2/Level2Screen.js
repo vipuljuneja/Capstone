@@ -9,6 +9,7 @@ import {
   PanResponder,
   Dimensions,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AvatarGenerator from '../../Components/Avatar/AvatarGenerate';
@@ -94,6 +95,7 @@ const Level2Screen = () => {
   const [avatarReady, setAvatarReady] = useState(false);
   const [transcriptionResults, setTranscriptionResults] = useState([]);
   const [facialAnalysisResults, setFacialAnalysisResults] = useState([]);
+  const [isFinishing, setIsFinishing] = useState(false);
 
   // Flags for tracking last question results received
   const [lastTranscriptionReceived, setLastTranscriptionReceived] =
@@ -315,18 +317,17 @@ const Level2Screen = () => {
       facialAnalysisResultsRef.current,
     );
 
-    setTimeout(() => {
-      navigation.navigate('Level2ResultScreen', {
-        totalQuestions: currentState?.totalLines || 5,
-        transcriptionResults: transcriptionResultsRef.current,
-        facialAnalysisResults: facialAnalysisResultsRef.current,
-        scenarioTitle: scenarioTitle || 'Ordering Coffee',
-        scenarioEmoji: scenarioEmoji || '☕',
-        scenarioId: scenarioId,
-      });
-      console.log('Navigation triggered');
-    }, 10000);
-  }, [navigation, route.params]);
+    // Navigate immediately without timeout
+    navigation.navigate('Level2ResultScreen', {
+      totalQuestions: currentState?.totalLines || 5,
+      transcriptionResults: transcriptionResultsRef.current,
+      facialAnalysisResults: facialAnalysisResultsRef.current,
+      scenarioTitle: scenarioTitle || 'Ordering Coffee',
+      scenarioEmoji: scenarioEmoji || '☕',
+      scenarioId: scenarioId,
+    });
+    console.log('Navigation triggered');
+  }, [navigation, route.params, scenarioTitle, scenarioId]);
 
   // Start recording and processing
   const handleStart = async () => {
@@ -398,6 +399,9 @@ const Level2Screen = () => {
     }
 
     if (currentState.idx === currentState.totalLines - 1) {
+      // Set finishing state immediately to show loading and disable buttons
+      setIsFinishing(true);
+
       const finishAfterResults = async () => {
         if (isRecording) {
           try {
@@ -556,7 +560,7 @@ const Level2Screen = () => {
         <TouchableOpacity
           style={isRecording ? styles.stopButton : styles.micButton}
           onPress={isRecording ? handleStop : handleStart}
-          disabled={!avatarReady && !isRecording}
+          disabled={(!avatarReady && !isRecording) || isFinishing}
         >
           <Text style={styles.buttonEmoji}>
             {isRecording ? (
@@ -571,10 +575,10 @@ const Level2Screen = () => {
         {isRecording && (
           <TouchableOpacity
             onPress={handleNext}
-            disabled={orbState.speaking || orbState.loading}
+            disabled={orbState.speaking || orbState.loading || isFinishing}
             style={[
               styles.nextButton,
-              (orbState.speaking || orbState.loading) && styles.buttonDisabled,
+              (orbState.speaking || orbState.loading || isFinishing) && styles.buttonDisabled,
             ]}
           >
             <Text style={styles.nextButtonText}>
@@ -583,6 +587,14 @@ const Level2Screen = () => {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Loading Overlay */}
+      {isFinishing && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#6B5B95" />
+          <Text style={styles.loadingText}>Processing results...</Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -705,6 +717,23 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: '#463855',
     borderRadius: 9,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#463855',
+    fontWeight: '600',
   },
 });
 
