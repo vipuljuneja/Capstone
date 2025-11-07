@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
-  SafeAreaView,
   View,
   Text,
   StyleSheet,
@@ -14,6 +13,7 @@ import {
   ActivityIndicator,
   Image
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import dayjs from "dayjs";
 import { getReflectionsByUser, createReflection, getReflectionDates, updateReflection, deleteReflection } from "../services/api";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
