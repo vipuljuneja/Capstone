@@ -242,19 +242,22 @@ function SelfReflectionCard({ title, description, onEdit, onDelete }) {
   );
 }
 
-function PipoCard({ title, subtitle, index, onPress, motivation,image }) {
+function PipoCard({ title, subtitle, index, onPress, motivation, image }) {
   const isEven = index % 2 === 0;
   const tint = isEven ? "#EEF5FF" : "#FFF8E9";
   const border = isEven ? "#CFE0FF" : "#FFE8B8";
+  
+  // Ensure image is always valid, fallback to first image if invalid
+  const safeImage = image && typeof image === 'object' ? image : imagesArr[0];
 
   return (
     <Pressable onPress={onPress} style={[styles.pipoCard, { backgroundColor: tint, borderColor: border }]}>
       <View style={styles.pipoIconWrap}>
         {/* <View style={styles.pipoBlob} /> */}
-        <Image source={image} style={styles.pipoBlob}></Image>
+        {safeImage && <Image source={safeImage} style={styles.pipoBlob} />}
       </View>
       <Text style={styles.pipoTitle} numberOfLines={2}>
-        {motivation || "You’ve got this"}
+        {motivation || "You've got this"}
       </Text>
       <Text style={styles.pipoSubtitle} numberOfLines={1}>
         {title}
@@ -283,6 +286,9 @@ export default function NotebookScreen({ navigation }) {
   const [showConfirmSelf, setShowConfirmSelf] = useState(false);
 const [deletingSelf, setDeletingSelf] = useState(false);
 const deleteTargetRef = useRef(null);
+const currentFetchDateRef = useRef(null);
+const dateChangeTimeoutRef = useRef(null);
+const pendingDateRef = useRef(null);
 
 
 
@@ -352,46 +358,64 @@ const confirmDeleteSelf = async () => {
 
   const fetchCards = useCallback(async () => {
     if (!userId) return;
+    // Track the current fetch to prevent race conditions
+    const fetchDate = selectedDate;
+    currentFetchDateRef.current = fetchDate;
     setLoading(true);
     try {
       const list = await getReflectionsByUser(userId, {
         date: selectedDate,
         type: activeTab,
       });
-      const safe = Array.isArray(list) ? list : [];
-      setItems(safe.map(toUICard));
+      // Only update state if this is still the current fetch (prevent race conditions)
+      if (currentFetchDateRef.current === fetchDate) {
+        const safe = Array.isArray(list) ? list : [];
+        setItems(safe.map(toUICard));
+      }
     } catch (e) {
       console.error("Get reflections failed:", e);
-      setItems([]);
+      // Only update state if this is still the current fetch
+      if (currentFetchDateRef.current === fetchDate) {
+        setItems([]);
+      }
     } finally {
-      setLoading(false);
+      // Only update loading state if this is still the current fetch
+      if (currentFetchDateRef.current === fetchDate) {
+        setLoading(false);
+      }
     }
   }, [userId, selectedDate, activeTab, toUICard]);
 
   const fetchDots = useCallback(async () => {
     if (!userId) return;
 
-
     const startDate = dayjs(selectedDate).startOf('isoWeek').format('YYYY-MM-DD');
     const endDate = dayjs(selectedDate).endOf('isoWeek').add(1, 'day').format('YYYY-MM-DD');
-
+    // Track the current fetch to prevent race conditions
+    const fetchDate = selectedDate;
 
     try {
       const dates = await getReflectionDates(userId, { startDate, endDate });
 
-      const next = {};
-      (Array.isArray(dates) ? dates : []).forEach((row) => {
-        const ds = dayjs(row?.date).format('YYYY-MM-DD');
-        const t = String(row?.type || '').toLowerCase();
-        if (!ds) return;
-        if (!next[ds]) next[ds] = { self: false, pipo: false };
-        if (t === 'self') next[ds].self = true;
-        if (t === 'pipo') next[ds].pipo = true;
-      });
-      setDotDates(next);
+      // Only update state if this is still the current fetch (prevent race conditions)
+      if (currentFetchDateRef.current === fetchDate) {
+        const next = {};
+        (Array.isArray(dates) ? dates : []).forEach((row) => {
+          const ds = dayjs(row?.date).format('YYYY-MM-DD');
+          const t = String(row?.type || '').toLowerCase();
+          if (!ds) return;
+          if (!next[ds]) next[ds] = { self: false, pipo: false };
+          if (t === 'self') next[ds].self = true;
+          if (t === 'pipo') next[ds].pipo = true;
+        });
+        setDotDates(next);
+      }
     } catch (e) {
       console.error('Get reflection dates failed:', e);
-      setDotDates({});
+      // Only update state if this is still the current fetch
+      if (currentFetchDateRef.current === fetchDate) {
+        setDotDates({});
+      }
     }
   }, [userId, selectedDate]);
 
@@ -404,6 +428,15 @@ const confirmDeleteSelf = async () => {
   useEffect(() => {
     fetchCards();
   }, [fetchCards]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (dateChangeTimeoutRef.current) {
+        clearTimeout(dateChangeTimeoutRef.current);
+      }
+    };
+  }, []);
   
   useFocusEffect(
   useCallback(() => {
@@ -504,6 +537,90 @@ const confirmDeleteSelf = async () => {
   const pipoData = useMemo(() => (Array.isArray(items) ? items.filter((it) => it.type !== "self") : []), [items]);
   const selfData = useMemo(() => (Array.isArray(items) ? items.filter((it) => it.type === "self") : []), [items]);
 
+  // Safe date change handler with debouncing to prevent crashes on rapid date switching
+  const handleDateChange = useCallback((newDate) => {
+    if (!newDate) return;
+    
+    // Validate date format
+    const dateStr = typeof newDate === 'string' ? newDate : (newDate?.dateString || newDate);
+    if (!dateStr || !dayjs(dateStr).isValid()) {
+      console.warn('Invalid date:', dateStr);
+      return;
+    }
+    
+    // Store the pending date
+    pendingDateRef.current = dateStr;
+    
+    // Clear any pending date changes
+    if (dateChangeTimeoutRef.current) {
+      clearTimeout(dateChangeTimeoutRef.current);
+    }
+    
+    // Debounce rapid date changes - only update after user stops changing dates
+    dateChangeTimeoutRef.current = setTimeout(() => {
+      try {
+        const pendingDate = pendingDateRef.current;
+        // Double-check the date is still valid
+        if (pendingDate && dayjs(pendingDate).isValid()) {
+          setSelectedDate(pendingDate);
+          pendingDateRef.current = null;
+        }
+      } catch (e) {
+        console.error('Error setting date:', e);
+        pendingDateRef.current = null;
+      }
+    }, 200); // 200ms debounce - wait for user to stop changing dates
+  }, []);
+
+  // Memoize random images and motivations per item to prevent crashes on fast date switching
+  const pipoCardData = useMemo(() => {
+    if (!pipoData.length || !selectedDate) return [];
+    
+    try {
+      // Use a seeded random function based on item.id and selectedDate for consistency
+      const seedRandom = (seed) => {
+        let value = Math.abs(seed);
+        return () => {
+          value = (value * 9301 + 49297) % 233280;
+          return value / 233280;
+        };
+      };
+      
+      return pipoData.map((item) => {
+        if (!item || !item.id) return null;
+        
+        try {
+          const seed = parseInt(String(item.id).replace(/\D/g, ''), 10) || 0;
+          const dateSeed = String(selectedDate).split('-').join('');
+          const combinedSeed = seed + (parseInt(dateSeed, 10) || 0);
+          const random = seedRandom(combinedSeed);
+          
+          const motivationIndex = Math.floor(random() * MOTIVATION_TITLES.length);
+          const imageIndex = Math.floor(random() * imagesArr.length);
+          
+          const randomMotivation = MOTIVATION_TITLES[Math.max(0, Math.min(motivationIndex, MOTIVATION_TITLES.length - 1))] || MOTIVATION_TITLES[0];
+          const randomImage = imagesArr[Math.max(0, Math.min(imageIndex, imagesArr.length - 1))] || imagesArr[0];
+          
+          return {
+            ...item,
+            motivation: randomMotivation,
+            image: randomImage,
+          };
+        } catch (e) {
+          console.error('Error generating card data for item:', e);
+          return {
+            ...item,
+            motivation: MOTIVATION_TITLES[0],
+            image: imagesArr[0],
+          };
+        }
+      }).filter(Boolean); // Remove any null items
+    } catch (e) {
+      console.error('Error in pipoCardData memoization:', e);
+      return [];
+    }
+  }, [pipoData, selectedDate]);
+
   if (!userId) {
     return (
       <SafeAreaView style={styles.container}>
@@ -520,14 +637,16 @@ const confirmDeleteSelf = async () => {
       <View style={styles.header}>
         <Text></Text>
         <Text style={styles.headerTitle}>
-          {new Date(selectedDate)
-            .toLocaleDateString("en-CA", {
-              weekday: "long",
-              month: "short",
-              day: "2-digit",
-              timeZone: "UTC",
-            })
-            .toUpperCase()}
+          {(() => {
+            try {
+              if (!selectedDate) return '';
+              const date = dayjs(selectedDate);
+              if (!date.isValid()) return '';
+              return date.format('dddd, MMM DD').toUpperCase();
+            } catch (e) {
+              return '';
+            }
+          })()}
         </Text>
 
         <Pressable onPress={() => setFullCalendarVisible(true)} hitSlop={12}>
@@ -537,10 +656,10 @@ const confirmDeleteSelf = async () => {
       <FullCalendar
         selectedDate={selectedDate}
         modalVisible={fullCalendarVisible}
-        setSelectedDate={setSelectedDate}
+        setSelectedDate={handleDateChange}
         setModalVisible={setFullCalendarVisible}
       />
-      <CalendarProvider date={selectedDate} onDateChanged={(d) => setSelectedDate(d)}>
+      <CalendarProvider date={selectedDate} onDateChanged={handleDateChange}>
         <View style={styles.weekHeaderWrap}>
           <WeekCalendar
             firstDay={1}
@@ -548,7 +667,7 @@ const confirmDeleteSelf = async () => {
             markingType="multi-dot"
             allowShadow={false}
             style={styles.weekCalendar}
-            onDayPress={(d) => setSelectedDate(d.dateString)}
+            onDayPress={(d) => handleDateChange(d?.dateString)}
             theme={{
               todayTextColor: "#111",
               selectedDayBackgroundColor: "#CFCFCF",
@@ -614,34 +733,81 @@ const confirmDeleteSelf = async () => {
             </View>
           ) : (
             <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
-              {pipoData.map((item, i) => {
-                const randomMotivation = getRandomElement(MOTIVATION_TITLES);
-                const randomImage = getRandomElement(imagesArr);
+              {pipoCardData.map((item, i) => {
+                // Create a safe navigation handler that validates all data
+                const handleCardPress = () => {
+                  try {
+                    // Don't navigate if still loading
+                    if (loading) {
+                      console.warn('Still loading data, please wait');
+                      return;
+                    }
+                    
+                    // Validate required fields before navigation
+                    if (!item || !item.id) {
+                      console.warn('Invalid item data, cannot navigate');
+                      return;
+                    }
+                    
+                    // Get the current date (use pending date if available, otherwise selectedDate)
+                    const currentDate = pendingDateRef.current || selectedDate;
+                    if (!currentDate || !dayjs(currentDate).isValid()) {
+                      console.warn('Invalid date, cannot navigate');
+                      return;
+                    }
+                    
+                    // Ensure image is valid - check if item has image, otherwise use fallback
+                    let safeImage = imagesArr[0]; // Default fallback
+                    if (item.image) {
+                      if (typeof item.image === 'object') {
+                        safeImage = item.image;
+                      } else if (typeof item.image === 'number') {
+                        // Handle require() imports which return numbers
+                        safeImage = item.image;
+                      }
+                    }
+                    
+                    // Ensure motivation is valid
+                    const safeMotivation = item.motivation || MOTIVATION_TITLES[0];
+                    
+                    // Ensure all required fields are present
+                    const pipoData = {
+                      id: String(item.id),
+                      image: safeImage,
+                      Motivation: safeMotivation,
+                      title: String(item.title || ''),
+                      subtitle: String(item.subtitle || ''),
+                      dateISO: currentDate,
+                      dateText: dayjs(currentDate).isValid() 
+                        ? dayjs(currentDate).format("ddd, MMM D").toUpperCase()
+                        : '',
+                      readAt: item.readAt,
+                      sessionId: item.sessionId || null,
+                      scenarioId: item.scenarioId || null,
+                      level: item.level || null,
+                    };
+                    
+                    // Final validation before navigation
+                    if (!pipoData.id || !pipoData.image) {
+                      console.warn('Missing required pipo data, cannot navigate');
+                      return;
+                    }
+                    
+                    navigation.navigate("PipoDetail", { pipo: pipoData });
+                  } catch (e) {
+                    console.error('Error navigating to PipoDetail:', e);
+                  }
+                };
+                
                 return (
                   <PipoCard
                     key={item.id}
-                    image={randomImage}
+                    image={item.image}
                     title={item.title}
                     subtitle={item.subtitle}
                     index={i}
-                    motivation={randomMotivation}
-                    onPress={() =>
-                      navigation.navigate("PipoDetail", {
-                        pipo: {
-                          id: item.id,
-                          image:randomImage,
-                          Motivation: randomMotivation,
-                          title: item.title,
-                          subtitle: item.subtitle,
-                          dateISO: selectedDate,
-                          dateText: dayjs(selectedDate).format("ddd, MMM D").toUpperCase(),
-                          readAt: item.readAt,
-                          sessionId: item.sessionId,
-                          scenarioId: item.scenarioId,
-                          level: item.level,
-                        },
-                      })
-                    }
+                    motivation={item.motivation}
+                    onPress={handleCardPress}
                   />
                 );
               })}

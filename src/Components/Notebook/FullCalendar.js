@@ -5,8 +5,10 @@ import { Calendar } from "react-native-calendars";
 const FullCalendar = ({ selectedDate, modalVisible, setModalVisible, setSelectedDate }) => {
     
     const onDaySelect = (day) => {
-        setSelectedDate(day.dateString);
-        setModalVisible(false);
+        if (day?.dateString) {
+            setSelectedDate(day.dateString);
+            setModalVisible(false);
+        }
     }
 
   return (
