@@ -34,31 +34,81 @@ export default function AddReflectionCard({
   useEffect(() => { setTitle(initialTitle || ""); }, [initialTitle]);
   useEffect(() => { setDesc(initialDescription || ""); }, [initialDescription]);
 
-  const canSave = title.trim().length > 0 && !saving;
+  const canSave = title && typeof title === 'string' && title.trim().length > 0 && !saving;
 
   const handlePressSave = async () => {
-    if (!canSave) return;
+    if (!canSave || saving) return;
+    
+    const trimmedTitle = title?.trim() || "";
+    const trimmedDesc = desc?.trim() || "";
+    
+    if (!trimmedTitle || trimmedTitle.length === 0) {
+      console.warn("Cannot save: title is empty");
+      return;
+    }
+    
+    if (!onSave) {
+      console.error("onSave callback is not provided");
+      return;
+    }
+    
+    if (!isMountedRef.current) {
+      console.warn("Component unmounted, cannot save");
+      return;
+    }
+    
     setSaving(true);
     try {
-      await onSave?.({ title: title.trim(), description: desc.trim() });
+      await onSave({ title: trimmedTitle, description: trimmedDesc });
 
-      if (looksHarmful(title, desc)) {
-        onHarmfulDetected?.(); 
+      if (isMountedRef.current && looksHarmful(trimmedTitle, trimmedDesc)) {
+        try {
+          onHarmfulDetected?.(); 
+        } catch (e) {
+          console.error("Error in onHarmfulDetected:", e);
+        }
       }
+    } catch (error) {
+      console.error("Error in handlePressSave:", error);
+      throw error;
     } finally {
-      if (isMountedRef.current) setSaving(false);
+      if (isMountedRef.current) {
+        setSaving(false);
+      }
+    }
+  };
+
+  const handleCancel = () => {
+    if (!isMountedRef.current) {
+      console.warn("Component unmounted, cannot cancel");
+      return;
+    }
+    
+    try {
+      onCancel?.();
+    } catch (e) {
+      console.error("Error in onCancel:", e);
     }
   };
 
   return (
     <View style={S.wrap}>
       <Text style={S.date}>
-        {new Date(selectedDate).toLocaleDateString("en-CA", {
-          weekday: "long",
-          month: "short",
-          day: "2-digit",
-          timeZone: "UTC",
-        }).toUpperCase()}
+        {(() => {
+          try {
+            if (!selectedDate) return '';
+            const date = new Date(selectedDate);
+            if (isNaN(date.getTime())) return '';
+            return date.toLocaleDateString("en-CA", {
+              weekday: "long",
+              month: "short",
+              day: "2-digit",
+              timeZone: "UTC",
+            }).toUpperCase();
+          } catch (e) {
+            return '';
+          }
+        })()}
       </Text>
 
       <TextInput
@@ -81,14 +131,18 @@ export default function AddReflectionCard({
 
       <View style={S.actions}>
         {onCancel && (
-          <Pressable onPress={onCancel} style={[S.btn, S.btnGhost]}>
+          <Pressable 
+            onPress={handleCancel} 
+            style={[S.btn, S.btnGhost]}
+            disabled={saving}
+          >
             <Text style={[S.btnText, { color: "#111" }]}>Cancel</Text>
           </Pressable>
         )}
         <Pressable
           onPress={handlePressSave}
           style={[S.btn, (!canSave) && S.btnDisabled]}
-          disabled={!canSave}
+          disabled={!canSave || saving}
         >
           <MaterialIcons name="save" size={18} color="#fff" />
           <Text style={S.btnText}>{saving ? "Saving…" : "Save"}</Text>
