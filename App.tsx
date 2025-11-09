@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import MainStack from './src/navigation/MainStack';
 import LoginScreen from './src/screens/auth/LoginScreen';
 import SignupScreen from './src/screens/auth/SignupScreen';
+import SplashScreen from './src/screens/SplashScreen';
 
 const NAV_THEME = {
   ...DefaultTheme,
@@ -26,8 +27,19 @@ const NAV_THEME = {
 
 function RootApp() {
   const { user, loading } = useAuth();
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  // const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [showSplash, setShowSplash] = useState(true);
 
+  const handleSplashFinish = () => {
+    setShowSplash(false);
+  };
+
+ 
+  if (showSplash) {
+    return <SplashScreen onFinish={handleSplashFinish} />;
+  }
+
+ 
   if (loading) {
     return (
       <SafeAreaView style={styles.centered}>
