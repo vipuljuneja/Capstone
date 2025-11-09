@@ -458,11 +458,12 @@ export const getReflectionsByUser = async (
     startDate?: string;
     endDate?: string;
   },
+  signal?: AbortSignal,
 ): Promise<Reflection[]> => {
   try {
     const response = await apiClient.get<ApiSuccessEnvelope<Reflection[]>>(
       `/reflections/user/${userId}`,
-      { params: filters },
+      { params: filters, signal },
     );
 
     if (!response.data?.success || !response.data?.data) {
@@ -471,7 +472,17 @@ export const getReflectionsByUser = async (
 
     return response.data.data;
   } catch (error: any) {
-   
+    // Check if request was cancelled (compatible with different axios versions)
+    const isCancelled = 
+      (typeof axios.isCancel === 'function' && axios.isCancel(error)) ||
+      error?.name === 'AbortError' || 
+      error?.name === 'CanceledError' ||
+      error?.code === 'ERR_CANCELED' ||
+      error?.message?.toLowerCase().includes('cancel');
+    
+    if (isCancelled) {
+      throw error; // Re-throw cancellation errors so caller knows it was cancelled
+    }
     throw error;
   }
 };
@@ -486,11 +497,12 @@ export const getReflectionDates = async (
     endDate?: string;
     type?: 'pipo' | 'self';
   },
+  signal?: AbortSignal,
 ): Promise<Array<{ date: string; type: 'pipo' | 'self' }>> => {
   try {
     const response = await apiClient.get<
       ApiSuccessEnvelope<Array<{ date: string; type: 'pipo' | 'self' }>>
-    >(`/reflections/user/${userId}/dates`, { params: filters });
+    >(`/reflections/user/${userId}/dates`, { params: filters, signal });
 
     if (!response.data?.success || !response.data?.data) {
       throw new Error('Failed to fetch reflection dates');
@@ -498,10 +510,21 @@ export const getReflectionDates = async (
 
     return response.data.data;
   } catch (error: any) {
-    console.error(
-      '❌ Failed to get reflection dates:',
-      error.response?.data || error.message,
-    );
+    // Check if request was cancelled (compatible with different axios versions)
+    const isCancelled = 
+      (typeof axios.isCancel === 'function' && axios.isCancel(error)) ||
+      error?.name === 'AbortError' || 
+      error?.name === 'CanceledError' ||
+      error?.code === 'ERR_CANCELED' ||
+      error?.message?.toLowerCase().includes('cancel');
+    
+    // Don't log cancellation errors
+    if (!isCancelled) {
+      console.error(
+        '❌ Failed to get reflection dates:',
+        error.response?.data || error.message,
+      );
+    }
     throw error;
   }
 };
