@@ -324,6 +324,13 @@ const writerModalTimeoutRef = useRef(null);
 const innerTabTimeoutRef = useRef(null);
 const goingToSupportTimeoutRef = useRef(null);
 const isMountedRef = useRef(true);
+const fetchRequestIdRef = useRef(0);
+const isFetchingCardsRef = useRef(false);
+const isFetchingDotsRef = useRef(false);
+const fetchCardsAbortControllerRef = useRef(null);
+const fetchDotsAbortControllerRef = useRef(null);
+const isDateChangingRef = useRef(false);
+const lastProcessedDateRef = useRef(null);
 
 
 
@@ -410,69 +417,173 @@ const confirmDeleteSelf = async () => {
       sessionId: r?.linkedSessionId || null,
       scenarioId: r?.scenarioId || null,
       level: r?.level || null,
-      imageName: r?.imageName || null, // Get imageName from backend
-      motivation: r?.motivation || null, // Get motivation from backend
+      imageName: r?.imageName || null,
+      motivation: r?.motivation || null,
       readAt: r?.readAt || null,
     }),
     [isSelf, selectedDate]
   );
 
   const fetchCards = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || !isMountedRef.current) return;
+    
     const fetchDate = selectedDate;
     const fetchTab = activeTab;
+    
+    if (!fetchDate || !dayjs(fetchDate).isValid()) {
+      console.warn('Invalid date in fetchCards:', fetchDate);
+      return;
+    }
+    
+    if (fetchCardsAbortControllerRef.current) {
+      try {
+        fetchCardsAbortControllerRef.current.abort();
+      } catch (e) {
+      }
+      fetchCardsAbortControllerRef.current = null;
+    }
+    
+    const abortController = new AbortController();
+    fetchCardsAbortControllerRef.current = abortController;
+    
+    const requestId = ++fetchRequestIdRef.current;
     currentFetchDateRef.current = fetchDate;
     currentFetchTabRef.current = fetchTab;
-    if (isMountedRef.current) {
-      setLoading(true);
-    }
+    isFetchingCardsRef.current = true;
+    
     try {
+      if (isMountedRef.current) {
+        setLoading(true);
+      }
+      
       const list = await getReflectionsByUser(userId, {
-        date: selectedDate,
-        type: activeTab,
-      });
-      if (currentFetchDateRef.current === fetchDate && currentFetchTabRef.current === fetchTab && isMountedRef.current) {
-        const safe = Array.isArray(list) ? list : [];
-        setItems(safe.map(toUICard));
+        date: fetchDate,
+        type: fetchTab,
+      }, abortController.signal);
+      
+      if (
+        !abortController.signal.aborted &&
+        requestId === fetchRequestIdRef.current &&
+        currentFetchDateRef.current === fetchDate && 
+        currentFetchTabRef.current === fetchTab && 
+        isMountedRef.current
+      ) {
+        try {
+          const safe = Array.isArray(list) ? list : [];
+          setItems(safe.map(toUICard));
+        } catch (stateError) {
+          console.error('Error updating items state:', stateError);
+        }
       }
     } catch (e) {
-      console.error("Get reflections failed:", e);
-      if (currentFetchDateRef.current === fetchDate && currentFetchTabRef.current === fetchTab && isMountedRef.current) {
-        setItems([]);
+      const isCancelled = e?.name === 'AbortError' || e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED' || e?.message?.includes('canceled');
+      
+      if (!isCancelled) {
+        if (requestId === fetchRequestIdRef.current && isMountedRef.current) {
+          console.error("Get reflections failed:", e);
+          if (currentFetchDateRef.current === fetchDate && currentFetchTabRef.current === fetchTab) {
+            try {
+              setItems([]);
+            } catch (stateError) {
+              console.error('Error setting empty items:', stateError);
+            }
+          }
+        }
       }
     } finally {
-      if (currentFetchDateRef.current === fetchDate && currentFetchTabRef.current === fetchTab && isMountedRef.current) {
-        setLoading(false);
+      if (requestId === fetchRequestIdRef.current && isMountedRef.current) {
+        try {
+          if (currentFetchDateRef.current === fetchDate && currentFetchTabRef.current === fetchTab) {
+            setLoading(false);
+          }
+        } catch (stateError) {
+          console.error('Error updating loading state:', stateError);
+        }
+      }
+      isFetchingCardsRef.current = false;
+      
+      if (fetchCardsAbortControllerRef.current === abortController) {
+        fetchCardsAbortControllerRef.current = null;
       }
     }
   }, [userId, selectedDate, activeTab, toUICard]);
 
   const fetchDots = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || !isMountedRef.current) return;
 
-    const startDate = dayjs(selectedDate).startOf('isoWeek').format('YYYY-MM-DD');
-    const endDate = dayjs(selectedDate).endOf('isoWeek').add(1, 'day').format('YYYY-MM-DD');
     const fetchDate = selectedDate;
+    
+    if (!fetchDate || !dayjs(fetchDate).isValid()) {
+      console.warn('Invalid date in fetchDots:', fetchDate);
+      return;
+    }
+
+    if (fetchDotsAbortControllerRef.current) {
+      try {
+        fetchDotsAbortControllerRef.current.abort();
+      } catch (e) {
+      }
+      fetchDotsAbortControllerRef.current = null;
+    }
+
+    const startDate = dayjs(fetchDate).startOf('isoWeek').format('YYYY-MM-DD');
+    const endDate = dayjs(fetchDate).endOf('isoWeek').add(1, 'day').format('YYYY-MM-DD');
+    
+    if (!startDate || !endDate || !dayjs(startDate).isValid() || !dayjs(endDate).isValid()) {
+      console.warn('Invalid date range in fetchDots:', { startDate, endDate });
+      return;
+    }
+    
+    const abortController = new AbortController();
+    fetchDotsAbortControllerRef.current = abortController;
+    
+    isFetchingDotsRef.current = true;
 
     try {
-      const dates = await getReflectionDates(userId, { startDate, endDate });
+      const dates = await getReflectionDates(userId, { startDate, endDate }, abortController.signal);
 
-      if (currentFetchDateRef.current === fetchDate && isMountedRef.current) {
-        const next = {};
-        (Array.isArray(dates) ? dates : []).forEach((row) => {
-          const ds = dayjs(row?.date).format('YYYY-MM-DD');
-          const t = String(row?.type || '').toLowerCase();
-          if (!ds) return;
-          if (!next[ds]) next[ds] = { self: false, pipo: false };
-          if (t === 'self') next[ds].self = true;
-          if (t === 'pipo') next[ds].pipo = true;
-        });
-        setDotDates(next);
+      if (
+        !abortController.signal.aborted &&
+        currentFetchDateRef.current === fetchDate && 
+        isMountedRef.current
+      ) {
+        try {
+          const next = {};
+          (Array.isArray(dates) ? dates : []).forEach((row) => {
+            try {
+              const ds = dayjs(row?.date).format('YYYY-MM-DD');
+              const t = String(row?.type || '').toLowerCase();
+              if (!ds || !dayjs(ds).isValid()) return;
+              if (!next[ds]) next[ds] = { self: false, pipo: false };
+              if (t === 'self') next[ds].self = true;
+              if (t === 'pipo') next[ds].pipo = true;
+            } catch (rowError) {
+              console.error('Error processing date row:', rowError);
+            }
+          });
+          setDotDates(next);
+        } catch (stateError) {
+          console.error('Error updating dotDates state:', stateError);
+        }
       }
     } catch (e) {
-      console.error('Get reflection dates failed:', e);
-      if (currentFetchDateRef.current === fetchDate && isMountedRef.current) {
-        setDotDates({});
+      const isCancelled = e?.name === 'AbortError' || e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED' || e?.message?.includes('canceled');
+      
+      if (!isCancelled) {
+        if (currentFetchDateRef.current === fetchDate && isMountedRef.current) {
+          console.error('Get reflection dates failed:', e);
+          try {
+            setDotDates({});
+          } catch (stateError) {
+            console.error('Error setting empty dotDates:', stateError);
+          }
+        }
+      }
+    } finally {
+      isFetchingDotsRef.current = false;
+      
+      if (fetchDotsAbortControllerRef.current === abortController) {
+        fetchDotsAbortControllerRef.current = null;
       }
     }
   }, [userId, selectedDate]);
@@ -480,12 +591,30 @@ const confirmDeleteSelf = async () => {
 
 
   useEffect(() => {
-    fetchDots();
-  }, [fetchDots]);
+    if (!isMountedRef.current) return;
+    if (userId && selectedDate && dayjs(selectedDate).isValid()) {
+      const timeoutId = setTimeout(() => {
+        if (isMountedRef.current && !isDateChangingRef.current) {
+          fetchDots();
+        }
+      }, 150);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [fetchDots, userId, selectedDate]);
 
   useEffect(() => {
-    fetchCards();
-  }, [fetchCards]);
+    if (!isMountedRef.current) return;
+    if (userId && selectedDate && dayjs(selectedDate).isValid()) {
+      const timeoutId = setTimeout(() => {
+        if (isMountedRef.current && !isDateChangingRef.current) {
+          fetchCards();
+        }
+      }, 150);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [fetchCards, userId, selectedDate]);
 
   const handleTabChange = useCallback((newTab) => {
     if (isSavingRef.current || writerOpen) {
@@ -528,63 +657,132 @@ const confirmDeleteSelf = async () => {
 
   useEffect(() => {
     isMountedRef.current = true;
+    isFetchingCardsRef.current = false;
+    isFetchingDotsRef.current = false;
     return () => {
       isMountedRef.current = false;
+      isFetchingCardsRef.current = false;
+      isFetchingDotsRef.current = false;
+      
+      if (fetchCardsAbortControllerRef.current) {
+        try {
+          fetchCardsAbortControllerRef.current.abort();
+        } catch (e) {
+        }
+        fetchCardsAbortControllerRef.current = null;
+      }
+      if (fetchDotsAbortControllerRef.current) {
+        try {
+          fetchDotsAbortControllerRef.current.abort();
+        } catch (e) {
+        }
+        fetchDotsAbortControllerRef.current = null;
+      }
+      
       if (dateChangeTimeoutRef.current) {
         clearTimeout(dateChangeTimeoutRef.current);
+        dateChangeTimeoutRef.current = null;
       }
       if (tabChangeTimeoutRef.current) {
         clearTimeout(tabChangeTimeoutRef.current);
+        tabChangeTimeoutRef.current = null;
       }
       if (writerModalTimeoutRef.current) {
         clearTimeout(writerModalTimeoutRef.current);
+        writerModalTimeoutRef.current = null;
       }
       if (innerTabTimeoutRef.current) {
         clearTimeout(innerTabTimeoutRef.current);
+        innerTabTimeoutRef.current = null;
       }
       if (goingToSupportTimeoutRef.current) {
         clearTimeout(goingToSupportTimeoutRef.current);
+        goingToSupportTimeoutRef.current = null;
       }
+      
+      pendingDateRef.current = null;
+      pendingTabRef.current = null;
+      isDateChangingRef.current = false;
+      lastProcessedDateRef.current = null;
     };
   }, []);
   
   useFocusEffect(
-  useCallback(() => {
-    fetchCards();
-    fetchDots();
-  }, [fetchCards, fetchDots])
-);
+    useCallback(() => {
+      if (!isMountedRef.current || !userId) return;
+      
+      if (selectedDate && dayjs(selectedDate).isValid()) {
+        const timeoutId = setTimeout(() => {
+          if (isMountedRef.current && userId && selectedDate && dayjs(selectedDate).isValid()) {
+            try {
+              fetchCards();
+              fetchDots();
+            } catch (e) {
+              console.error('Error in useFocusEffect fetch:', e);
+            }
+          }
+        }, 100);
+        
+        return () => {
+          clearTimeout(timeoutId);
+        };
+      }
+    }, [fetchCards, fetchDots, userId, selectedDate])
+  );
 
 
 
   const markedDates = useMemo(() => {
-    const marks = {};
+    try {
+      const marks = {};
 
-    Object.keys(dotDates || {}).forEach((ds) => {
+      if (dotDates && typeof dotDates === 'object') {
+        Object.keys(dotDates).forEach((ds) => {
+          try {
+            if (!ds || typeof ds !== 'string') return;
+            
+            const d = dayjs(ds).format('YYYY-MM-DD');
+            if (!d || d === 'Invalid Date' || !dayjs(d).isValid()) return;
+            
+            const flags = dotDates[ds] || {};
+            if (typeof flags !== 'object') return;
+            
+            const dots = [];
 
-      const d = dayjs(ds).format('YYYY-MM-DD');
-      const flags = dotDates[ds] || {};
-      const dots = [];
+            if (flags.pipo) dots.push({ key: 'pipo', color: 'rgba(23, 155, 255, 1)', selectedDotColor: 'rgba(23, 155, 255, 1)' });
+            if (flags.self) dots.push({ key: 'self', color: 'rgba(112, 73, 196, 1)', selectedDotColor: 'rgba(112, 73, 196, 1)' });
 
-      if (flags.pipo) dots.push({ key: 'pipo', color: 'rgba(23, 155, 255, 1)', selectedDotColor: 'rgba(23, 155, 255, 1)' });
-      if (flags.self) dots.push({ key: 'self', color: 'rgba(112, 73, 196, 1)', selectedDotColor: 'rgba(112, 73, 196, 1)' });
-
-      if (dots.length) {
-
-        marks[d] = { ...(marks[d] || {}), dots, marked: true };
+            if (dots.length) {
+              marks[d] = { ...(marks[d] || {}), dots, marked: true };
+            }
+          } catch (e) {
+            console.error('Error processing date in markedDates:', ds, e);
+          }
+        });
       }
-    });
 
+      // Add selected date marker
+      if (selectedDate && dayjs(selectedDate).isValid()) {
+        try {
+          const sel = dayjs(selectedDate).format('YYYY-MM-DD');
+          if (sel && sel !== 'Invalid Date') {
+            marks[sel] = {
+              ...(marks[sel] || {}),
+              selected: true,
+              selectedColor: 'rgba(244, 239, 255, 1)',
+              selectedTextColor: '#111',
+            };
+          }
+        } catch (e) {
+          console.error('Error setting selected date in markedDates:', e);
+        }
+      }
 
-    const sel = dayjs(selectedDate).format('YYYY-MM-DD');
-    marks[sel] = {
-      ...(marks[sel] || {}),
-      selected: true,
-      selectedColor: 'rgba(244, 239, 255, 1)',
-      selectedTextColor: '#111',
-    };
-
-    return marks;
+      return marks;
+    } catch (e) {
+      console.error('Error in markedDates useMemo:', e);
+      return {};
+    }
   }, [dotDates, selectedDate]);
 
   const handleSaveReflection = async ({ title, description }) => {
@@ -766,13 +964,29 @@ const confirmDeleteSelf = async () => {
 
 
   const onRefresh = async () => {
-    if (!isMountedRef.current) return;
-    setRefreshing(true);
+    if (!isMountedRef.current || !userId) return;
+    
+    if (refreshing || isFetchingCardsRef.current || isFetchingDotsRef.current) {
+      return;
+    }
+    
     try {
-      await Promise.all([fetchCards(), fetchDots()]);
+      if (isMountedRef.current) {
+        setRefreshing(true);
+      }
+      
+      if (selectedDate && dayjs(selectedDate).isValid()) {
+        await Promise.all([fetchCards(), fetchDots()]);
+      }
+    } catch (e) {
+      console.error('Error in onRefresh:', e);
     } finally {
       if (isMountedRef.current) {
-        setRefreshing(false);
+        try {
+          setRefreshing(false);
+        } catch (stateError) {
+          console.error('Error setting refreshing state:', stateError);
+        }
       }
     }
   };
@@ -780,43 +994,111 @@ const confirmDeleteSelf = async () => {
   const pipoData = useMemo(() => (Array.isArray(items) ? items.filter((it) => it.type !== "self") : []), [items]);
   const selfData = useMemo(() => (Array.isArray(items) ? items.filter((it) => it.type === "self") : []), [items]);
 
-  // Safe date change handler with debouncing to prevent crashes on rapid date switching
   const handleDateChange = useCallback((newDate) => {
-    if (!newDate) return;
+    if (!newDate || !isMountedRef.current) return;
     
-    const dateStr = typeof newDate === 'string' ? newDate : (newDate?.dateString || newDate);
-    if (!dateStr || !dayjs(dateStr).isValid()) {
-      console.warn('Invalid date:', dateStr);
+    if (isDateChangingRef.current) {
       return;
     }
     
-    pendingDateRef.current = dateStr;
-    
-    if (dateChangeTimeoutRef.current) {
-      clearTimeout(dateChangeTimeoutRef.current);
-    }
-    
-    dateChangeTimeoutRef.current = setTimeout(() => {
-      try {
-        const pendingDate = pendingDateRef.current;
-        if (pendingDate && dayjs(pendingDate).isValid() && isMountedRef.current) {
-          setSelectedDate(pendingDate);
-          pendingDateRef.current = null;
-        }
-      } catch (e) {
-        console.error('Error setting date:', e);
-        pendingDateRef.current = null;
+    try {
+      const dateStr = typeof newDate === 'string' ? newDate : (newDate?.dateString || newDate);
+      if (!dateStr || typeof dateStr !== 'string') {
+        console.warn('Invalid date format:', newDate);
+        return;
       }
-    }, 200);
-  }, []);
+      
+      if (!dayjs(dateStr).isValid()) {
+        console.warn('Invalid date value:', dateStr);
+        return;
+      }
+      
+      const normalizedDate = dayjs(dateStr).format('YYYY-MM-DD');
+      if (!normalizedDate || normalizedDate === 'Invalid Date') {
+        console.warn('Could not normalize date:', dateStr);
+        return;
+      }
+      
+      if (normalizedDate === selectedDate || normalizedDate === lastProcessedDateRef.current) {
+        return;
+      }
+      
+      isDateChangingRef.current = true;
+      lastProcessedDateRef.current = normalizedDate;
+      
+      if (fetchCardsAbortControllerRef.current) {
+        try {
+          fetchCardsAbortControllerRef.current.abort();
+        } catch (e) {
+        }
+        fetchCardsAbortControllerRef.current = null;
+      }
+      if (fetchDotsAbortControllerRef.current) {
+        try {
+          fetchDotsAbortControllerRef.current.abort();
+        } catch (e) {
+        }
+        fetchDotsAbortControllerRef.current = null;
+      }
+      
+      pendingDateRef.current = normalizedDate;
+      
+      if (dateChangeTimeoutRef.current) {
+        clearTimeout(dateChangeTimeoutRef.current);
+        dateChangeTimeoutRef.current = null;
+      }
+      
+      dateChangeTimeoutRef.current = setTimeout(() => {
+        const processedDate = pendingDateRef.current || normalizedDate;
+        try {
+          const pendingDate = pendingDateRef.current;
+          if (
+            pendingDate && 
+            typeof pendingDate === 'string' &&
+            dayjs(pendingDate).isValid() && 
+            isMountedRef.current
+          ) {
+            const finalDate = dayjs(pendingDate).format('YYYY-MM-DD');
+            if (finalDate && finalDate !== 'Invalid Date') {
+              setSelectedDate(finalDate);
+            }
+            pendingDateRef.current = null;
+          }
+        } catch (e) {
+          console.error('Error setting date:', e);
+          pendingDateRef.current = null;
+        } finally {
+          dateChangeTimeoutRef.current = null;
+          setTimeout(() => {
+            isDateChangingRef.current = false;
+            setTimeout(() => {
+              if (lastProcessedDateRef.current === processedDate) {
+                lastProcessedDateRef.current = null;
+              }
+            }, 100);
+          }, 100);
+        }
+      }, 400);
+    } catch (e) {
+      console.error('Error in handleDateChange:', e);
+      isDateChangingRef.current = false;
+      lastProcessedDateRef.current = null;
+    }
+  }, [selectedDate]);
 
-  // Use motivation and imageName from backend (with fallback for backward compatibility)
+  
   const pipoCardData = useMemo(() => {
-    if (!pipoData.length || !selectedDate) return [];
+    if (!Array.isArray(pipoData) || !pipoData.length || !selectedDate) return [];
+    
+    
+    if (!dayjs(selectedDate).isValid()) {
+      console.warn('Invalid selectedDate in pipoCardData:', selectedDate);
+      return [];
+    }
     
     try {
       const seedRandom = (seed) => {
-        let value = Math.abs(seed);
+        let value = Math.abs(seed || 0);
         return () => {
           value = (value * 9301 + 49297) % 233280;
           return value / 233280;
@@ -829,9 +1111,10 @@ const confirmDeleteSelf = async () => {
         try {
           let motivation = item.motivation;
           if (!motivation) {
-            const seed = parseInt(String(item.id).replace(/\D/g, ''), 10) || 0;
-            const dateSeed = String(selectedDate).split('-').join('');
-            const combinedSeed = seed + (parseInt(dateSeed, 10) || 0);
+            const seed = parseInt(String(item.id || '').replace(/\D/g, ''), 10) || 0;
+            const dateStr = String(selectedDate || '').split('-').join('');
+            const dateSeed = parseInt(dateStr, 10) || 0;
+            const combinedSeed = seed + dateSeed;
             const random = seedRandom(combinedSeed);
             const motivationIndex = Math.floor(random() * MOTIVATION_TITLES.length);
             motivation = MOTIVATION_TITLES[Math.max(0, Math.min(motivationIndex, MOTIVATION_TITLES.length - 1))] || MOTIVATION_TITLES[0];
@@ -839,9 +1122,10 @@ const confirmDeleteSelf = async () => {
           
           let imageFilename = item.imageName;
           if (!imageFilename) {
-            const seed = parseInt(String(item.id).replace(/\D/g, ''), 10) || 0;
-            const dateSeed = String(selectedDate).split('-').join('');
-            const combinedSeed = seed + (parseInt(dateSeed, 10) || 0);
+            const seed = parseInt(String(item.id || '').replace(/\D/g, ''), 10) || 0;
+            const dateStr = String(selectedDate || '').split('-').join('');
+            const dateSeed = parseInt(dateStr, 10) || 0;
+            const combinedSeed = seed + dateSeed;
             const random = seedRandom(combinedSeed);
             const imageIndex = Math.floor(random() * PIPO_NOTE_IMAGES.length);
             imageFilename = PIPO_NOTE_IMAGES[Math.max(0, Math.min(imageIndex, PIPO_NOTE_IMAGES.length - 1))] || PIPO_NOTE_IMAGES[0];
@@ -849,11 +1133,11 @@ const confirmDeleteSelf = async () => {
           
           return {
             ...item,
-            motivation: motivation,
-            imageFilename: imageFilename,
+            motivation: motivation || MOTIVATION_TITLES[0],
+            imageFilename: imageFilename || PIPO_NOTE_IMAGES[0],
           };
         } catch (e) {
-          console.error('Error generating card data for item:', e);
+          console.error('Error generating card data for item:', item?.id, e);
           return {
             ...item,
             motivation: item.motivation || MOTIVATION_TITLES[0],
@@ -905,7 +1189,11 @@ const confirmDeleteSelf = async () => {
         setSelectedDate={handleDateChange}
         setModalVisible={setFullCalendarVisible}
       />
-      <CalendarProvider date={selectedDate} onDateChanged={handleDateChange}>
+      <CalendarProvider date={selectedDate} onDateChanged={(date) => {
+        if (!isDateChangingRef.current && date && date !== selectedDate) {
+          handleDateChange(date);
+        }
+      }}>
         <View style={styles.weekHeaderWrap}>
           <WeekCalendar
             firstDay={1}
@@ -913,7 +1201,15 @@ const confirmDeleteSelf = async () => {
             markingType="multi-dot"
             allowShadow={false}
             style={styles.weekCalendar}
-            onDayPress={(d) => handleDateChange(d?.dateString)}
+            onDayPress={(d) => {
+              try {
+                if (d && d.dateString && typeof d.dateString === 'string') {
+                  handleDateChange(d.dateString);
+                }
+              } catch (e) {
+                console.error('Error in onDayPress:', e);
+              }
+            }}
             theme={{
               todayTextColor: "#111",
               selectedDayBackgroundColor: "#CFCFCF",

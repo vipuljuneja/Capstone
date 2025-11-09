@@ -5,9 +5,13 @@ import { Calendar } from "react-native-calendars";
 const FullCalendar = ({ selectedDate, modalVisible, setModalVisible, setSelectedDate }) => {
     
     const onDaySelect = (day) => {
-        if (day?.dateString) {
-            setSelectedDate(day.dateString);
-            setModalVisible(false);
+        try {
+            if (day?.dateString && typeof day.dateString === 'string') {
+                setSelectedDate(day.dateString);
+                setModalVisible(false);
+            }
+        } catch (e) {
+            console.error('Error in FullCalendar onDaySelect:', e);
         }
     }
 
