@@ -312,17 +312,48 @@ export default function NotebookScreen({ navigation }) {
 const [deletingSelf, setDeletingSelf] = useState(false);
 const deleteTargetRef = useRef(null);
 const currentFetchDateRef = useRef(null);
+const currentFetchTabRef = useRef("pipo"); // Initialize to match initial activeTab
 const dateChangeTimeoutRef = useRef(null);
+const tabChangeTimeoutRef = useRef(null);
 const pendingDateRef = useRef(null);
+const pendingTabRef = useRef(null);
+const isTabChangingRef = useRef(false);
+const isSavingRef = useRef(false);
+const writerModalTabRef = useRef(null);
+const writerModalTimeoutRef = useRef(null);
+const innerTabTimeoutRef = useRef(null);
+const goingToSupportTimeoutRef = useRef(null);
+const isMountedRef = useRef(true);
 
 
 
   const isSelf = activeTab === "self";
 
   const onEditSelf = (item) => {
-    setEditingSelf({ id: item.id, title: item.title, description: item.subtitle });
-
-    setWriterOpen(true);
+    if (!item || !item.id) return;
+    
+    if (tabChangeTimeoutRef.current) {
+      clearTimeout(tabChangeTimeoutRef.current);
+      tabChangeTimeoutRef.current = null;
+    }
+    isTabChangingRef.current = false;
+    pendingTabRef.current = null;
+    
+    setEditingSelf({ id: item.id, title: item.title || "", description: item.subtitle || "" });
+    
+    if (activeTab !== "self") {
+      setActiveTab("self");
+      currentFetchTabRef.current = "self";
+    }
+    
+    writerModalTabRef.current = "self";
+    if (writerModalTimeoutRef.current) {
+      clearTimeout(writerModalTimeoutRef.current);
+    }
+    writerModalTimeoutRef.current = setTimeout(() => {
+      setWriterOpen(true);
+      writerModalTimeoutRef.current = null;
+    }, 50);
   };
 
   // const onDeleteSelf = async (item) => {
@@ -355,7 +386,9 @@ const confirmDeleteSelf = async () => {
   setDeletingSelf(true);
   try {
     await deleteReflection(item.id);
-    await Promise.all([fetchCards(), fetchDots()]);
+    if (fetchCards && fetchDots) {
+      await Promise.all([fetchCards(), fetchDots()]);
+    }
   } catch (e) {
     console.error("Delete failed:", e);
   } finally {
@@ -386,29 +419,29 @@ const confirmDeleteSelf = async () => {
 
   const fetchCards = useCallback(async () => {
     if (!userId) return;
-    // Track the current fetch to prevent race conditions
     const fetchDate = selectedDate;
+    const fetchTab = activeTab;
     currentFetchDateRef.current = fetchDate;
-    setLoading(true);
+    currentFetchTabRef.current = fetchTab;
+    if (isMountedRef.current) {
+      setLoading(true);
+    }
     try {
       const list = await getReflectionsByUser(userId, {
         date: selectedDate,
         type: activeTab,
       });
-      // Only update state if this is still the current fetch (prevent race conditions)
-      if (currentFetchDateRef.current === fetchDate) {
+      if (currentFetchDateRef.current === fetchDate && currentFetchTabRef.current === fetchTab && isMountedRef.current) {
         const safe = Array.isArray(list) ? list : [];
         setItems(safe.map(toUICard));
       }
     } catch (e) {
       console.error("Get reflections failed:", e);
-      // Only update state if this is still the current fetch
-      if (currentFetchDateRef.current === fetchDate) {
+      if (currentFetchDateRef.current === fetchDate && currentFetchTabRef.current === fetchTab && isMountedRef.current) {
         setItems([]);
       }
     } finally {
-      // Only update loading state if this is still the current fetch
-      if (currentFetchDateRef.current === fetchDate) {
+      if (currentFetchDateRef.current === fetchDate && currentFetchTabRef.current === fetchTab && isMountedRef.current) {
         setLoading(false);
       }
     }
@@ -419,14 +452,12 @@ const confirmDeleteSelf = async () => {
 
     const startDate = dayjs(selectedDate).startOf('isoWeek').format('YYYY-MM-DD');
     const endDate = dayjs(selectedDate).endOf('isoWeek').add(1, 'day').format('YYYY-MM-DD');
-    // Track the current fetch to prevent race conditions
     const fetchDate = selectedDate;
 
     try {
       const dates = await getReflectionDates(userId, { startDate, endDate });
 
-      // Only update state if this is still the current fetch (prevent race conditions)
-      if (currentFetchDateRef.current === fetchDate) {
+      if (currentFetchDateRef.current === fetchDate && isMountedRef.current) {
         const next = {};
         (Array.isArray(dates) ? dates : []).forEach((row) => {
           const ds = dayjs(row?.date).format('YYYY-MM-DD');
@@ -440,8 +471,7 @@ const confirmDeleteSelf = async () => {
       }
     } catch (e) {
       console.error('Get reflection dates failed:', e);
-      // Only update state if this is still the current fetch
-      if (currentFetchDateRef.current === fetchDate) {
+      if (currentFetchDateRef.current === fetchDate && isMountedRef.current) {
         setDotDates({});
       }
     }
@@ -457,11 +487,63 @@ const confirmDeleteSelf = async () => {
     fetchCards();
   }, [fetchCards]);
 
-  // Cleanup timeout on unmount
+  const handleTabChange = useCallback((newTab) => {
+    if (isSavingRef.current || writerOpen) {
+      console.warn("Cannot change tabs while saving or writer modal is open");
+      return;
+    }
+    if (!newTab || newTab === activeTab || isTabChangingRef.current) return;
+    
+    pendingTabRef.current = newTab;
+    
+    if (tabChangeTimeoutRef.current) {
+      clearTimeout(tabChangeTimeoutRef.current);
+    }
+    
+    isTabChangingRef.current = true;
+    
+    tabChangeTimeoutRef.current = setTimeout(() => {
+      try {
+        const pendingTab = pendingTabRef.current;
+        if (pendingTab && (pendingTab === "pipo" || pendingTab === "self") && isMountedRef.current) {
+          setActiveTab(pendingTab);
+          pendingTabRef.current = null;
+        }
+      } catch (e) {
+        console.error('Error setting tab:', e);
+        pendingTabRef.current = null;
+      } finally {
+        if (innerTabTimeoutRef.current) {
+          clearTimeout(innerTabTimeoutRef.current);
+        }
+        innerTabTimeoutRef.current = setTimeout(() => {
+          if (isMountedRef.current) {
+            isTabChangingRef.current = false;
+          }
+          innerTabTimeoutRef.current = null;
+        }, 300);
+      }
+    }, 150);
+  }, [activeTab]);
+
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
+      isMountedRef.current = false;
       if (dateChangeTimeoutRef.current) {
         clearTimeout(dateChangeTimeoutRef.current);
+      }
+      if (tabChangeTimeoutRef.current) {
+        clearTimeout(tabChangeTimeoutRef.current);
+      }
+      if (writerModalTimeoutRef.current) {
+        clearTimeout(writerModalTimeoutRef.current);
+      }
+      if (innerTabTimeoutRef.current) {
+        clearTimeout(innerTabTimeoutRef.current);
+      }
+      if (goingToSupportTimeoutRef.current) {
+        clearTimeout(goingToSupportTimeoutRef.current);
       }
     };
   }, []);
@@ -507,58 +589,191 @@ const confirmDeleteSelf = async () => {
 
   const handleSaveReflection = async ({ title, description }) => {
     if (!userId) return;
-    const selfData = Array.isArray(items) ? items.filter((it) => it.type === "self") : [];
-    const alreadyHasSelf = selfData.length > 0;
-    if (alreadyHasSelf) {
-      console.warn("A self reflection already exists for this date.");
+    
+    if (isSavingRef.current) {
+      console.warn("Save already in progress");
       return;
     }
-
+    
+    isSavingRef.current = true;
+    
     try {
+      if (!selectedDate || !dayjs(selectedDate).isValid()) {
+        console.error("Invalid selectedDate:", selectedDate);
+        isSavingRef.current = false;
+        return;
+      }
+      
+      if (!title || typeof title !== 'string' || title.trim().length === 0) {
+        console.error("Invalid title provided");
+        isSavingRef.current = false;
+        return;
+      }
+      
+      const selfData = Array.isArray(items) ? items.filter((it) => it.type === "self") : [];
+      const alreadyHasSelf = selfData.length > 0;
+      if (alreadyHasSelf) {
+        console.warn("A self reflection already exists for this date.");
+        isSavingRef.current = false;
+        return;
+      }
+
       const created = await createReflection({
         userId,
-        title,
-        description,
+        title: title.trim(),
+        description: description || "",
         date: selectedDate,
         type: "self",
       });
-      await fetchCards();
-      setDotDates((prev) => {
-        const curr = prev || {};
-        const existing = curr[selectedDate] || {};
-        return { ...curr, [selectedDate]: { ...existing, self: true } };
-      });
-
+      
+      if (created) {
+        try {
+          const fetchDate = selectedDate;
+          
+          const list = await getReflectionsByUser(userId, {
+            date: selectedDate,
+            type: "self",
+          });
+          
+          if ((currentFetchDateRef.current === fetchDate || !currentFetchDateRef.current) && isMountedRef.current) {
+            const safe = Array.isArray(list) ? list : [];
+            if (activeTab === "self") {
+              setItems(safe.map((r, i) => ({
+                id: String(r?._id ?? r?.id ?? i),
+                type: r?.type ?? "self",
+                date: r?.date ?? selectedDate,
+                title: r?.title ?? "",
+                subtitle: r?.description ?? "",
+                sessionId: r?.linkedSessionId || null,
+                scenarioId: r?.scenarioId || null,
+                level: r?.level || null,
+                imageName: r?.imageName || null,
+                motivation: r?.motivation || null,
+                readAt: r?.readAt || null,
+              })));
+            }
+          }
+        } catch (fetchError) {
+          console.error("Failed to refresh cards after save:", fetchError);
+        }
+        
+        try {
+          const dateKey = dayjs(selectedDate).format("YYYY-MM-DD");
+          if (dateKey && dayjs(dateKey).isValid() && isMountedRef.current) {
+            setDotDates((prev) => {
+              const curr = prev || {};
+              const existing = curr[dateKey] || {};
+              return { ...curr, [dateKey]: { ...existing, self: true } };
+            });
+          }
+        } catch (dateError) {
+          console.error("Failed to update dot dates:", dateError);
+        }
+      }
     } catch (e) {
       console.error("Create reflection failed:", e);
+      throw e;
+    } finally {
+      isSavingRef.current = false;
     }
   };
 
   const handleUpdateReflection = async ({ title, description }) => {
-    if (!editingSelf) return;
+    if (!editingSelf || !editingSelf.id) {
+      console.error("Cannot update: editingSelf or id is missing");
+      return;
+    }
+    
+    if (isSavingRef.current) {
+      console.warn("Save already in progress");
+      return;
+    }
+    
+    isSavingRef.current = true;
+    
     try {
-      await updateReflection(editingSelf.id, { title, description, date: selectedDate, type: "self" });
-      setEditingSelf(null);
-      await fetchCards();
-
-      const key = dayjs(selectedDate).format("YYYY-MM-DD");
-      setDotDates((prev) => {
-        const curr = prev || {};
-        const existing = curr[key] || {};
-        return { ...curr, [key]: { ...existing, self: true } };
+      if (!selectedDate || !dayjs(selectedDate).isValid()) {
+        console.error("Invalid selectedDate:", selectedDate);
+        isSavingRef.current = false;
+        return;
+      }
+      
+      if (!title || typeof title !== 'string' || title.trim().length === 0) {
+        console.error("Invalid title provided");
+        isSavingRef.current = false;
+        return;
+      }
+      
+      await updateReflection(editingSelf.id, { 
+        title: title.trim(), 
+        description: description || "", 
+        date: selectedDate, 
+        type: "self" 
       });
+      
+      if (isMountedRef.current) {
+        setEditingSelf(null);
+      }
+      
+      try {
+        const fetchDate = selectedDate;
+        const list = await getReflectionsByUser(userId, {
+          date: selectedDate,
+          type: "self",
+        });
+        
+        if ((currentFetchDateRef.current === fetchDate || !currentFetchDateRef.current) && isMountedRef.current) {
+          const safe = Array.isArray(list) ? list : [];
+          if (activeTab === "self") {
+            setItems(safe.map((r, i) => ({
+              id: String(r?._id ?? r?.id ?? i),
+              type: r?.type ?? "self",
+              date: r?.date ?? selectedDate,
+              title: r?.title ?? "",
+              subtitle: r?.description ?? "",
+              sessionId: r?.linkedSessionId || null,
+              scenarioId: r?.scenarioId || null,
+              level: r?.level || null,
+              imageName: r?.imageName || null,
+              motivation: r?.motivation || null,
+              readAt: r?.readAt || null,
+            })));
+          }
+        }
+      } catch (fetchError) {
+        console.error("Failed to refresh cards after update:", fetchError);
+      }
+
+      try {
+        const key = dayjs(selectedDate).format("YYYY-MM-DD");
+        if (key && dayjs(key).isValid() && isMountedRef.current) {
+          setDotDates((prev) => {
+            const curr = prev || {};
+            const existing = curr[key] || {};
+            return { ...curr, [key]: { ...existing, self: true } };
+          });
+        }
+      } catch (dateError) {
+        console.error("Failed to update dot dates:", dateError);
+      }
     } catch (e) {
       console.error("Update failed:", e);
+      throw e;
+    } finally {
+      isSavingRef.current = false;
     }
   };
 
 
   const onRefresh = async () => {
+    if (!isMountedRef.current) return;
     setRefreshing(true);
     try {
       await Promise.all([fetchCards(), fetchDots()]);
     } finally {
-      setRefreshing(false);
+      if (isMountedRef.current) {
+        setRefreshing(false);
+      }
     }
   };
 
@@ -569,27 +784,22 @@ const confirmDeleteSelf = async () => {
   const handleDateChange = useCallback((newDate) => {
     if (!newDate) return;
     
-    // Validate date format
     const dateStr = typeof newDate === 'string' ? newDate : (newDate?.dateString || newDate);
     if (!dateStr || !dayjs(dateStr).isValid()) {
       console.warn('Invalid date:', dateStr);
       return;
     }
     
-    // Store the pending date
     pendingDateRef.current = dateStr;
     
-    // Clear any pending date changes
     if (dateChangeTimeoutRef.current) {
       clearTimeout(dateChangeTimeoutRef.current);
     }
     
-    // Debounce rapid date changes - only update after user stops changing dates
     dateChangeTimeoutRef.current = setTimeout(() => {
       try {
         const pendingDate = pendingDateRef.current;
-        // Double-check the date is still valid
-        if (pendingDate && dayjs(pendingDate).isValid()) {
+        if (pendingDate && dayjs(pendingDate).isValid() && isMountedRef.current) {
           setSelectedDate(pendingDate);
           pendingDateRef.current = null;
         }
@@ -597,7 +807,7 @@ const confirmDeleteSelf = async () => {
         console.error('Error setting date:', e);
         pendingDateRef.current = null;
       }
-    }, 200); // 200ms debounce - wait for user to stop changing dates
+    }, 200);
   }, []);
 
   // Use motivation and imageName from backend (with fallback for backward compatibility)
@@ -605,7 +815,6 @@ const confirmDeleteSelf = async () => {
     if (!pipoData.length || !selectedDate) return [];
     
     try {
-      // Use a seeded random function for fallback only (when backend data is missing)
       const seedRandom = (seed) => {
         let value = Math.abs(seed);
         return () => {
@@ -618,10 +827,8 @@ const confirmDeleteSelf = async () => {
         if (!item || !item.id) return null;
         
         try {
-          // Use motivation from backend if available, otherwise fallback to random selection
           let motivation = item.motivation;
           if (!motivation) {
-            // Fallback: generate random motivation if backend didn't provide one (for backward compatibility)
             const seed = parseInt(String(item.id).replace(/\D/g, ''), 10) || 0;
             const dateSeed = String(selectedDate).split('-').join('');
             const combinedSeed = seed + (parseInt(dateSeed, 10) || 0);
@@ -630,10 +837,8 @@ const confirmDeleteSelf = async () => {
             motivation = MOTIVATION_TITLES[Math.max(0, Math.min(motivationIndex, MOTIVATION_TITLES.length - 1))] || MOTIVATION_TITLES[0];
           }
           
-          // Use imageName from backend if available, otherwise fallback to random selection
           let imageFilename = item.imageName;
           if (!imageFilename) {
-            // Fallback: generate random image if backend didn't provide one (for backward compatibility)
             const seed = parseInt(String(item.id).replace(/\D/g, ''), 10) || 0;
             const dateSeed = String(selectedDate).split('-').join('');
             const combinedSeed = seed + (parseInt(dateSeed, 10) || 0);
@@ -644,8 +849,8 @@ const confirmDeleteSelf = async () => {
           
           return {
             ...item,
-            motivation: motivation, // Use from backend or fallback
-            imageFilename: imageFilename, // Use from backend or fallback
+            motivation: motivation,
+            imageFilename: imageFilename,
           };
         } catch (e) {
           console.error('Error generating card data for item:', e);
@@ -655,7 +860,7 @@ const confirmDeleteSelf = async () => {
             imageFilename: item.imageName || PIPO_NOTE_IMAGES[0],
           };
         }
-      }).filter(Boolean); // Remove any null items
+      }).filter(Boolean);
     } catch (e) {
       console.error('Error in pipoCardData memoization:', e);
       return [];
@@ -739,7 +944,32 @@ const confirmDeleteSelf = async () => {
             <View style={styles.emptyWrap}>
               <Text style={styles.emptyTextCenter}>Take a little moment just for you.</Text>
 
-              <Pressable onPress={() => setWriterOpen(true)} style={styles.writeBtn} hitSlop={12}>
+              <Pressable 
+                onPress={() => {
+                  if (tabChangeTimeoutRef.current) {
+                    clearTimeout(tabChangeTimeoutRef.current);
+                    tabChangeTimeoutRef.current = null;
+                  }
+                  isTabChangingRef.current = false;
+                  pendingTabRef.current = null;
+                  
+                  if (activeTab !== "self") {
+                    setActiveTab("self");
+                    currentFetchTabRef.current = "self";
+                  }
+                  
+                  writerModalTabRef.current = "self";
+                  if (writerModalTimeoutRef.current) {
+                    clearTimeout(writerModalTimeoutRef.current);
+                  }
+                  writerModalTimeoutRef.current = setTimeout(() => {
+                    setWriterOpen(true);
+                    writerModalTimeoutRef.current = null;
+                  }, 50);
+                }} 
+                style={styles.writeBtn} 
+                hitSlop={12}
+              >
                 <MaterialIcons name="edit" size={18} color="#fff" />
                 <Text style={styles.writeBtnText}>WRITE</Text>
               </Pressable>
@@ -775,40 +1005,32 @@ const confirmDeleteSelf = async () => {
           ) : (
             <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
               {pipoCardData.map((item, i) => {
-                // Create a safe navigation handler that validates all data
                 const handleCardPress = () => {
                   try {
-                    // Don't navigate if still loading
                     if (loading) {
                       console.warn('Still loading data, please wait');
                       return;
                     }
                     
-                    // Validate required fields before navigation
                     if (!item || !item.id) {
                       console.warn('Invalid item data, cannot navigate');
                       return;
                     }
                     
-                    // Get the current date (use pending date if available, otherwise selectedDate)
                     const currentDate = pendingDateRef.current || selectedDate;
                     if (!currentDate || !dayjs(currentDate).isValid()) {
                       console.warn('Invalid date, cannot navigate');
                       return;
                     }
                     
-                    // Ensure image filename is valid
                     const imageFilename = item.imageFilename || PIPO_NOTE_IMAGES[0];
-                    
-                    // Use motivation from backend (should already be set in pipoCardData)
                     const safeMotivation = item.motivation || MOTIVATION_TITLES[0];
                     
-                    // Ensure all required fields are present
                     const pipoData = {
                       id: String(item.id),
-                      imageFilename: imageFilename, // Pass filename instead of require() object
-                      motivation: safeMotivation, // Use lowercase to match backend field
-                      Motivation: safeMotivation, // Keep uppercase for backward compatibility
+                      imageFilename: imageFilename,
+                      motivation: safeMotivation,
+                      Motivation: safeMotivation,
                       title: String(item.title || ''),
                       subtitle: String(item.subtitle || ''),
                       dateISO: currentDate,
@@ -821,7 +1043,6 @@ const confirmDeleteSelf = async () => {
                       level: item.level || null,
                     };
                     
-                    // Final validation before navigation
                     if (!pipoData.id || !pipoData.imageFilename) {
                       console.warn('Missing required pipo data, cannot navigate');
                       return;
@@ -860,14 +1081,14 @@ const confirmDeleteSelf = async () => {
         >
           <Pressable
             style={[styles.tabButton, activeTab === "pipo" && styles.tabActive]}
-            onPress={() => setActiveTab("pipo")}
+            onPress={() => handleTabChange("pipo")}
           >
             <Text style={[styles.tabText, activeTab === "pipo" && styles.tabTextActive]}>FROM PIPO</Text>
           </Pressable>
 
           <Pressable
             style={[styles.tabButton, activeTab === "self" && styles.tabActive]}
-            onPress={() => setActiveTab("self")}
+            onPress={() => handleTabChange("self")}
           >
             <Text style={[styles.tabText, activeTab === "self" && styles.tabTextActive]}>TO MYSELF</Text>
           </Pressable>
@@ -876,15 +1097,52 @@ const confirmDeleteSelf = async () => {
       <Modal
         visible={writerOpen}
         animationType="slide"
-        onRequestClose={() => setWriterOpen(false)}
+        onRequestClose={() => {
+          try {
+            if (writerModalTimeoutRef.current) {
+              clearTimeout(writerModalTimeoutRef.current);
+              writerModalTimeoutRef.current = null;
+            }
+            setWriterOpen(false);
+            setEditingSelf(null);
+            writerModalTabRef.current = null;
+          } catch (e) {
+            console.error("Error in onRequestClose:", e);
+          }
+        }}
         presentationStyle="fullScreen"
       >
-        <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
-          <View style={{ flexDirection: "row", alignItems: "center", padding: 12, gap: 12 }}>
-            <Pressable onPress={() => setWriterOpen(false)} hitSlop={12}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={['top', 'bottom', 'left', 'right']}>
+          <View style={{ 
+            flexDirection: "row", 
+            alignItems: "center", 
+            paddingHorizontal: 12, 
+            paddingVertical: 12,
+            paddingTop: 8,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: "#eee",
+            backgroundColor: "#fff",
+            zIndex: 10,
+          }}>
+            <Pressable 
+              onPress={() => {
+                try {
+                  if (writerModalTimeoutRef.current) {
+                    clearTimeout(writerModalTimeoutRef.current);
+                    writerModalTimeoutRef.current = null;
+                  }
+                  setWriterOpen(false);
+                  setEditingSelf(null);
+                  writerModalTabRef.current = null;
+                } catch (e) {
+                  console.error("Error closing modal:", e);
+                }
+              }} 
+              hitSlop={12}
+            >
               <MaterialIcons name="arrow-back" size={22} color="#000" />
             </Pressable>
-            <Text style={{ fontSize: 16, fontWeight: "700" }}>Write</Text>
+            <Text style={{ fontSize: 16, fontWeight: "700", marginLeft: 8 }}>Write</Text>
           </View>
 
           <KeyboardAvoidingView
@@ -892,14 +1150,28 @@ const confirmDeleteSelf = async () => {
             behavior={Platform.OS === "ios" ? "padding" : undefined}
             keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
           >
-            <View style={{ padding: 16, flex: 1 }}>
+            <ScrollView 
+              style={{ flex: 1 }}
+              contentContainerStyle={{ padding: 16 }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={true}
+            >
               <AddReflectionCard
                 selectedDate={selectedDate}
                 initialTitle={editingSelf?.title}
                 initialDescription={editingSelf?.description}
                 onCancel={() => {
-                  setWriterOpen(false);
-                  setEditingSelf(null);
+                  try {
+                    if (writerModalTimeoutRef.current) {
+                      clearTimeout(writerModalTimeoutRef.current);
+                      writerModalTimeoutRef.current = null;
+                    }
+                    setWriterOpen(false);
+                    setEditingSelf(null);
+                    writerModalTabRef.current = null;
+                  } catch (e) {
+                    console.error("Error in onCancel:", e);
+                  }
                 }}
                 onSave={async ({ title, description }) => {
                   try {
@@ -908,20 +1180,32 @@ const confirmDeleteSelf = async () => {
                     } else {
                       await handleSaveReflection({ title, description });
                     }
-                  } catch (e) {
-                    console.error("Save failed:", e);
-                  } finally {
+                    if (writerModalTimeoutRef.current) {
+                      clearTimeout(writerModalTimeoutRef.current);
+                      writerModalTimeoutRef.current = null;
+                    }
                     setWriterOpen(false);
                     setEditingSelf(null);
+                    writerModalTabRef.current = null;
+                  } catch (e) {
+                    console.error("Save failed:", e);
+                    console.error("Error details:", {
+                      message: e?.message,
+                      stack: e?.stack,
+                      response: e?.response?.data,
+                    });
+                    throw e;
                   }
                 }}
                 onHarmfulDetected={() => {
-                  setShowSupportModal(true);
+                  try {
+                    setShowSupportModal(true);
+                  } catch (e) {
+                    console.error("Error showing support modal:", e);
+                  }
                 }}
               />
-
-
-            </View>
+            </ScrollView>
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
@@ -936,7 +1220,13 @@ const confirmDeleteSelf = async () => {
 
           requestAnimationFrame(() => {
             navigation.navigate("EmotionalSupport");
-            setTimeout(() => { goingToSupportRef.current = false; }, 300);
+            if (goingToSupportTimeoutRef.current) {
+              clearTimeout(goingToSupportTimeoutRef.current);
+            }
+            goingToSupportTimeoutRef.current = setTimeout(() => { 
+              goingToSupportRef.current = false;
+              goingToSupportTimeoutRef.current = null;
+            }, 300);
           });
         }}
       />
@@ -1064,9 +1354,7 @@ const styles = StyleSheet.create({
   pipoBlob: {
     width: 56,
     height: 56,
-    resizeMode: "contain"
-    // borderRadius: 28,
-    // backgroundColor: "#CFC3FF",
+    resizeMode: "contain",
   },
   pipoTitle: {
     fontSize: 15,
