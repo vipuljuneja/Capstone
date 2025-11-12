@@ -21,7 +21,7 @@ export default function QuestionCard({ index, total, prompt, value, onChange }) 
 const S = StyleSheet.create({
   wrap: { gap: 18 },
   counter: { alignSelf: "center", color: "#6b7280", fontSize: 14, marginVertical: 6 },
-  prompt: { fontSize: 22, fontWeight: "500", color: "#111827", lineHeight: 28 , textAlign:'center'},
+  prompt: { fontSize: 19, fontWeight: "500", color: "#111827", lineHeight: 28 , textAlign:'center'},
   card: {
     marginTop: 8,
     padding: 20,
