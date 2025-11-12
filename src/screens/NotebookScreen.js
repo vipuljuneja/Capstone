@@ -1379,7 +1379,7 @@ const confirmDeleteSelf = async () => {
             style={[styles.tabButton, activeTab === "pipo" && styles.tabActive]}
             onPress={() => handleTabChange("pipo")}
           >
-            <Text style={[styles.tabText, activeTab === "pipo" && styles.tabTextActive]}>FROM PIPO</Text>
+            <Text style={[styles.tabText, activeTab === "pipo" && styles.tabTextActive]}>FROM PIP</Text>
           </Pressable>
 
           <Pressable

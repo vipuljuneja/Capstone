@@ -286,12 +286,12 @@ export default function MainStack() {
       <Stack.Screen
         name="Notebook"
         component={NotebookScreen}
-        options={{ title: 'Notebook' }}
+        options={{ title: 'Mailbox' }}
       />
       <Stack.Screen
         name="PipoDetail"
         component={PipoDetailScreen}
-        options={{ title: 'Notebook detail' }}
+        options={{ title: 'Mailbox detail' }}
       />
       <Stack.Screen
         name="Transcript"

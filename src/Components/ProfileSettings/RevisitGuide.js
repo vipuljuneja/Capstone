@@ -32,7 +32,7 @@ export default function RevisitGuide({ slides, onStartOver }) {
             },
             {
               image: require("../../../assets/RevisitGuide/guide3.png"),
-              title: "Notebook",
+              title: "Mailbox",
               subtitle: "Write quick reflections and track your progress",
             },
             {
