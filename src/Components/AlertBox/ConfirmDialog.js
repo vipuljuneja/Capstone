@@ -76,11 +76,11 @@ const ConfirmDialog = ({
               onPress={onConfirm}
               style={({ pressed }) => [
                 styles.button,
-                styles.buttonOutlined,
-                { borderColor: primaryColor, opacity: loading ? 0.6 : pressed ? 0.9 : 1 },
+                styles.buttonFilled,
+                { backgroundColor: primaryColor, opacity: loading ? 0.6 : pressed ? 0.9 : 1 },
               ]}
             >
-              <Text style={[styles.buttonText, { color: primaryColor }]}>{confirmText}</Text>
+              <Text style={[styles.buttonText, styles.buttonTextFilled]}>{confirmText}</Text>
             </Pressable>
 
         
@@ -91,11 +91,11 @@ const ConfirmDialog = ({
               onPress={onCancel}
               style={({ pressed }) => [
                 styles.button,
-                styles.buttonFilled,
-                { backgroundColor: primaryColor, opacity: loading ? 0.6 : pressed ? 0.9 : 1 },
+                styles.buttonOutlined,
+                { borderColor: primaryColor, opacity: loading ? 0.6 : pressed ? 0.9 : 1 },
               ]}
             >
-              <Text style={[styles.buttonText, styles.buttonTextFilled]}>{cancelText}</Text>
+              <Text style={[styles.buttonText, { color: primaryColor }]}>{cancelText}</Text>
             </Pressable>
           </View>
         </Animated.View>
