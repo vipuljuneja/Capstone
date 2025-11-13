@@ -19,7 +19,7 @@ import { CommonActions, useNavigation } from '@react-navigation/native';
 const questionList = [
   'I avoid certain social situations because I’m afraid of embarrassing myself.',
   'My heart races or I overthink before speaking in front of others.',
-  'I criticize myself harshly after social interactions.',
+  'I criticize myself harshly after \nsocial interactions.',
   'I find it hard to relax or fall asleep after a party or social event.',
   'I worry for a long time, replaying what I said or did.',
 ];
