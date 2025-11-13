@@ -1,4 +1,3 @@
-// src/screens/scenarios/LevelOptionsScreen.js
 import React, {
   useEffect,
   useMemo,
@@ -12,6 +11,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Image,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { signOut } from 'firebase/auth';
@@ -23,8 +23,14 @@ import {
   initializeProgress,
   getUserLevelQuestions,
 } from '../../services/api';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import BackIcon from '../../../assets/icons/back.svg';
+import CustomHeader from '../../Components/UI/CustomHeader';
+import SafeAreaBottom from '../../Components/UI/SafeAreaBottom';
+
+import LockIcon from '../../../assets/icons/lock-white-filled.svg';
+
+const HEADER_HEIGHT = 56;
 
 export default function LevelOptionsScreen({ route, navigation }) {
   const { scenarioTitle, scenarioEmoji, scenarioId, scenarioDescription } =
@@ -35,6 +41,9 @@ export default function LevelOptionsScreen({ route, navigation }) {
     level3Locked: true,
     specialMissionLocked: true,
   });
+
+  const insets = useSafeAreaInsets();
+
   const userId = mongoUser?._id;
 
   // Test function to manually fetch cards
@@ -77,7 +86,9 @@ export default function LevelOptionsScreen({ route, navigation }) {
 
         const level2Unlocked = Boolean(progress.levels?.['2']?.unlockedAt);
         const level3Unlocked = Boolean(progress.levels?.['3']?.unlockedAt);
-        const level3Completed = Boolean(progress.levels?.['3']?.lastCompletedAt);
+        const level3Completed = Boolean(
+          progress.levels?.['3']?.lastCompletedAt,
+        );
         setLocks({
           level2Locked: !level2Unlocked,
           level3Locked: !level3Unlocked,
@@ -90,7 +101,11 @@ export default function LevelOptionsScreen({ route, navigation }) {
         await new Promise(r => setTimeout(r, 500));
       }
     } catch (e) {
-      setLocks({ level2Locked: true, level3Locked: true, specialMissionLocked: true });
+      setLocks({
+        level2Locked: true,
+        level3Locked: true,
+        specialMissionLocked: true,
+      });
     } finally {
       ensureInFlightRef.current = false;
     }
@@ -123,6 +138,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
         emoji: '🎵',
         isLocked: false,
         bgColor: '#E3F2FD',
+        levelEmoji: 1,
       },
       {
         id: 2,
@@ -132,6 +148,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
         emoji: '😊',
         isLocked: locks.level2Locked,
         bgColor: '#FFF9C4',
+        levelEmoji: 2,
       },
       {
         id: 3,
@@ -141,15 +158,21 @@ export default function LevelOptionsScreen({ route, navigation }) {
         emoji: '💬',
         isLocked: locks.level3Locked,
         bgColor: '#C8E6C9',
+        levelEmoji: 3,
       },
     ],
     [locks],
   );
 
+  const levelEmoji = {
+    1: require('../../../assets/level-illustrations/pip-voice.png'),
+    2: require('../../../assets/level-illustrations/pip-avatar.png'),
+    3: require('../../../assets/level-illustrations/pip-real.png'),
+  };
+
   const handleLevelPress = async level => {
     if (level.isLocked) return;
 
-    // Console log questions for this level before navigating
     try {
       if (userId && scenarioId) {
         const levelKey =
@@ -183,7 +206,6 @@ export default function LevelOptionsScreen({ route, navigation }) {
         scenarioId: scenarioId,
       });
     } else {
-      // Level 1 goes directly to intro
       navigation.navigate('Level1IntroScreen', {
         levelNumber: level.id,
         levelTitle: level.title.split(' ').slice(0, 2).join(' '),
@@ -196,32 +218,12 @@ export default function LevelOptionsScreen({ route, navigation }) {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header with Back Button */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Home')}
-          style={styles.backButton}
-        >
-          <BackIcon height={24} width={24} />
-        </TouchableOpacity>
-        {/* <Text style={styles.headerTitle}>{scenarioTitle}</Text>
-        <TouchableOpacity
-          onPress={async () => {
-            try {
-              console.log('🔐 Logging out...');
-              await signOut(auth);
-              console.log('✅ Signed out');
-            } catch (e) {
-              console.log('❌ Sign out error:', e?.message || e);
-            }
-          }}
-          style={styles.testButton}
-        >
-          <BackIcon />
-        </TouchableOpacity> */}
-      </View>
-
+    <View style={{ flex: 1, backgroundColor: '#F6F3FC', height: '100%' }}>
+      {/* Header */}
+      <CustomHeader
+        title={scenarioTitle}
+        onLeftPress={() => navigation.navigate('Home')}
+      />
       {/* Timeline with Levels */}
       <ScrollView
         style={styles.scrollView}
@@ -234,11 +236,11 @@ export default function LevelOptionsScreen({ route, navigation }) {
               <View
                 style={[
                   styles.timelineCircle,
-                  { backgroundColor: level.isLocked ? '#B0A0C0' : '#6B5B95' },
+                  { backgroundColor: '#6B5B95', padding: 16 },
                 ]}
               >
                 {level.isLocked ? (
-                  <Text style={styles.lockIcon}>🔒</Text>
+                  <LockIcon width={16} height={16} />
                 ) : (
                   <View style={styles.timelineDot} />
                 )}
@@ -266,7 +268,11 @@ export default function LevelOptionsScreen({ route, navigation }) {
                 <View
                   style={[styles.levelIcon, { backgroundColor: level.bgColor }]}
                 >
-                  <Text style={styles.levelEmoji}>{level.emoji}</Text>
+                  <Image
+                    source={levelEmoji[level?.levelEmoji]}
+                    resizeMode="cover"
+                    style={{ width: '100%', height: '100%', borderRadius: 16 }}
+                  />
                 </View>
               </View>
             </TouchableOpacity>
@@ -279,11 +285,14 @@ export default function LevelOptionsScreen({ route, navigation }) {
             <View
               style={[
                 styles.timelineCircle,
-                { backgroundColor: locks.specialMissionLocked ? '#B0A0C0' : '#6B5B95' },
+                {
+                  backgroundColor: '#6B5B95',
+                  padding: 16,
+                },
               ]}
             >
               {locks.specialMissionLocked ? (
-                <Text style={styles.lockIcon}>🔒</Text>
+                <LockIcon width={16} height={16} />
               ) : (
                 <View style={styles.timelineDot} />
               )}
@@ -314,6 +323,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      <SafeAreaBottom color="#F6F3FC" />
     </View>
   );
 }
@@ -327,7 +337,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
     backgroundColor: 'white',
   },
   backButton: {
@@ -358,28 +369,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    paddingHorizontal: 20,
+    flex: 1,
+    backgroundColor: '#F6F3FC',
+    justifyContent: 'center',
   },
   levelRow: {
     flexDirection: 'row',
     marginBottom: 10,
   },
-  timelineColumn: {
-    alignItems: 'center',
-    marginRight: 20,
-    width: 50,
-  },
   timelineCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 32,
+    height: 32,
+    borderRadius: '50%',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: 'white',
+    borderWidth: 4,
+    borderColor: '#F6F3FC',
+    backgroundColor: '#9170F5',
   },
-  lockIcon: {
-    fontSize: 20,
+
+  timelineColumn: {
+    alignItems: 'center',
+    // justifyContent: 'center',
+    marginRight: 18,
+    width: 32,
   },
   timelineDot: {
     width: 20,
@@ -391,14 +405,24 @@ const styles = StyleSheet.create({
     width: 3,
     flex: 1,
     backgroundColor: '#D0D0D0',
-    minHeight: 120,
+    minHeight: 45,
   },
   levelCard: {
     flex: 1,
     backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 30,
+    borderRadius: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 18,
+    marginBottom: 26,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#5A4D7B',
+    shadowOpacity: 0.04,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 16,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#efe6fa',
   },
   cardContent: {
     flexDirection: 'row',
@@ -421,8 +445,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   levelIcon: {
-    width: 80,
-    height: 80,
+    width: 100,
+    height: 100,
     borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
