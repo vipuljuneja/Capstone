@@ -90,9 +90,10 @@ function getSummary(responses) {
   };
 }
 
-export default function Onboarding() {
+export default function Onboarding({ route }) {
   const { user, mongoUser, refreshMongoUser } = useAuth();
-  const [phase, setPhase] = useState('slides');
+  const skipSlides = route?.params?.skipSlides || false;
+  const [phase, setPhase] = useState(skipSlides ? 'questions' : 'slides');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [responses, setResponses] = useState(
     Array(questionList.length).fill(null),
