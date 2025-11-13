@@ -46,19 +46,7 @@ const LevelIntroScreen = () => {
         headerColor="#fafaff"
         title={'Voice Practise'}
         onLeftPress={() => {
-          setTimeout(() => {
-            navigation.goBack();
-          }, 500);
-          // try {
-          //   if (navigation.canGoBack()) {
-          //     // navigation.goBack();
-          //     navigation.dispatch(StackActions.pop(1));
-          //   } else {
-          //     navigation.navigate('Home');
-          //   }
-          // } catch (err) {
-          //   console.error('Navigation back error:', err);
-          // }
+          navigation.navigate('LevelOptions', { ...route.params });
         }}
       />
 

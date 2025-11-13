@@ -13,13 +13,16 @@ export default function CustomHeader({
   safeAreaColor = '#fff',
   headerColor = '#fff',
   rightComponent,
+  safeAreaAdded = false,
 }) {
   const insets = useSafeAreaInsets();
 
   return (
     <>
       {/* Top Safe Area */}
-      <View style={{ height: insets.top, backgroundColor: safeAreaColor }} />
+      {safeAreaAdded && (
+        <View style={{ height: insets.top, backgroundColor: safeAreaColor }} />
+      )}
       {/* Header Bar */}
       <View
         style={[

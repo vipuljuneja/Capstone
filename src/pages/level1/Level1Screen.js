@@ -283,7 +283,7 @@ const Level1Screen = () => {
       {/* Header with Progress */}
 
       <View style={styles.header}>
-    <TouchableOpacity
+        <TouchableOpacity
           onPress={async () => {
             try {
               if (isRecording) {

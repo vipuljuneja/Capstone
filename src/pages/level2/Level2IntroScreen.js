@@ -4,6 +4,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 
+import CustomHeader from '../../Components/UI/CustomHeader';
+
 const Level2IntroScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -31,6 +33,15 @@ const Level2IntroScreen = () => {
 
   return (
     <LinearGradient colors={['#fafaff', '#d6dafe']} style={styles.container}>
+      <CustomHeader
+        safeAreaColor="#fafaff"
+        headerColor="#fafaff"
+        title={'Level 2'}
+        onLeftPress={() => {
+          navigation.navigate('Level2NoticeScreen', { ...route.params });
+        }}
+      />
+
       {/* Top Section - Level Info */}
       <View style={styles.topSection}>
         <Text style={styles.levelTitle}>

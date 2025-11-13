@@ -335,7 +335,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <View
+      {/* <View
         style={{
           top: 0,
           left: 0,
@@ -345,7 +345,7 @@ export default function HomeScreen() {
           zIndex: 100,
         }}
         pointerEvents="none"
-      />
+      /> */}
       <LinearGradient
         colors={['#C7DFFF', '#EEF3E7', '#FFFFFF']}
         locations={[0, 0.5, 1]}

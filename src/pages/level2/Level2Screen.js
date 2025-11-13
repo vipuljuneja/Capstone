@@ -465,17 +465,6 @@ const Level2Screen = () => {
   return (
     <View style={styles.container}>
       {/* Header with Progress */}
-      {/* <View style={styles.header}>
-        <View style={styles.progressBar}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${((orbState.idx + 1) / orbState.totalLines) * 100}%` },
-            ]}
-          />
-        </View>
-      </View> */}
-
       <View style={styles.header}>
         <TouchableOpacity
           onPress={handleBackPress}

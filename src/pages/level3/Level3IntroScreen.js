@@ -1,14 +1,14 @@
-// src/screens/levels/Level2IntroScreen.js
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 
+import CustomHeader from '../../Components/UI/CustomHeader';
+
 const Level3IntroScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
 
-  // You can pass these as navigation params if needed
   const {
     levelNumber = 3,
     levelTitle = 'Level 3',
@@ -16,8 +16,6 @@ const Level3IntroScreen = () => {
     scenarioDescription = 'You are at your favourite cafe. You ordered your usual menu but the barista gives you the wrong order . . .',
     scenarioId,
   } = route.params || {};
-
-  console.log('Level3IntroScreen params:', route.params);
 
   useEffect(() => {
     navigation.setOptions({
@@ -31,6 +29,15 @@ const Level3IntroScreen = () => {
 
   return (
     <LinearGradient colors={['#fafaff', '#d6dafe']} style={styles.container}>
+      <CustomHeader
+        safeAreaColor="#fafaff"
+        headerColor="#fafaff"
+        title={'Level 3'}
+        onLeftPress={() => {
+          navigation.navigate('Level3NoticeScreen', { ...route.params });
+        }}
+      />
+
       {/* Top Section - Level Info */}
       <View style={styles.topSection}>
         <Text style={styles.levelTitle}>

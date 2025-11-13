@@ -191,6 +191,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
     // Level 2 requires camera notice first
     if (level.id === 2) {
       navigation.navigate('Level2NoticeScreen', {
+        ...route.params,
         levelNumber: level.id,
         levelTitle: level.title.split(' ').slice(0, 2).join(' '), // "Level 2"
         scenarioTitle: scenarioTitle,
@@ -199,6 +200,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
       });
     } else if (level.id === 3) {
       navigation.navigate('Level3NoticeScreen', {
+        ...route.params,
         levelNumber: level.id,
         levelTitle: level.title.split(' ').slice(0, 2).join(' '), // "Level 2"
         scenarioTitle: scenarioTitle,
@@ -207,6 +209,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
       });
     } else {
       navigation.navigate('Level1IntroScreen', {
+        ...route.params,
         levelNumber: level.id,
         levelTitle: level.title.split(' ').slice(0, 2).join(' '),
         scenarioTitle: scenarioTitle,
@@ -309,6 +312,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
                 navigation.navigate('SpecialMissionScreen', {
                   scenarioTitle: scenarioTitle,
                   scenarioEmoji: scenarioEmoji,
+                  ...route.params,
                 });
               }
             }}
