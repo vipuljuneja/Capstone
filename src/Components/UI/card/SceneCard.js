@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
   characterImage: {
     width: 70,
     height: 70,
-    marginBottom: 16,
+    marginBottom: 24,
     resizeMode: 'contain',
   },
   sectionHeader: {
@@ -56,13 +56,13 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 2,
     backgroundColor: '#5e496b',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   title: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#232323',
-    marginBottom: 8,
+    marginBottom: 24,
     textAlign: 'center',
   },
   button: {

@@ -70,8 +70,8 @@ const styles = StyleSheet.create({
   titleText: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#222',
     marginHorizontal: 8,
   },

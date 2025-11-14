@@ -254,7 +254,7 @@ export default function HomeScreen() {
     const size = interpolate(
       contentProgress.value,
       [0, 1],
-      [screenHeight * 0.4, screenHeight * 0.25],
+      [screenHeight * 0.5, screenHeight * 0.4],
       Extrapolate.CLAMP,
     );
     return {
@@ -476,7 +476,7 @@ export default function HomeScreen() {
 
           {/* Character */}
           <Animated.Image
-            source={require('../../../assets/gifs/HomePipo.gif')}
+            source={require('../../../assets/gifs/HomePipo1.gif')}
             style={[characterAnimStyle, { resizeMode: 'contain' }]}
           />
         </View>
