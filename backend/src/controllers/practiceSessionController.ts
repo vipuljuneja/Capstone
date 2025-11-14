@@ -310,7 +310,7 @@ export const completeSession = async (req: Request, res: Response): Promise<void
                 nextLevel
               );
 
-              // Update UserScenarioOverrides with new video URLs
+              // Update UserScenarioOverrides with new D-ID video URLs
               const updatedLevelKey = nextLevel === 2 ? 'level2' : 'level3';
               const updatedUpdate: any = {};
               updatedUpdate[updatedLevelKey] = { questions: updatedQuestions };
@@ -323,7 +323,7 @@ export const completeSession = async (req: Request, res: Response): Promise<void
               // Count successfully generated videos
               const successfulVideos = updatedQuestions.filter(q => q.videoUrl && q.videoUrl.startsWith('http')).length;
               
-              console.log('✅ Successfully updated questions with Supabase video URLs (completeSession)', {
+              console.log('✅ Successfully updated questions with D-ID video URLs (completeSession)', {
                 userId: session.userId,
                 scenarioId: session.scenarioId,
                 nextLevel,
@@ -617,7 +617,7 @@ export const createCompleteSession = async (req: Request, res: Response): Promis
           });
 
           // Generate and store videos in background (fire-and-forget)
-          // This runs asynchronously and updates the questions with Supabase URLs
+          // This runs asynchronously and updates the questions with D-ID URLs
           // After videos are generated, unlock the next level
           (async () => {
             try {
@@ -629,7 +629,7 @@ export const createCompleteSession = async (req: Request, res: Response): Promis
                 nextLevel
               );
 
-              // Update UserScenarioOverrides with new video URLs
+              // Update UserScenarioOverrides with new D-ID video URLs
               const updatedLevelKey = nextLevel === 2 ? 'level2' : 'level3';
               const updatedUpdate: any = {};
               updatedUpdate[updatedLevelKey] = { questions: updatedQuestions };
@@ -639,10 +639,10 @@ export const createCompleteSession = async (req: Request, res: Response): Promis
                 { $set: updatedUpdate }
               );
 
-              // Count successfully generated videos (those with Supabase URLs)
+              // Count successfully generated videos (those with D-ID URLs)
               const successfulVideos = updatedQuestions.filter(q => q.videoUrl && q.videoUrl.startsWith('http')).length;
               
-              console.log('✅ Successfully updated questions with Supabase video URLs', {
+              console.log('✅ Successfully updated questions with D-ID video URLs', {
                 userId,
                 scenarioId,
                 nextLevel,
