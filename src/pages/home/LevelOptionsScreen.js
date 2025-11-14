@@ -84,19 +84,25 @@ export default function LevelOptionsScreen({ route, navigation }) {
           }
         }
 
+        // Only unlock based on backend unlock status - check unlockedAt timestamp
         const level2Unlocked = Boolean(progress.levels?.['2']?.unlockedAt);
         const level3Unlocked = Boolean(progress.levels?.['3']?.unlockedAt);
         const level3Completed = Boolean(
           progress.levels?.['3']?.lastCompletedAt,
         );
+        
+        // Set locks based on backend unlock status only
         setLocks({
           level2Locked: !level2Unlocked,
           level3Locked: !level3Unlocked,
           specialMissionLocked: !level3Completed,
         });
 
-        // If unlocked or we were just checking, break; else wait and retry (handles race after save)
-        if (level2Unlocked || level3Unlocked || level3Completed) break;
+        // Break if we found any unlocked levels (backend has confirmed unlock)
+        // Otherwise continue polling to wait for backend unlock
+        if (level2Unlocked || level3Unlocked || level3Completed) {
+          break;
+        }
         attempts += 1;
         await new Promise(r => setTimeout(r, 500));
       }

@@ -268,14 +268,48 @@ export const completeSession = async (req: Request, res: Response): Promise<void
       progress.totalSessions += 1;
       progress.lastPlayedAt = new Date();
 
-      // Don't unlock next level here - wait for videos to be generated
-      // Unlock will happen after video generation completes
-
       await progress.save();
     }
 
     // Generate and save personalized next-level questions after completion (if applicable)
+    // Also unlock next level directly after saving (only if current level was completed)
     const nextLevel = session.level < 3 ? (session.level + 1) as 2 | 3 : null;
+    
+    // Unlock next level only if current level was successfully completed
+    if (nextLevel && progress) {
+      const currentLevelKey = session.level.toString();
+      const currentLevelProgress = progress.levels.get(currentLevelKey);
+      
+      // Only unlock next level if current level has been completed (has lastCompletedAt)
+      if (currentLevelProgress?.lastCompletedAt) {
+        const nextLevelKey = nextLevel.toString();
+        const nextLevelProgress = progress.levels.get(nextLevelKey) || {
+          attempts: 0,
+          lastCompletedAt: null,
+          achievements: [],
+          unlockedAt: null
+        };
+
+        if (!nextLevelProgress.unlockedAt) {
+          nextLevelProgress.unlockedAt = new Date();
+          progress.levels.set(nextLevelKey, nextLevelProgress);
+          await progress.save();
+          console.log('🔓 Next level unlocked after session save (completeSession)', {
+            userId: session.userId,
+            scenarioId: session.scenarioId,
+            nextLevel,
+            currentLevelCompleted: currentLevelProgress.lastCompletedAt
+          });
+        }
+      } else {
+        console.log('⚠️ Cannot unlock next level: current level not completed', {
+          userId: session.userId,
+          scenarioId: session.scenarioId,
+          currentLevel: session.level,
+          nextLevel
+        });
+      }
+    }
     if (nextLevel) {
       try {
         // Prepare minimal AI data from updated session
@@ -330,33 +364,7 @@ export const completeSession = async (req: Request, res: Response): Promise<void
                 updatedCount: successfulVideos
               });
 
-              // Unlock next level only after videos are generated
-              if (aggregate && aggregate.score >= 70 && successfulVideos > 0) {
-                const progress = await Progress.findOne({ 
-                  userId: session.userId, 
-                  scenarioId: session.scenarioId 
-                });
-                if (progress) {
-                  const nextLevelKey = nextLevel.toString();
-                  const nextLevelProgress = progress.levels.get(nextLevelKey) || {
-                    attempts: 0,
-                    lastCompletedAt: null,
-                    achievements: [],
-                    unlockedAt: null
-                  };
-
-                  if (!nextLevelProgress.unlockedAt) {
-                    nextLevelProgress.unlockedAt = new Date();
-                    progress.levels.set(nextLevelKey, nextLevelProgress);
-                    await progress.save();
-                    console.log('🔓 Next level unlocked after video generation (completeSession)', {
-                      userId: session.userId,
-                      scenarioId: session.scenarioId,
-                      nextLevel
-                    });
-                  }
-                }
-              }
+              // Note: Level unlock already happened above after session save, no need to unlock here
             } catch (error: any) {
               console.error('❌ Background video generation/storage failed (completeSession):', error.message);
             }
@@ -587,14 +595,49 @@ export const createCompleteSession = async (req: Request, res: Response): Promis
       progress.totalSessions += 1;
       progress.lastPlayedAt = new Date();
 
-      // Don't unlock next level here - wait for videos to be generated
-      // Unlock will happen after video generation completes
-
       await progress.save();
     }
 
     // If there is a next level (2 or 3), generate personalized questions and save
+    // Also unlock next level directly after saving (only if current level was completed)
     const nextLevel = level < 3 ? (level + 1) as 2 | 3 : null;
+    
+    // Unlock next level only if current level was successfully completed
+    if (nextLevel && progress) {
+      const currentLevelKey = level.toString();
+      const currentLevelProgress = progress.levels.get(currentLevelKey);
+      
+      // Only unlock next level if current level has been completed (has lastCompletedAt)
+      if (currentLevelProgress?.lastCompletedAt) {
+        const nextLevelKey = nextLevel.toString();
+        const nextLevelProgress = progress.levels.get(nextLevelKey) || {
+          attempts: 0,
+          lastCompletedAt: null,
+          achievements: [],
+          unlockedAt: null
+        };
+
+        if (!nextLevelProgress.unlockedAt) {
+          nextLevelProgress.unlockedAt = new Date();
+          progress.levels.set(nextLevelKey, nextLevelProgress);
+          await progress.save();
+          console.log('🔓 Next level unlocked after session save', {
+            userId,
+            scenarioId,
+            nextLevel,
+            unlockedAt: nextLevelProgress.unlockedAt,
+            currentLevelCompleted: currentLevelProgress.lastCompletedAt
+          });
+        }
+      } else {
+        console.log('⚠️ Cannot unlock next level: current level not completed', {
+          userId,
+          scenarioId,
+          currentLevel: level,
+          nextLevel
+        });
+      }
+    }
     if (nextLevel) {
       try {
         const aiForNext = { ...aiData, nextLevel } as any;
@@ -650,46 +693,7 @@ export const createCompleteSession = async (req: Request, res: Response): Promis
                 totalQuestions: updatedQuestions.length
               });
 
-              // Unlock next level only after videos are generated
-              // Check if score is high enough and if we have successfully generated videos
-              if (aggregate && aggregate.score >= 70 && successfulVideos > 0) {
-                const progress = await Progress.findOne({ userId, scenarioId });
-                if (progress) {
-                  const nextLevelKey = nextLevel.toString();
-                  const nextLevelProgress = progress.levels.get(nextLevelKey) || {
-                    attempts: 0,
-                    lastCompletedAt: null,
-                    achievements: [],
-                    unlockedAt: null
-                  };
-
-                  if (!nextLevelProgress.unlockedAt) {
-                    nextLevelProgress.unlockedAt = new Date();
-                    progress.levels.set(nextLevelKey, nextLevelProgress);
-                    await progress.save();
-                    console.log('🔓 Next level unlocked after video generation', {
-                      userId,
-                      scenarioId,
-                      nextLevel,
-                      unlockedAt: nextLevelProgress.unlockedAt
-                    });
-                  } else {
-                    console.log('ℹ️ Next level already unlocked', {
-                      userId,
-                      scenarioId,
-                      nextLevel
-                    });
-                  }
-                }
-              } else {
-                console.log('⚠️ Cannot unlock next level:', {
-                  userId,
-                  scenarioId,
-                  nextLevel,
-                  scoreHighEnough: aggregate && aggregate.score >= 70,
-                  videosGenerated: successfulVideos > 0
-                });
-              }
+              // Note: Level unlock already happened above after session save, no need to unlock here
             } catch (error: any) {
               console.error('❌ Background video generation/storage failed:', error.message);
               // Don't throw - this is a background process, failures shouldn't affect the main flow

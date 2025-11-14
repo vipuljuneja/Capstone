@@ -10,7 +10,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSessionSaver } from '../../services/sessionSaver';
-import { unlockLevel, getProgressForScenario } from '../../services/api';
+import { getProgressForScenario } from '../../services/api';
 import { ActivityIndicator } from 'react-native';
 
 import BackIcon from '../../../assets/icons/back.svg';
@@ -146,17 +146,9 @@ const Level1ResultScreen = () => {
 
         console.log('✅ Level 1 session saved successfully');
 
-        // Unlock Level 2
-        try {
-          await unlockLevel(mongoUser?._id, finalScenarioId, 2);
-          console.log('🔓 Level 2 unlocked');
-          setNextLevelUnlocked(true);
-        } catch (e) {
-          console.warn(
-            '⚠️ Failed to unlock Level 2 (non-fatal):',
-            e?.message || e,
-          );
-        }
+        // Backend will unlock Level 2 automatically after saving
+        // Enable the button immediately on results page (unlocking happens in backend)
+        setNextLevelUnlocked(true);
       } catch (error) {
         console.error('❌ Failed to save Level 1 session:', error);
       }
