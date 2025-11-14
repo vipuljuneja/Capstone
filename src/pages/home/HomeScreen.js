@@ -99,17 +99,7 @@ export default function HomeScreen() {
     loadScenarios();
   }, []);
 
-  // Log when scenarios state updates
   useEffect(() => {
-    console.log('Scenarios state:', scenarios.length, scenarios);
-  }, [scenarios]);
-
-  useEffect(() => {
-    testDownload();
-  }, []);
-
-  useEffect(() => {
-    // Don't show tour if mongoUser is not loaded (empty object or no _id)
     if (!mongoUser || !mongoUser._id) {
       setTourVisible(false);
       return;
@@ -156,7 +146,6 @@ export default function HomeScreen() {
           const reflections = await getReflectionsByUser(mongoUser._id, {
             type: 'pipo',
           });
-          console.log(reflections);
 
           if (!stop) {
             const hasUnreadReflections = reflections.some(
@@ -211,31 +200,6 @@ export default function HomeScreen() {
   const skipTour = React.useCallback(() => {
     finishTour();
   }, [finishTour]);
-
-  const testDownload = async () => {
-    console.log('🧪 TESTING FILE DOWNLOAD...');
-    try {
-      const filePath = '1.mp4';
-      const { data, error } = await supabase.storage
-        .from('videos')
-        .download(filePath);
-
-      if (error) {
-        console.error('Error downloading file:', error.message);
-        return;
-      }
-      console.log('File downloaded successfully:', data);
-
-      // To prove you have the file blob, print blob size
-      console.log('Blob size:', data.size);
-
-      // Optionally convert to URL to test usage in video tag or Image
-      const url = URL.createObjectURL(data);
-      console.log('Blob URL:', url);
-    } catch (err) {
-      console.error('Unexpected error:', err);
-    }
-  };
 
   const handlePractice = scenario => {
     navigation.navigate('LevelOptions', {
@@ -512,7 +476,7 @@ export default function HomeScreen() {
 
           {/* Character */}
           <Animated.Image
-            source={require('../../../assets/pipo_set.png')}
+            source={require('../../../assets/gifs/HomePipo.gif')}
             style={[characterAnimStyle, { resizeMode: 'contain' }]}
           />
         </View>
@@ -579,7 +543,7 @@ export default function HomeScreen() {
           </Animated.View>
         </View>
       </LinearGradient>
-      <View
+      {/* <View
         style={{
           top: 0,
           left: 0,
@@ -589,7 +553,7 @@ export default function HomeScreen() {
           zIndex: 100,
         }}
         pointerEvents="none"
-      />
+      /> */}
       {/* <SafeAreaBottom /> */}
     </View>
   );

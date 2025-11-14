@@ -39,9 +39,9 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   characterImage: {
-    width: 100,
-    height: 100,
-    marginBottom: 8,
+    width: 70,
+    height: 70,
+    marginBottom: 16,
     resizeMode: 'contain',
   },
   sectionHeader: {

@@ -31,10 +31,7 @@ const Level1ResultScreen = () => {
     scenarioEmoji,
   } = route.params || {};
 
-  console.log('Level1ResultScreen route params:', route.params);
-
-  // Use the actual scenario ID from navigation params
-  const finalScenarioId = scenarioId; // must be passed; no fallback
+  const finalScenarioId = scenarioId;
 
   console.log('📊 Results screen received:', route.params);
 
@@ -145,7 +142,6 @@ const Level1ResultScreen = () => {
           scenarioId: finalScenarioId,
           level: 1,
           transcriptionResults: transcriptionResults,
-          // No facial analysis for Level 1
         });
 
         console.log('✅ Level 1 session saved successfully');

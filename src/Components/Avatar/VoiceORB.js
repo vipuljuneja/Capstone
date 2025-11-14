@@ -14,6 +14,7 @@ import {
   Easing,
   Pressable,
   Platform,
+  Image,
 } from 'react-native';
 import RNFetchBlob from 'react-native-blob-util';
 import Sound from 'react-native-sound';
@@ -39,6 +40,8 @@ const VoiceOrb = forwardRef((props, ref) => {
   const [idx, setIdx] = useState(0);
   const [loading, setLoading] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+
+  const showGif = speaking;
 
   // Call onStateChange whenever state changes
   useEffect(() => {
@@ -216,16 +219,26 @@ const VoiceOrb = forwardRef((props, ref) => {
         disabled={loading}
         style={{ alignItems: 'center' }}
       >
-        <Animated.View
+        {/* <Animated.View
           style={[
             styles.ball,
             {
               transform: [{ scale }],
-              opacity: loading ? 0.7 : 1,
-              shadowOpacity: speaking ? 0.35 : 0.15,
+              opacity: 0.2,
+              backgroundColor: '#6EA8FE',
+              shadowOpacity: 0.15,
             },
           ]}
+        /> */}
+
+        <Image
+          source={require('../../../assets/gifs/PipoORB.gif')}
+          style={[styles.gif, { width: BALL, height: BALL }]}
+          resizeMode="contain"
         />
+
+        {/* If you want tap interaction only on the GIF+ball area,
+        wrap Image and Animated.View together in a parent View */}
       </Pressable>
 
       <Text style={styles.line}>"{LINES[idx]}"</Text>
@@ -233,7 +246,7 @@ const VoiceOrb = forwardRef((props, ref) => {
   );
 });
 
-const BALL = 220;
+const BALL = 360;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -258,6 +271,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 32,
     paddingHorizontal: 20,
+  },
+  gif: {
+    borderRadius: BALL / 2,
+    // position is set inline to 'absolute'
+    // Add shadow if desired consistent with ball style
   },
 });
 
