@@ -53,7 +53,7 @@ const LevelIntroScreen = () => {
       {/* Middle Section - Character */}
       <View style={styles.middleSection}>
         <Image
-          source={require('../../../assets/pipo/pipo-loading.png')}
+          source={require('../../../assets/gifs/LoadingPIPO.gif')}
           style={styles.characterImage}
           resizeMode="contain"
         />
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
   scenarioCard: {
-    backgroundColor: 'white',
+    // backgroundColor: 'white',
     borderRadius: 18,
     padding: 20,
     marginBottom: 0,
@@ -167,8 +167,8 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   characterImage: {
-    width: 240,
-    height: 240,
+    width: 450,
+    height: 600,
     marginBottom: 0,
   },
   levelLabel: {
