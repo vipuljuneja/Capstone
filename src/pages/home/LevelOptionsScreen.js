@@ -132,9 +132,9 @@ export default function LevelOptionsScreen({ route, navigation }) {
     () => [
       {
         id: 1,
-        title: 'Level 1 Voice Check',
+        title: 'Level 1',
         description:
-          'Start with your voice. Explore your pace and tone to build up confidence.',
+          'Start with your voice. Explore your pace and tone to build up your confidence.',
         emoji: '🎵',
         isLocked: false,
         bgColor: '#E3F2FD',
@@ -142,9 +142,9 @@ export default function LevelOptionsScreen({ route, navigation }) {
       },
       {
         id: 2,
-        title: 'Level 2 Face Time',
+        title: 'Level 2',
         description:
-          'Practice both voice and facial expressions at your own pace with Pipo',
+          'Practice both voice and facial expressions at your own pace.',
         emoji: '😊',
         isLocked: locks.level2Locked,
         bgColor: '#FFF9C4',
@@ -152,9 +152,9 @@ export default function LevelOptionsScreen({ route, navigation }) {
       },
       {
         id: 3,
-        title: 'Level 3 Real Talk',
+        title: 'Level 3',
         description:
-          'Time to go all in. Combine voice and facial and expressions like a pro.',
+          'Lets Go all in. Combine voice and facial and expressions like a pro.',
         emoji: '💬',
         isLocked: locks.level3Locked,
         bgColor: '#C8E6C9',
@@ -438,8 +438,8 @@ const styles = StyleSheet.create({
     paddingRight: 10,
   },
   levelTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
     marginBottom: 8,
     color: '#333',
   },
