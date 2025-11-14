@@ -342,7 +342,7 @@ async function uploadToSupabase(
  * @param scenarioId - MongoDB ObjectId string
  * @param level - Level number (2 or 3)
  * @param sourceImageUrl - Optional custom avatar image URL
- * @returns Updated questions array with Supabase video URLs
+ * @returns Updated questions array with D-ID video URLs
  */
 export async function generateAndStoreVideos(
   questions: Question[],
@@ -359,10 +359,11 @@ export async function generateAndStoreVideos(
     return questions; // Return original questions with placeholder URLs
   }
 
-  if (!supabase) {
-    console.error('❌ Supabase not configured. Skipping video upload.');
-    return questions;
-  }
+  // Supabase check removed - we're using D-ID URLs directly
+  // if (!supabase) {
+  //   console.error('❌ Supabase not configured. Skipping video upload.');
+  //   return questions;
+  // }
 
   const updatedQuestions: Question[] = [];
 
@@ -393,44 +394,53 @@ export async function generateAndStoreVideos(
       // Generate video using D-ID (with built-in retry logic)
       const didVideoUrl = await generateDIDVideo(question.text, avatarImageUrl);
 
-      // Create filename: {userId}_{scenarioId}_{level}_{order}.mp4
-      const fileName = `${userId}_${scenarioId}_level${level}_${question.order}.mp4`;
-      const storagePath = `avatar-videos/${userId}/${scenarioId}/${level}/${fileName}`;
-      const tempFilePath = path.join(TEMP_DIR, fileName);
+      // Save D-ID URL directly to question (no download/upload needed)
+      updatedQuestions.push({
+        ...question,
+        videoUrl: didVideoUrl,
+      });
 
-      try {
-        // Download video from D-ID
-        console.log(`📥 Downloading video from D-ID...`);
-        await downloadVideo(didVideoUrl, tempFilePath);
+      console.log(`✅ Video generated successfully, using D-ID URL: ${didVideoUrl}`);
 
-        // Upload to Supabase
-        console.log(`☁️ Uploading to Supabase: ${storagePath}`);
-        const publicUrl = await uploadToSupabase(tempFilePath, storagePath);
+      // COMMENTED OUT: Download and upload to Supabase
+      // // Create filename: {userId}_{scenarioId}_{level}_{order}.mp4
+      // const fileName = `${userId}_${scenarioId}_level${level}_${question.order}.mp4`;
+      // const storagePath = `avatar-videos/${userId}/${scenarioId}/${level}/${fileName}`;
+      // const tempFilePath = path.join(TEMP_DIR, fileName);
 
-        // Update question with Supabase URL
-        updatedQuestions.push({
-          ...question,
-          videoUrl: publicUrl,
-        });
+      // try {
+      //   // Download video from D-ID
+      //   console.log(`📥 Downloading video from D-ID...`);
+      //   await downloadVideo(didVideoUrl, tempFilePath);
 
-        console.log(`✅ Video stored successfully: ${publicUrl}`);
+      //   // Upload to Supabase
+      //   console.log(`☁️ Uploading to Supabase: ${storagePath}`);
+      //   const publicUrl = await uploadToSupabase(tempFilePath, storagePath);
 
-        // Clean up temp file
-        try {
-          fs.unlinkSync(tempFilePath);
-        } catch (cleanupError) {
-          console.warn(`⚠️ Failed to delete temp file: ${cleanupError}`);
-        }
-      } catch (error: any) {
-        console.error(
-          `❌ Failed to process video for question ${question.order}:`,
-          error.message,
-        );
-        // Keep original placeholder URL
-        updatedQuestions.push(question);
-        // Wait after error to avoid hammering the API
-        await sleep(DELAY_AFTER_ERROR);
-      }
+      //   // Update question with Supabase URL
+      //   updatedQuestions.push({
+      //     ...question,
+      //     videoUrl: publicUrl,
+      //   });
+
+      //   console.log(`✅ Video stored successfully: ${publicUrl}`);
+
+      //   // Clean up temp file
+      //   try {
+      //     fs.unlinkSync(tempFilePath);
+      //   } catch (cleanupError) {
+      //     console.warn(`⚠️ Failed to delete temp file: ${cleanupError}`);
+      //   }
+      // } catch (error: any) {
+      //   console.error(
+      //     `❌ Failed to process video for question ${question.order}:`,
+      //     error.message,
+      //   );
+      //   // Keep original placeholder URL
+      //   updatedQuestions.push(question);
+      //   // Wait after error to avoid hammering the API
+      //   await sleep(DELAY_AFTER_ERROR);
+      // }
     } catch (error: any) {
       const isRateLimit = isRateLimitError(error);
       console.error(
