@@ -331,7 +331,7 @@ export const completeSession = async (req: Request, res: Response): Promise<void
               });
 
               // Unlock next level only after videos are generated
-              if (aggregate && aggregate.score >= 70 && successfulVideos > 0) {
+              if (successfulVideos > 0) {
                 const progress = await Progress.findOne({ 
                   userId: session.userId, 
                   scenarioId: session.scenarioId 
@@ -651,8 +651,7 @@ export const createCompleteSession = async (req: Request, res: Response): Promis
               });
 
               // Unlock next level only after videos are generated
-              // Check if score is high enough and if we have successfully generated videos
-              if (aggregate && aggregate.score >= 70 && successfulVideos > 0) {
+              if (successfulVideos > 0) {
                 const progress = await Progress.findOne({ userId, scenarioId });
                 if (progress) {
                   const nextLevelKey = nextLevel.toString();
@@ -686,7 +685,6 @@ export const createCompleteSession = async (req: Request, res: Response): Promis
                   userId,
                   scenarioId,
                   nextLevel,
-                  scoreHighEnough: aggregate && aggregate.score >= 70,
                   videosGenerated: successfulVideos > 0
                 });
               }

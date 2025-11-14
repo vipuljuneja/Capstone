@@ -5,6 +5,11 @@ const config = {
   resolver: {
     assetExts: defaultConfig.resolver.assetExts.filter(ext => ext !== 'svg'),
     sourceExts: [...defaultConfig.resolver.sourceExts, 'svg'],
+    // Block Metro from watching temp-videos directories
+    blockList: [
+      /.*\/temp-videos\/.*/,
+      /.*\/backend\/temp-videos\/.*/,
+    ],
   },
   transformer: {
     babelTransformerPath: require.resolve('react-native-svg-transformer'),
