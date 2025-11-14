@@ -9,6 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
@@ -27,6 +28,7 @@ import AnimatedRippleButton from '../../Components/UI/button/AnimatedRippleButto
 
 import SceneCard from '../../Components/UI/card/SceneCard';
 import scenarioService from '../../services/scenarioService';
+import SafeAreaBottom from '../../Components/UI/SafeAreaBottom.js';
 
 import Animated, {
   useSharedValue,
@@ -57,6 +59,8 @@ export default function HomeScreen() {
   const [tourVisible, setTourVisible] = useState(false);
   const [tourStep, setTourStep] = useState(1);
   const [hasUnread, setHasUnread] = useState(false);
+
+  const insets = useSafeAreaInsets();
 
   const TOTAL_STEPS = 4;
 
@@ -331,6 +335,17 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      {/* <View
+        style={{
+          top: 0,
+          left: 0,
+          right: 0,
+          height: insets.top,
+          backgroundColor: '#C7DFFF',
+          zIndex: 100,
+        }}
+        pointerEvents="none"
+      /> */}
       <LinearGradient
         colors={['#C7DFFF', '#EEF3E7', '#FFFFFF']}
         locations={[0, 0.5, 1]}
@@ -564,6 +579,18 @@ export default function HomeScreen() {
           </Animated.View>
         </View>
       </LinearGradient>
+      <View
+        style={{
+          top: 0,
+          left: 0,
+          right: 0,
+          height: insets.bottom,
+          backgroundColor: '#C7DFFF',
+          zIndex: 100,
+        }}
+        pointerEvents="none"
+      />
+      {/* <SafeAreaBottom /> */}
     </View>
   );
 }
@@ -597,13 +624,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
   },
   scenariosWrapper: {
     marginBottom: 24,
     overflow: 'hidden',
     width: '100%',
-    minHeight: 250,
+    minHeight: 200,
   },
 
   button: {

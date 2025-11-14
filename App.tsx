@@ -34,12 +34,10 @@ function RootApp() {
     setShowSplash(false);
   };
 
- 
   if (showSplash) {
     return <SplashScreen onFinish={handleSplashFinish} />;
   }
 
- 
   if (loading) {
     return (
       <SafeAreaView style={styles.centered}>
@@ -54,15 +52,6 @@ function RootApp() {
       <NavigationContainer theme={NAV_THEME}>
         <MainStack />
       </NavigationContainer>
-      {/* {user ? (
-        <NavigationContainer theme={NAV_THEME}>
-          <MainStack />
-        </NavigationContainer>
-      ) : mode === 'signup' ? (
-        <SignupScreen onSwitchToLogin={() => setMode('login')} />
-      ) : (
-        <LoginScreen onSwitchToSignup={() => setMode('signup')} />
-      )} */}
       <Toast />
     </SafeAreaView>
   );

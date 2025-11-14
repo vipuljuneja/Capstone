@@ -269,10 +269,10 @@ const Level1ResultScreen = () => {
           </View>
 
           {/* Tone Section */}
-          <View style={styles.feedbackSection}>
+          {/* <View style={styles.feedbackSection}>
             <Text style={styles.sectionTitle}>TONE</Text>
             <Text style={styles.sectionText}>{generateToneFeedback()}</Text>
-          </View>
+          </View> */}
 
           {/* Filler Words Section */}
           <View style={styles.feedbackSection}>

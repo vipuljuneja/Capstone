@@ -3,6 +3,9 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
+import { StackActions } from '@react-navigation/native';
+
+import CustomHeader from '../../Components/UI/CustomHeader';
 
 const LevelIntroScreen = () => {
   const navigation = useNavigation();
@@ -38,12 +41,14 @@ const LevelIntroScreen = () => {
 
   return (
     <LinearGradient colors={['#fafaff', '#d6dafe']} style={styles.container}>
-      {/* <View style={styles.container}> */}
-      {/* Top Section - Level Info */}
-      <View style={styles.topSection}>
-        {/* <Text style={styles.levelLabel}>{levelTitle}</Text> */}
-        <Text style={styles.levelTitle}>Voice Practice</Text>
-      </View>
+      <CustomHeader
+        safeAreaColor="#fafaff"
+        headerColor="#fafaff"
+        title={'Voice Practise'}
+        onLeftPress={() => {
+          navigation.navigate('LevelOptions', { ...route.params });
+        }}
+      />
 
       {/* Middle Section - Character */}
       <View style={styles.middleSection}>
@@ -73,7 +78,6 @@ const LevelIntroScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // backgroundColor: '#FFFFFF',
   },
   headerSection: {
     paddingHorizontal: 20,

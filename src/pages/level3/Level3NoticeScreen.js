@@ -5,8 +5,10 @@ import {
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import CustomHeader from '../../Components/UI/CustomHeader';
 
 const Level3NoticeScreen = () => {
   const navigation = useNavigation();
@@ -32,7 +34,14 @@ const Level3NoticeScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Navigation header handles back; remove in-screen back */}
+      <CustomHeader
+        safeAreaColor="#fafaff"
+        headerColor="#fafaff"
+        title={'Level 3'}
+        onLeftPress={() => {
+          navigation.navigate('LevelOptions', { ...route.params });
+        }}
+      />
 
       <View style={styles.content}>
         {/* Title Section */}
@@ -50,7 +59,10 @@ const Level3NoticeScreen = () => {
           <View style={styles.instructionCard1}>
             <View style={styles.phoneIcon}>
               <View style={styles.phoneScreen}>
-                <Text style={styles.characterInPhone}>💧</Text>
+                <Image
+                  source={require('../../../assets/level-illustrations/pipo-notice-lighting.png')}
+                  style={styles.characterInPhone}
+                />
               </View>
               <View style={styles.phoneButton} />
             </View>
@@ -65,8 +77,10 @@ const Level3NoticeScreen = () => {
               Ensure good lighting for better recognition
             </Text>
             <View style={styles.lightingIcon}>
-              <Text style={styles.sunEmoji}>☀️</Text>
-              <Text style={styles.characterEmoji}>💧</Text>
+              <Image
+                source={require('../../../assets/level-illustrations/pipo-notice-lighting.png')}
+                style={styles.characterNotInPhone}
+              />
             </View>
           </View>
         </View>
@@ -145,9 +159,19 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   characterInPhone: {
-    fontSize: 40,
+    width: '100%',
+    height: 200,
+    resizeMode: 'cover',
+    top: 20,
+  },
+  characterNotInPhone: {
+    width: 60,
+    height: 60,
+    resizeMode: 'cover',
+    // top: 20,
   },
   phoneButton: {
     width: 25,

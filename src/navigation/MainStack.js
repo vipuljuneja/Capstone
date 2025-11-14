@@ -203,12 +203,6 @@ export default function MainStack() {
         options={{ title: 'Home', headerShown: false, gestureEnabled: false }}
       />
 
-      {/* <Stack.Screen
-        name="Results"
-        component={ResultsScreen}
-        options={{ title: 'Results' }}
-      /> */}
-
       <Stack.Screen
         name="LevelOptions"
         component={LevelsOptions}
@@ -230,7 +224,7 @@ export default function MainStack() {
       <Stack.Screen
         name="Level1IntroScreen"
         component={Level1IntroScreen}
-        options={{ title: 'Level1IntroScreen' }}
+        options={{ title: 'Level1IntroScreen', headerShown: false }}
       />
 
       <Stack.Screen
@@ -239,9 +233,17 @@ export default function MainStack() {
         options={{ title: 'Level1ResultScreen', headerShown: false }}
       />
 
-      <Stack.Screen name="Level2NoticeScreen" component={Level2NoticeScreen} />
+      <Stack.Screen
+        name="Level2NoticeScreen"
+        component={Level2NoticeScreen}
+        options={{ headerShown: false }}
+      />
 
-      <Stack.Screen name="Level2IntroScreen" component={Level2IntroScreen} />
+      <Stack.Screen
+        name="Level2IntroScreen"
+        component={Level2IntroScreen}
+        options={{ headerShown: false }}
+      />
 
       <Stack.Screen
         name="Level2Screen"
@@ -255,9 +257,17 @@ export default function MainStack() {
         options={{ headerShown: false }}
       />
 
-      <Stack.Screen name="Level3NoticeScreen" component={Level3NoticeScreen} />
+      <Stack.Screen
+        name="Level3NoticeScreen"
+        component={Level3NoticeScreen}
+        options={{ headerShown: false }}
+      />
 
-      <Stack.Screen name="Level3IntroScreen" component={Level3IntroScreen} />
+      <Stack.Screen
+        name="Level3IntroScreen"
+        component={Level3IntroScreen}
+        options={{ headerShown: false }}
+      />
 
       <Stack.Screen
         name="Level3Screen"

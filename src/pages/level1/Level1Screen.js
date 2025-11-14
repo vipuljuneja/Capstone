@@ -1,5 +1,11 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 import VoiceOrb from '../../Components/Avatar/VoiceORB';
 import AudioRecorder from '../../Components/Audio/AudioRecorder';
 import AudioWaveform from '../../Components/Audio/AudioWaveform';
@@ -17,6 +23,7 @@ const Level1Screen = () => {
   const [transcriptionResults, setTranscriptionResults] = useState([]);
   const [scenarioData, setScenarioData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showOverlay, setShowOverlay] = useState(false);
 
   const voiceOrbRef = useRef(null);
   const audioRecorderRef = useRef(null);
@@ -186,9 +193,9 @@ const Level1Screen = () => {
       return;
     }
 
-    console.log('➡️ Current state:', currentState);
-
     if (currentState.idx === currentState.totalLines - 1) {
+      setShowOverlay(true);
+
       // Last question - wait for transcription then navigate
       const navigateToResults = async () => {
         console.log('✅ Last question completed, waiting for transcription...');
@@ -244,6 +251,8 @@ const Level1Screen = () => {
 
         const { scenarioEmoji } = route.params || {};
 
+        setShowOverlay(false);
+
         navigation.navigate('Level1ResultScreen', {
           totalQuestions: currentState.totalLines,
           transcriptionResults: finalResults,
@@ -281,9 +290,17 @@ const Level1Screen = () => {
   return (
     <View style={styles.container}>
       {/* Header with Progress */}
+      {showOverlay && (
+        <View style={styles.overlay}>
+          <View style={styles.loaderContainer}>
+            {/* Replace with your loader component, e.g., ActivityIndicator */}
+            <ActivityIndicator size="large" color="#6B5B95" />
+          </View>
+        </View>
+      )}
 
       <View style={styles.header}>
-    <TouchableOpacity
+        <TouchableOpacity
           onPress={async () => {
             try {
               if (isRecording) {
@@ -497,6 +514,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#666',
     textAlign: 'center',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+    backdropFilter: 'blur(10px)', // Note: backdropFilter is not supported in all React Native environments
+  },
+  loaderContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    padding: 20,
+    borderRadius: 10,
   },
 });
 

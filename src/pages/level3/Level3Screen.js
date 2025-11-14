@@ -9,6 +9,7 @@ import {
   PanResponder,
   Dimensions,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AvatarGenerator from '../../Components/Avatar/AvatarGenerate';
@@ -34,7 +35,9 @@ const Level3Screen = () => {
   //Scenario States
   const [scenarioData, setScenarioData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [userQuestions, setUserQuestions] = useState(null); // User-specific questions with video URLs
+  const [userQuestions, setUserQuestions] = useState(null);
+
+  const [showOverlay, setShowOverlay] = useState(false);
 
   //Fetch User-Specific Questions (with Supabase video URLs)
   useEffect(() => {
@@ -274,6 +277,8 @@ const Level3Screen = () => {
     );
 
     setTimeout(() => {
+      setShowOverlay(false);
+
       navigation.navigate('Level3ResultScreen', {
         totalQuestions: currentState?.totalLines || 5,
         transcriptionResults: transcriptionResultsRef.current,
@@ -406,6 +411,8 @@ const Level3Screen = () => {
             audioRecorderRef.current.stopRecording();
           }
 
+          setShowOverlay(true);
+
           console.log('⏳ Waiting for final transcription...');
           await transcriptionPromise;
           setIsRecording(false);
@@ -465,16 +472,12 @@ const Level3Screen = () => {
   return (
     <View style={styles.container}>
       {/* Header with Progress */}
-      {/* <View style={styles.header}>
-        <View style={styles.progressBar}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${((orbState.idx + 1) / orbState.totalLines) * 100}%` },
-            ]}
-          />
+      {showOverlay && (
+        <View style={styles.overlay}>
+          <View style={styles.blurFallback} />
+          <ActivityIndicator size="large" color="#6B5B95" />
         </View>
-      </View> */}
+      )}
 
       <View style={styles.header}>
         <TouchableOpacity
@@ -587,6 +590,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  blurFallback: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.7)',
   },
   header: {
     flexDirection: 'row',
