@@ -362,8 +362,8 @@ export default function HomeScreen() {
               contentStyle={{
                 backgroundColor: '#fff',
                 borderRadius: 16,
-                borderWidth: 1,
-                borderColor: '#E3DDF4',
+                borderWidth: 0,
+                borderColor: 'transparent',
                 overflow: 'hidden',
                 shadowColor: '#000',
                 shadowOpacity: 0.12,
@@ -399,8 +399,8 @@ export default function HomeScreen() {
               contentStyle={{
                 backgroundColor: '#fff',
                 borderRadius: 16,
-                borderWidth: 1,
-                borderColor: '#E3DDF4',
+                borderWidth: 0,
+                borderColor: 'transparent',
                 overflow: 'hidden',
                 shadowColor: '#000',
                 shadowOpacity: 0.12,
@@ -413,7 +413,7 @@ export default function HomeScreen() {
                   step={3}
                   total={TOTAL_STEPS}
                   title="Mailbox"
-                  desc="See notes from Pipo and write a reflection note to yourself"
+                  desc="See notes from Pip and write a reflection note to yourself"
                   onNext={nextStep}
                   onSkip={skipTour}
                 />
@@ -444,8 +444,8 @@ export default function HomeScreen() {
               contentStyle={{
                 backgroundColor: '#fff',
                 borderRadius: 16,
-                borderWidth: 1,
-                borderColor: '#E3DDF4',
+                borderWidth: 0,
+                borderColor: 'transparent',
                 overflow: 'hidden',
                 shadowColor: '#000',
                 shadowOpacity: 0.12,
@@ -532,8 +532,8 @@ export default function HomeScreen() {
               contentStyle={{
                 backgroundColor: '#fff',
                 borderRadius: 16,
-                borderWidth: 1,
-                borderColor: '#E3DDF4',
+                borderWidth: 0,
+                borderColor: 'transparent',
                 overflow: 'hidden',
                 shadowColor: '#000',
                 shadowOpacity: 0.12,
