@@ -590,7 +590,7 @@ export default function HomeScreen() {
         }}
         pointerEvents="none"
       />
-      <SafeAreaBottom />
+      {/* <SafeAreaBottom /> */}
     </View>
   );
 }

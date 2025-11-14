@@ -9,6 +9,7 @@ import {
   PanResponder,
   Dimensions,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AvatarGenerator from '../../Components/Avatar/AvatarGenerate';
@@ -31,12 +32,13 @@ const Level2Screen = () => {
   const { scenarioTitle, scenarioId } = route.params || {};
   const { mongoUser } = useAuth();
 
+  const [showOverlay, setShowOverlay] = useState(false);
+
   //Scenario States
   const [scenarioData, setScenarioData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [userQuestions, setUserQuestions] = useState(null); // User-specific questions with video URLs
+  const [userQuestions, setUserQuestions] = useState(null);
 
-  //Fetch User-Specific Questions (with Supabase video URLs)
   useEffect(() => {
     const loadUserQuestions = async () => {
       try {
@@ -274,6 +276,7 @@ const Level2Screen = () => {
     );
 
     setTimeout(() => {
+      setShowOverlay(false);
       navigation.navigate('Level2ResultScreen', {
         totalQuestions: currentState?.totalLines || 5,
         transcriptionResults: transcriptionResultsRef.current,
@@ -283,7 +286,7 @@ const Level2Screen = () => {
         scenarioId: scenarioId,
       });
       console.log('Navigation triggered');
-    }, 10000);
+    }, 5000);
   }, [navigation, route.params]);
 
   // Start recording and processing
@@ -406,6 +409,8 @@ const Level2Screen = () => {
             audioRecorderRef.current.stopRecording();
           }
 
+          setShowOverlay(true);
+
           console.log('⏳ Waiting for final transcription...');
           await transcriptionPromise;
           setIsRecording(false);
@@ -419,17 +424,6 @@ const Level2Screen = () => {
         // Check if results already present
         setLastTranscriptionReceived(true);
         setLastFacialAnalysisReceived(true);
-        // console.log(
-        //   'Hereee',
-        //   transcriptionResultsRef,
-        //   facialAnalysisResultsRef,
-        // );
-        // if (
-        //   transcriptionResultsRef.current.length === currentState.totalLines &&
-        //   facialAnalysisResultsRef.current.length === currentState.totalLines
-        // ) {
-
-        // }
       };
 
       finishAfterResults();
@@ -465,6 +459,14 @@ const Level2Screen = () => {
   return (
     <View style={styles.container}>
       {/* Header with Progress */}
+
+      {showOverlay && (
+        <View style={styles.overlay}>
+          <View style={styles.blurFallback} />
+          <ActivityIndicator size="large" color="#6B5B95" />
+        </View>
+      )}
+
       <View style={styles.header}>
         <TouchableOpacity
           onPress={handleBackPress}
@@ -576,6 +578,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  blurFallback: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.7)',
   },
   header: {
     flexDirection: 'row',

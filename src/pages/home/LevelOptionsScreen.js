@@ -327,7 +327,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
-      <SafeAreaBottom color="#F6F3FC" />
+      {/* <SafeAreaBottom color="#F6F3FC" /> */}
     </View>
   );
 }

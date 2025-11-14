@@ -121,6 +121,8 @@ const Level2ResultScreen = () => {
 
   const finalScenarioId = scenarioId; // must be provided
 
+  console.log('here-=-=-=-=-=-=', route.params);
+
   // Calculate transcript metrics
   const avgWpm = getAvgScore(transcriptionResults, ['wpm']);
   const totalFillers = transcriptionResults.reduce(
