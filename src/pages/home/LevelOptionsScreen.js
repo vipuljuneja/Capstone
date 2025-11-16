@@ -249,9 +249,7 @@ export default function LevelOptionsScreen({ route, navigation }) {
                 )}
               </View>
 
-              {index < levels.length - 1 && (
-                <View style={styles.timelineLine} />
-              )}
+              {index < levels.length && <View style={styles.timelineLine} />}
             </View>
 
             {/* Level Card */}

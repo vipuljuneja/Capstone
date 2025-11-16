@@ -18,7 +18,7 @@ export default function CustomHeader({
   const insets = useSafeAreaInsets();
 
   return (
-    <>
+    <View style={styles.headers}>
       {/* Top Safe Area */}
       {safeAreaAdded && (
         <View style={{ height: insets.top, backgroundColor: safeAreaColor }} />
@@ -49,7 +49,7 @@ export default function CustomHeader({
           </>
         )}
       </View>
-    </>
+    </View>
   );
 }
 
