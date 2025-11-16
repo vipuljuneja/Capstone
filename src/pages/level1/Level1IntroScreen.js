@@ -44,11 +44,19 @@ const LevelIntroScreen = () => {
       <CustomHeader
         safeAreaColor="#fafaff"
         headerColor="#fafaff"
-        title={'Voice Practise'}
+        // title={'Voice Practice'}
         onLeftPress={() => {
           navigation.navigate('LevelOptions', { ...route.params });
         }}
       />
+
+      <View style={styles.topSection1}>
+        <Text style={styles.levelTitle1}>Level 1</Text>
+      </View>
+
+      <View style={styles.topSection}>
+        <Text style={styles.levelTitle}>Voice Practice</Text>
+      </View>
 
       {/* Middle Section - Character */}
       <View style={styles.middleSection}>
@@ -92,18 +100,31 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: '#333',
   },
-  topSection: {
+  topSection1: {
     alignItems: 'center',
-    paddingTop: 20,
-    paddingBottom: 20,
+    paddingTop: 80,
   },
   levelLabel: {
     fontSize: 16,
     color: '#666',
     marginBottom: 8,
   },
+  topSection: {
+    alignItems: 'center',
+    paddingTop: 20,
+  },
+  levelLabel: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 8,
+  },
+  levelTitle1: {
+    fontSize: 20,
+    // fontWeight: 'bold',
+    color: '#333',
+  },
   levelTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
   },
@@ -135,7 +156,7 @@ const styles = StyleSheet.create({
     // backgroundColor: 'white',
     borderRadius: 18,
     padding: 20,
-    marginBottom: 0,
+    marginBottom: 60,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.09,
@@ -149,7 +170,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   startButton: {
-    backgroundColor: '#6B5B95',
+    backgroundColor: '#3E3153',
     borderRadius: 25,
     paddingVertical: 16,
     alignItems: 'center',
@@ -177,13 +198,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontWeight: '500',
     textAlign: 'center',
-  },
-  levelTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#222',
-    textAlign: 'center',
-    marginBottom: 14,
   },
 });
 

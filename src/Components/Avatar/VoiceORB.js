@@ -241,12 +241,12 @@ const VoiceOrb = forwardRef((props, ref) => {
         wrap Image and Animated.View together in a parent View */}
       </Pressable>
 
-      <Text style={styles.line}>"{LINES[idx]}"</Text>
+      {/* <Text style={styles.line}>"{LINES[idx]}"</Text> */}
     </View>
   );
 });
 
-const BALL = 360;
+const BALL = 330;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
