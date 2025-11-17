@@ -1,14 +1,15 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   TextInput,
   TouchableOpacity,
   StyleSheet,
   TextInputProps,
+  Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-interface AuthInputProps extends TextInputProps {
+interface AuthInputProps extends Omit<TextInputProps, 'secureTextEntry'> {
   icon: string;
   iconSize?: number;
   isPassword?: boolean;
@@ -27,28 +28,27 @@ export default function AuthInput({
   ...textInputProps
 }: AuthInputProps) {
   const [uncontrolledVisibility, setUncontrolledVisibility] = useState(false);
-  const inputRef = useRef<TextInput>(null);
   const isPasswordVisible =
     typeof controlledVisibility === 'boolean'
       ? controlledVisibility
       : uncontrolledVisibility;
 
   const handleToggleVisibility = () => {
-    // Blur the input before toggling to prevent crashes
-    inputRef.current?.blur();
-    
-    // Use setTimeout to ensure blur completes before state change
-    setTimeout(() => {
-      const nextVisibility = !isPasswordVisible;
-      onPasswordVisibilityChange?.(nextVisibility);
-      if (typeof controlledVisibility !== 'boolean') {
-        setUncontrolledVisibility(nextVisibility);
-      }
-    }, 0);
+    const nextVisibility = !isPasswordVisible;
+    onPasswordVisibilityChange?.(nextVisibility);
+    if (typeof controlledVisibility !== 'boolean') {
+      setUncontrolledVisibility(nextVisibility);
+    }
   };
 
-  // Ensure secureTextEntry is always explicitly boolean
-  const secureTextEntry = isPassword ? !isPasswordVisible : false;
+  // Conditionally render different TextInputs to avoid secureTextEntry toggle crashes
+  // Using key prop ensures proper remounting, and since inputs are controlled (value prop),
+  // the text value will be preserved
+  const commonProps = {
+    ...textInputProps,
+    style: [styles.input, textInputProps.style],
+    placeholderTextColor: '#94a3b8',
+  };
 
   return (
     <View style={[styles.container, error && styles.containerError]}>
@@ -58,13 +58,26 @@ export default function AuthInput({
         color={error ? '#ef4444' : '#64748b'}
         style={styles.icon}
       />
-      <TextInput
-        ref={inputRef}
-        {...textInputProps}
-        style={[styles.input, textInputProps.style]}
-        secureTextEntry={secureTextEntry}
-        placeholderTextColor="#94a3b8"
-      />
+      {isPassword ? (
+        isPasswordVisible ? (
+          <TextInput
+            {...commonProps}
+            key="password-visible"
+            autoComplete={Platform.OS === 'ios' ? 'password' : 'password-new'}
+            textContentType="password"
+          />
+        ) : (
+          <TextInput
+            {...commonProps}
+            key="password-hidden"
+            secureTextEntry={true}
+            autoComplete={Platform.OS === 'ios' ? 'password' : 'password-new'}
+            textContentType="password"
+          />
+        )
+      ) : (
+        <TextInput {...commonProps} />
+      )}
       {isPassword && (
         <TouchableOpacity
           onPress={handleToggleVisibility}
