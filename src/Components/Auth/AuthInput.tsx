@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   TextInput,
@@ -27,18 +27,28 @@ export default function AuthInput({
   ...textInputProps
 }: AuthInputProps) {
   const [uncontrolledVisibility, setUncontrolledVisibility] = useState(false);
+  const inputRef = useRef<TextInput>(null);
   const isPasswordVisible =
     typeof controlledVisibility === 'boolean'
       ? controlledVisibility
       : uncontrolledVisibility;
 
   const handleToggleVisibility = () => {
-    const nextVisibility = !isPasswordVisible;
-    onPasswordVisibilityChange?.(nextVisibility);
-    if (typeof controlledVisibility !== 'boolean') {
-      setUncontrolledVisibility(nextVisibility);
-    }
+    // Blur the input before toggling to prevent crashes
+    inputRef.current?.blur();
+    
+    // Use setTimeout to ensure blur completes before state change
+    setTimeout(() => {
+      const nextVisibility = !isPasswordVisible;
+      onPasswordVisibilityChange?.(nextVisibility);
+      if (typeof controlledVisibility !== 'boolean') {
+        setUncontrolledVisibility(nextVisibility);
+      }
+    }, 0);
   };
+
+  // Ensure secureTextEntry is always explicitly boolean
+  const secureTextEntry = isPassword ? !isPasswordVisible : false;
 
   return (
     <View style={[styles.container, error && styles.containerError]}>
@@ -49,9 +59,10 @@ export default function AuthInput({
         style={styles.icon}
       />
       <TextInput
+        ref={inputRef}
         {...textInputProps}
         style={[styles.input, textInputProps.style]}
-        secureTextEntry={isPassword && !isPasswordVisible}
+        secureTextEntry={secureTextEntry}
         placeholderTextColor="#94a3b8"
       />
       {isPassword && (
