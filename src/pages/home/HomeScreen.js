@@ -37,6 +37,7 @@ import Animated, {
   interpolate,
   Extrapolate,
 } from 'react-native-reanimated';
+import LottieView from 'lottie-react-native';
 
 const emojiMap = {
   'Ordering Coffee': require('../../../assets/pipo/pipo-coffee.png'),
@@ -475,10 +476,31 @@ export default function HomeScreen() {
           </Animated.View>
 
           {/* Character */}
-          <Animated.Image
-            source={require('../../../assets/gifs/HomePipo1.gif')}
+          {/* <Animated.Image
+            source={require('../../../assets/gifs/HomePipo2.gif')}
             style={[characterAnimStyle, { resizeMode: 'contain' }]}
-          />
+          /> */}
+
+          <Animated.View style={characterAnimStyle}>
+            <View
+              style={{
+                justifyContent: 'center',
+                alignItems: 'center',
+                display: 'flex',
+              }}
+            >
+              <LottieView
+                source={require('../../../assets/json/HomePipo.json')}
+                autoPlay
+                loop
+                style={{
+                  marginTop: 20,
+                  width: '80%',
+                  height: '80%',
+                }}
+              />
+            </View>
+          </Animated.View>
         </View>
 
         {/* Bottom Buttons `*/}

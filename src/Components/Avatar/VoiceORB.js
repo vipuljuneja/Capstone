@@ -24,7 +24,7 @@ const DEEPGRAM_API_KEY = TTS_API_KEY;
 const DG_MODEL = 'aura-2-thalia-en';
 
 const VoiceOrb = forwardRef((props, ref) => {
-  const { onStateChange, lines } = props; // Accept dynamic lines
+  const { onStateChange, lines } = props;
 
   const LINES = useMemo(() => {
     if (Array.isArray(lines) && lines.length > 0) return lines;
@@ -236,12 +236,7 @@ const VoiceOrb = forwardRef((props, ref) => {
           style={[styles.gif, { width: BALL, height: BALL }]}
           resizeMode="contain"
         />
-
-        {/* If you want tap interaction only on the GIF+ball area,
-        wrap Image and Animated.View together in a parent View */}
       </Pressable>
-
-      {/* <Text style={styles.line}>"{LINES[idx]}"</Text> */}
     </View>
   );
 });
@@ -274,8 +269,6 @@ const styles = StyleSheet.create({
   },
   gif: {
     borderRadius: BALL / 2,
-    // position is set inline to 'absolute'
-    // Add shadow if desired consistent with ball style
   },
 });
 
