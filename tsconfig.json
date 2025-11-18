@@ -12,7 +12,8 @@
     "src/screens/auth/SignupScreen.js",
     "src/screens/auth/LoginScreen.js",
     "src/contexts/AuthContext.js",
-    "src/services/api.js"
+    "src/services/api.js",
+    "src/Components/Auth/AuthInput.js"
   ],
   "exclude": ["**/node_modules", "**/Pods"]
 }
