@@ -29,13 +29,13 @@ export default function ScaleButtons({ value, onChange }) {
 }
 
 const S = StyleSheet.create({
-  wrap: { gap: 14 },
+  wrap: { gap: 18, paddingHorizontal: 15, paddingVertical: 15 },
   item: {
     borderWidth: 1,
     borderColor: "#e5e7eb",
     backgroundColor: "#fff",
     paddingVertical: 14,
-    borderRadius: 16,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },

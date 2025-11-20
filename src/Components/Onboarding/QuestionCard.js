@@ -19,18 +19,18 @@ export default function QuestionCard({ index, total, prompt, value, onChange }) 
 }
 
 const S = StyleSheet.create({
-  wrap: { gap: 18 },
+  wrap: { gap: 30 },
   counter: { alignSelf: "center", color: "#6b7280", fontSize: 14, marginVertical: 6 },
   prompt: { fontSize: 19, fontWeight: "500", color: "#111827", lineHeight: 28 , textAlign:'center'},
   card: {
     marginTop: 8,
     padding: 20,
-    borderRadius: 18,
+    borderRadius: 30,
     backgroundColor: "#fff",
     shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 4, height: 4 },
+    elevation: 4,
   },
 });
