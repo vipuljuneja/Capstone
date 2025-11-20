@@ -22,12 +22,62 @@ import { signOut } from 'firebase/auth';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 
+
+const PROFILE_IMAGES = {
+  set_lock: require('../../assets/set_lock.png'),
+  set_PP: require('../../assets/set_PP.png'),
+  set_revisit: require('../../assets/set_revisit.png'),
+  set_TOU: require('../../assets/set_TOU.png'),
+  pipo_heart: require('../../assets/pipo-heart.png'),
+  pipo_hi: require('../../assets/pipo/pipo-hi.png'),
+};
+
+const AVATAR_IMAGES = {
+  pipo_set: require('../../assets/pipo_set.png'),
+  bro_set: require('../../assets/bro_set.png'),
+  cherry_set: require('../../assets/cherry_set.png'),
+  mshrom_set: require('../../assets/mshrom_set.png'),
+};
+
+const GRADIENT_IMAGES = {
+  yellow: require('../../assets/gradients/yel-gradient-min.png'),
+  purple: require('../../assets/gradients/purp_gradient-min.png'),
+  blue: require('../../assets/gradients/bl_gradient-min.png'),
+  green: require('../../assets/gradients/gr-gradient-min.png'),
+};
+
 export default function ProfileScreen({ route }) {
   const backToHomeOnce = route?.params?.backToHomeOnce;
   const { mongoUser, refreshMongoUser } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const navigation = useNavigation();
+
+  
+  useEffect(() => {
+    const prefetchImages = () => {
+      try {
+        const imagesToPrefetch = [
+          ...Object.values(PROFILE_IMAGES),
+          ...Object.values(AVATAR_IMAGES),
+          ...Object.values(GRADIENT_IMAGES),
+        ];
+
+        // Prefetch in background without blocking UI
+        Promise.all(
+          imagesToPrefetch.map(img => {
+            const uri = Image.resolveAssetSource(img)?.uri;
+            return uri ? Image.prefetch(uri) : Promise.resolve();
+          })
+        ).catch(err => console.log('Prefetch warning:', err));
+      } catch (error) {
+        console.log('Image prefetch warning:', error);
+      }
+    };
+
+    
+    setTimeout(prefetchImages, 100);
+  }, []);
 
   const handleSignOut = useCallback(async () => {
     if (signingOut) return;
@@ -97,28 +147,16 @@ export default function ProfileScreen({ route }) {
       alert('Error getting token: ' + error.message);
     }
   };
-  const images = {
-    set_lock: require('../../assets/set_lock.png'),
-    set_PP: require('../../assets/set_PP.png'),
-    set_revisit: require('../../assets/set_revisit.png'),
-    set_TOU: require('../../assets/set_TOU.png'),
-  };
 
   useFocusEffect(
     useCallback(() => {
       refreshMongoUser();
     }, []),
   );
-  const avatarImages = {
-    pipo_set: require('../../assets/pipo_set.png'),
-    bro_set: require('../../assets/bro_set.png'),
-    cherry_set: require('../../assets/cherry_set.png'),
-    mshrom_set: require('../../assets/mshrom_set.png'),
-  };
 
   const getUserAvatar = () => {
     const avatarName = mongoUser?.avatarImage || 'pipo_set';
-    return avatarImages[avatarName] || avatarImages.pipo_set;
+    return AVATAR_IMAGES[avatarName] || AVATAR_IMAGES.pipo_set;
   };
 
   // Safety check - if no user data, show loading
@@ -143,8 +181,8 @@ export default function ProfileScreen({ route }) {
     {
       title: 'Change Password',
       desc: 'Update your password safely',
-      icon: images.set_lock,
-      bg: require('../../assets/gradients/yel-gradient-min.png'),
+      icon: PROFILE_IMAGES.set_lock,
+      bg: GRADIENT_IMAGES.yellow,
       onPress: () =>
         navigation && navigation.navigate?.('ChangePasswordScreen'),
     },
@@ -154,7 +192,7 @@ export default function ProfileScreen({ route }) {
     {
       title: 'Get Firebase Token',
       desc: 'Copy token to console for API testing',
-      icon: images.set_lock, // Using existing icon
+      icon: PROFILE_IMAGES.set_lock,
       onPress: getFirebaseToken,
     },
   ];
@@ -163,36 +201,36 @@ export default function ProfileScreen({ route }) {
     {
       title: 'Revisit Guide',
       desc: 'Review the essential steps anytime',
-      icon: images.set_revisit,
-      bg: require('../../assets/gradients/purp_gradient-min.png'),
+      icon: PROFILE_IMAGES.set_revisit,
+      bg: GRADIENT_IMAGES.purple,
       onPress: () => navigation && navigation.navigate?.('Guide'),
     },
     {
       title: 'Terms Of Use',
       desc: 'App rules at a glance',
-      icon: images.set_TOU,
-      bg: require('../../assets/gradients/bl_gradient-min.png'),
+      icon: PROFILE_IMAGES.set_TOU,
+      bg: GRADIENT_IMAGES.blue,
       onPress: () => navigation && navigation.navigate?.('Terms'),
     },
     {
       title: 'Privacy Policy',
       desc: 'How we handle your data',
-      icon: images.set_PP,
-      bg: require('../../assets/gradients/gr-gradient-min.png'),
+      icon: PROFILE_IMAGES.set_PP,
+      bg: GRADIENT_IMAGES.green,
       onPress: () => navigation && navigation.navigate?.('PrivacyPolicy'),
     },
     {
       title: 'Emotional Support',
       desc: 'Reach out when it feels heavy',
-      icon: require('../../assets/pipo-heart.png'),
-      bg: require('../../assets/gradients/yel-gradient-min.png'),
+      icon: PROFILE_IMAGES.pipo_heart,
+      bg: GRADIENT_IMAGES.yellow,
       onPress: () => navigation && navigation.navigate?.('EmotionalSupport'),
     },
     {
       title: 'Redo Assessment Test',
       desc: 'Take the assessment again',
-      icon: require('../../assets/pipo/pipo-hi.png'),
-      bg: require('../../assets/gradients/purp_gradient-min.png'),
+      icon: PROFILE_IMAGES.pipo_hi,
+      bg: GRADIENT_IMAGES.purple,
       onPress: () => navigation && navigation.navigate?.('Onboarding', { skipSlides: true }),
     },
   ];
@@ -276,13 +314,21 @@ export default function ProfileScreen({ route }) {
 }
 
 function OptionRow({ title, desc, icon, onPress, bg }) {
-  const source = icon;
-
   return (
     <Pressable style={S.option} onPress={onPress}>
       <View style={S.optionLeft}>
-        <ImageBackground source={bg} style={S.bg_option}>
-          <Image source={source} style={S.optionIcon} />
+        <ImageBackground 
+          source={bg} 
+          style={S.bg_option}
+          // Progressive loading - show immediately, no fade animation
+          fadeDuration={0}
+        >
+          <Image 
+            source={icon} 
+            style={S.optionIcon}
+            // Load icons fast without fade
+            fadeDuration={0}
+          />
         </ImageBackground>
         <View>
           <Text style={S.optionTitle}>{title}</Text>
