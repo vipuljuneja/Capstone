@@ -49,9 +49,9 @@ export default function ProfileSettingScreen({ navigation }) {
     { name: 'mshrom_set', image: require('../../assets/mshrom_set.png') },
   ];
   const miniBg = [
-    require('../../assets/gradients/bl_gradient.png'),
-    require('../../assets/gradients/purp_gradient.png'),
-    require('../../assets/gradients/yel-gradient.png'),
+    require('../../assets/gradients/bl_gradient-min.png'),
+    require('../../assets/gradients/purp_gradient-min.png'),
+    require('../../assets/gradients/yel-gradient-min.png'),
   ];
 
   function getRandomElement(arr) {
