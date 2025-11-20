@@ -20,6 +20,8 @@ import RNFetchBlob from 'react-native-blob-util';
 import Sound from 'react-native-sound';
 import { TTS_API_KEY } from '@env';
 
+import LottieView from 'lottie-react-native';
+
 const DEEPGRAM_API_KEY = TTS_API_KEY;
 const DG_MODEL = 'aura-2-thalia-en';
 
@@ -231,10 +233,21 @@ const VoiceOrb = forwardRef((props, ref) => {
           ]}
         /> */}
 
-        <Image
+        {/* <Image
           source={require('../../../assets/gifs/PipoORB.gif')}
           style={[styles.gif, { width: BALL, height: BALL }]}
           resizeMode="contain"
+        /> */}
+
+        <LottieView
+          source={require('../../../assets/json/PipoORB.json')}
+          autoPlay
+          loop
+          style={{
+            marginTop: 30,
+            width: '85%',
+            height: '85%',
+          }}
         />
       </Pressable>
     </View>

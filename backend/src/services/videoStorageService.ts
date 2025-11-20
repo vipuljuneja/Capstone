@@ -14,7 +14,7 @@ const streamPipeline = promisify(pipeline);
 const DID_API_KEY = process.env.DID_API_KEY || process.env.AVATAR_API_KEY;
 // Avatar images for different levels
 const AVATAR_IMAGE_LEVEL2 =
-  'https://tiapdsojkbqjucmjmjri.supabase.co/storage/v1/object/public/images/Hitina_Square.png';
+  'https://tiapdsojkbqjucmjmjri.supabase.co/storage/v1/object/public/images/HitinaV2Female.png';
 const AVATAR_IMAGE_LEVEL3 =
   'https://create-images-results.d-id.com/api_docs/assets/noelle.jpeg';
 
@@ -400,7 +400,9 @@ export async function generateAndStoreVideos(
         videoUrl: didVideoUrl,
       });
 
-      console.log(`✅ Video generated successfully, using D-ID URL: ${didVideoUrl}`);
+      console.log(
+        `✅ Video generated successfully, using D-ID URL: ${didVideoUrl}`,
+      );
 
       // COMMENTED OUT: Download and upload to Supabase
       // // Create filename: {userId}_{scenarioId}_{level}_{order}.mp4
