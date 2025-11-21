@@ -372,51 +372,53 @@ const Level3Screen = () => {
   );
 
   // Handle "Next" button press in conversation
-  const handleNext = useCallback(() => {
+  const handleNext = useCallback(async () => {
     const currentState = avatarRef.current?.getState();
     if (!currentState) {
       console.warn('Avatar state not available');
       return;
     }
 
+    // Stop current recording before moving to next
+    if (isRecording) {
+      console.log('🛑 Stopping recording for next question...');
+      try {
+        if (waveformRef.current) {
+          await waveformRef.current.stop();
+        }
+        if (audioRecorderRef.current) {
+          await audioRecorderRef.current.stopRecording();
+        }
+      } catch (error) {
+        console.error('Error stopping recording on next:', error);
+      }
+      setIsRecording(false);
+    }
+
     if (currentState.idx === currentState.totalLines - 1) {
       const finishAfterResults = async () => {
-        if (isRecording) {
-          try {
-            if (waveformRef.current) {
-              await waveformRef.current.stop();
-            }
-          } catch (error) {
-            console.error('Waveform stop error:', error);
-          }
 
-          if (cameraRef.current) {
-            cameraRef.current.stopRecording();
-          }
-          if (avatarRef.current?.stop) {
-            avatarRef.current.stop();
-          }
-
-          const transcriptionPromise = new Promise(resolve => {
-            transcriptionPromiseRef.current = { resolve };
-            setTimeout(() => {
-              if (transcriptionPromiseRef.current) {
-                transcriptionPromiseRef.current.resolve(null);
-                transcriptionPromiseRef.current = null;
-              }
-            }, 5000);
-          });
-
-          if (audioRecorderRef.current) {
-            audioRecorderRef.current.stopRecording();
-          }
-
-          setShowOverlay(true);
-
-          console.log('⏳ Waiting for final transcription...');
-          await transcriptionPromise;
-          setIsRecording(false);
+        if (cameraRef.current) {
+          cameraRef.current.stopRecording();
         }
+        if (avatarRef.current?.stop) {
+          avatarRef.current.stop();
+        }
+
+        const transcriptionPromise = new Promise(resolve => {
+          transcriptionPromiseRef.current = { resolve };
+          setTimeout(() => {
+            if (transcriptionPromiseRef.current) {
+              transcriptionPromiseRef.current.resolve(null);
+              transcriptionPromiseRef.current = null;
+            }
+          }, 5000);
+        });
+
+        setShowOverlay(true);
+
+        console.log('⏳ Waiting for final transcription...');
+        await transcriptionPromise;
 
         await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -426,22 +428,24 @@ const Level3Screen = () => {
         // Check if results already present
         setLastTranscriptionReceived(true);
         setLastFacialAnalysisReceived(true);
-        // console.log(
-        //   'Hereee',
-        //   transcriptionResultsRef,
-        //   facialAnalysisResultsRef,
-        // );
-        // if (
-        //   transcriptionResultsRef.current.length === currentState.totalLines &&
-        //   facialAnalysisResultsRef.current.length === currentState.totalLines
-        // ) {
-
-        // }
       };
 
       finishAfterResults();
     } else {
+      // Move to next question
       avatarRef.current?.next();
+
+      // Restart recording after a short delay
+      setTimeout(async () => {
+        console.log('🎤 Restarting recording for next question...');
+        setIsRecording(true);
+        if (waveformRef.current) {
+          await waveformRef.current.start();
+        }
+        if (audioRecorderRef.current) {
+          await audioRecorderRef.current.startRecording();
+        }
+      }, 1000);
     }
   }, [isRecording]);
 
@@ -654,10 +658,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   waveformHidden: {
-    width: 0,
-    height: 0,
-    overflow: 'hidden',
-    opacity: 0,
+    height: 60,
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 15,
+    opacity: 0.5,
   },
   waveformVisible: {
     height: 60,
