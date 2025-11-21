@@ -58,7 +58,7 @@ export default function TranscriptScreen({ route }) {
             return (
               <View>
                 <Text style={isUser ? styles.youLabel : styles.speakerLabel}>
-                  {isUser ? 'You' : 'Speaker'}
+                  {isUser ? '' : ''}
                 </Text>
                 <Text style={styles.line}>{item.transcript || ''}</Text>
               </View>

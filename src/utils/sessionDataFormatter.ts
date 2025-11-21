@@ -58,7 +58,13 @@ export const formatTranscriptionToSteps = (
     const endTime = new Date(startTime.getTime() + duration * 1000);
 
     // Only add facial metrics to the first step (since facial analysis is for entire session)
-    const facialMetrics = index === 0 && facialAnalysis ? {
+    // Check if facialAnalysis is valid (not an error object)
+    const isValidFacialAnalysis = facialAnalysis && 
+      !facialAnalysis.error && 
+      facialAnalysis.scores && 
+      typeof facialAnalysis.scores.eyeContact === 'number';
+    
+    const facialMetrics = index === 0 && isValidFacialAnalysis ? {
       eyeContact: {
         available: true,
         ratio: facialAnalysis.scores.eyeContact / 100

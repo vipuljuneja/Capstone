@@ -43,6 +43,7 @@ const AvatarGenerator = forwardRef((props, ref) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
+  const [videoReadyToRender, setVideoReadyToRender] = useState(true); // Show video immediately like Level 3
 
   const videoRef = useRef(null);
   const cache = useRef(new Map());
@@ -84,6 +85,10 @@ const AvatarGenerator = forwardRef((props, ref) => {
       isInitialized, // Important: parent can check this
     }),
     isReady: () => isInitialized, // Convenience method
+    enableVideoRendering: () => {
+      console.log('✅ Enabling video rendering (recording is stable)');
+      setVideoReadyToRender(true);
+    },
   }));
 
   // Notify parent of state changes
@@ -301,13 +306,29 @@ const AvatarGenerator = forwardRef((props, ref) => {
 
   // Handle video load - this is called when video is ready to play
   const handleVideoLoad = () => {
-    console.log('✅ Video loaded successfully');
-    setVideoError(null);
-    setVideoLoaded(true);
-
-    // If we should be playing, start now
-    if (shouldPlayRef.current) {
-      setSpeaking(true);
+    try {
+      console.log('✅ Video loaded successfully');
+      setVideoError(null);
+      
+      // Delay setting videoLoaded and starting playback to avoid audio session conflicts
+      // The Video component tries to initialize audio even when muted, which can crash
+      setTimeout(() => {
+        try {
+          setVideoLoaded(true);
+          
+          // If we should be playing, start now (but video is muted so no audio conflict)
+          if (shouldPlayRef.current) {
+            console.log('▶️ Starting video playback (muted for recording)');
+            setSpeaking(true);
+          }
+        } catch (error) {
+          console.error('❌ Error in handleVideoLoad setTimeout:', error);
+          setVideoError('Failed to start video playback');
+        }
+      }, 300); // Longer delay to ensure audio session is fully stable
+    } catch (error) {
+      console.error('❌ Error in handleVideoLoad:', error);
+      setVideoError('Video load error: ' + error.message);
     }
   };
 
@@ -346,6 +367,8 @@ const AvatarGenerator = forwardRef((props, ref) => {
       {isInitialized && urls.length > 0 && urls[idx] && (
         <TouchableWithoutFeedback onPress={handleVideoTap}>
           <View style={styles.videoWrapper}>
+            {/* Only render Video component after recording is stable to prevent audio conflicts */}
+            {videoReadyToRender ? (
             <Video
               key={`video-${idx}`}
               ref={videoRef}
@@ -357,6 +380,12 @@ const AvatarGenerator = forwardRef((props, ref) => {
               controls={false}
               playInBackground={false}
               playWhenInactive={false}
+              ignoreSilentSwitch="ignore"
+              mixWithOthers={true}
+              volume={1.0}
+              muted={false}
+              audioOnly={false}
+              disableFocus={true}
               onLoad={handleVideoLoad}
               onEnd={handleVideoEnd}
               onError={handleVideoError}
@@ -364,13 +393,30 @@ const AvatarGenerator = forwardRef((props, ref) => {
                 console.log('⏳ Video loading started');
                 setVideoLoaded(false);
               }}
+              onReadyForDisplay={() => {
+                console.log('✅ Video ready for display');
+              }}
               onBuffer={({ isBuffering }) => {
                 console.log(
                   `${isBuffering ? '⏸️' : '▶️'} Buffering: ${isBuffering}`,
                 );
               }}
             />
-            {!speaking && (
+            ) : (
+              // Placeholder while waiting for recording to stabilize
+              <View style={styles.videoPlaceholder}>
+                <Text style={styles.placeholderText}>Loading video...</Text>
+              </View>
+            )}
+            {/* Question Text Overlay - Hidden for production (was for debugging) */}
+            {false && (
+              <View style={styles.questionOverlay}>
+                <Text style={styles.questionText}>
+                  {QUESTIONS[idx] || 'Loading question...'}
+                </Text>
+              </View>
+            )}
+            {!speaking && videoReadyToRender && (
               <View style={styles.tapOverlay}>
                 <Text style={styles.tapText}>Tap to replay</Text>
               </View>
@@ -395,19 +441,49 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
-    backgroundColor: 'white',
+    backgroundColor: '#E0E0E0', // Match Level 2 background
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
   },
   videoWrapper: {
     width: '100%',
     height: '100%',
     position: 'relative',
+    zIndex: 1, // Ensure video is behind camera overlay
   },
   video: {
     width: '100%',
     height: '100%',
     backgroundColor: '#000',
+  },
+  videoPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderText: {
+    color: 'white',
+    fontSize: 16,
+  },
+  questionOverlay: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: 15,
+    borderRadius: 12,
+    zIndex: 10,
+  },
+  questionText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 22,
   },
   tapOverlay: {
     position: 'absolute',

@@ -63,9 +63,9 @@ export const savePracticeSession = async (
       throw new Error('No transcription results to save');
     }
 
-    // Get facial analysis (if available)
+    // Get facial analysis (if available and valid - filter out error objects)
     const facialAnalysis = facialAnalysisResults && facialAnalysisResults.length > 0
-      ? facialAnalysisResults[0]
+      ? (facialAnalysisResults[0]?.error ? null : facialAnalysisResults[0])
       : null;
 
     console.log('Overall score:', facialAnalysis?.summary?.overallScore || 0);

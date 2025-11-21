@@ -69,6 +69,8 @@ const CameraDetector = forwardRef(({ onAnalysisComplete }, ref) => {
   const [isCapturing, setIsCapturing] = useState(false);
   const [capturedFrames, setCapturedFrames] = useState([]);
   const [frameCount, setFrameCount] = useState(0);
+  const maxFramesRef = useRef(40); // Allow longer sessions (≈ full Level 2) before auto-stopping
+  const processingErrorCountRef = useRef(0); // Track errors to disable if too many
 
   const intervalRef = useRef(null);
 
@@ -81,11 +83,22 @@ const CameraDetector = forwardRef(({ onAnalysisComplete }, ref) => {
   // Capture loop
   useEffect(() => {
     if (isCapturing) {
-      intervalRef.current = setInterval(() => {
-        if (camera.current && !isProcessing) {
-          captureAndProcess();
+      // Add initial delay before first capture to ensure everything is ready
+      const initialDelay = setTimeout(() => {
+        intervalRef.current = setInterval(() => {
+          if (camera.current && !isProcessing) {
+            captureAndProcess();
+          }
+        }, 1500); // Increased interval to 1.5 seconds to reduce load
+      }, 1000); // Wait 1 second before starting captures
+
+      return () => {
+        clearTimeout(initialDelay);
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
         }
-      }, 1000);
+      };
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -103,6 +116,12 @@ const CameraDetector = forwardRef(({ onAnalysisComplete }, ref) => {
   const captureAndProcess = async () => {
     try {
       setIsProcessing(true);
+      
+      if (!camera.current) {
+        console.warn('CameraDetector: Camera ref is null');
+        return;
+      }
+
       const photo = await camera.current.takePhoto();
       const imagePath = extractPhotoPath(photo);
 
@@ -120,9 +139,51 @@ const CameraDetector = forwardRef(({ onAnalysisComplete }, ref) => {
       }
 
       // Ensure the native side has time to write the image to disk before processing it
-      await sleep(120);
+      await sleep(200); // Increased delay to ensure file is written
 
-      const result = await FaceLandmarkModule.processImage(imagePath);
+      if (!FaceLandmarkModule) {
+        console.error('FaceLandmarkModule is not available');
+        return;
+      }
+
+      if (typeof FaceLandmarkModule.processImage !== 'function') {
+        console.error('FaceLandmarkModule.processImage is not a function');
+        return;
+      }
+
+      // Check if we've had too many errors - disable processing to prevent crashes
+      if (processingErrorCountRef.current >= 3) {
+        console.warn('Too many processing errors, skipping facial analysis to prevent crashes');
+        return;
+      }
+
+      let result;
+      try {
+        // Add timeout to prevent hanging
+        const processPromise = FaceLandmarkModule.processImage(imagePath);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Processing timeout')), 5000)
+        );
+        
+        result = await Promise.race([processPromise, timeoutPromise]);
+        // Reset error count on success
+        processingErrorCountRef.current = 0;
+      } catch (nativeError) {
+        processingErrorCountRef.current += 1;
+        console.error('Native module error processing image:', nativeError, `(Error count: ${processingErrorCountRef.current})`);
+        
+        // Stop capturing if we get too many errors
+        if (processingErrorCountRef.current >= 3) {
+          console.warn('Too many processing errors, stopping capture to prevent crashes');
+          setIsCapturing(false);
+        }
+        return;
+      }
+
+      if (!result) {
+        console.warn('CameraDetector: No result returned from processImage');
+        return;
+      }
 
       console.log('results----', result);
 
@@ -140,13 +201,30 @@ const CameraDetector = forwardRef(({ onAnalysisComplete }, ref) => {
 
       const frameMetrics = extractFrameMetrics(result);
 
-      setCapturedFrames(prevFrames => [...prevFrames, frameMetrics]);
-      setFrameCount(prev => prev + 1);
+      if (frameMetrics) {
+        setCapturedFrames(prevFrames => {
+          // Limit the number of frames to prevent memory issues
+          const updatedFrames = [...prevFrames, frameMetrics];
+          if (updatedFrames.length > maxFramesRef.current) {
+            return updatedFrames.slice(-maxFramesRef.current);
+          }
+          return updatedFrames;
+        });
+        const newCount = frameCount + 1;
+        setFrameCount(newCount);
 
-      console.log(`Frame ${frameCount + 1} captured`);
+        console.log(`Frame ${newCount} captured`);
+        
+        // Stop capturing after max frames to prevent crashes
+        if (newCount >= maxFramesRef.current) {
+          console.log(`Reached max frames (${maxFramesRef.current}), stopping capture`);
+          setIsCapturing(false);
+        }
+      }
     } catch (error) {
       console.error('Error capturing frame:', error);
 
+      // Don't show toast for every error to avoid spam
       if (error?.message?.includes('Cannot load image')) {
         Toast.show({
           type: 'error',
@@ -165,7 +243,11 @@ const CameraDetector = forwardRef(({ onAnalysisComplete }, ref) => {
     console.log('🎬 Starting facial analysis session...');
     setCapturedFrames([]);
     setFrameCount(0);
-    setIsCapturing(true);
+    processingErrorCountRef.current = 0; // Reset error count
+    // Add a delay before starting to ensure camera is ready
+    setTimeout(() => {
+      setIsCapturing(true);
+    }, 500);
   };
 
   const handleStop = () => {
