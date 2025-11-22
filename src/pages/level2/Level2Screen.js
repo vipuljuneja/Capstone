@@ -1,120 +1,35 @@
-// src/screens/levels/Level2Screen.js
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Animated,
-  PanResponder,
-  Dimensions,
-  Image,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import AvatarGenerator from '../../Components/Avatar/AvatarGenerate';
-import CameraDetector from '../../Components/Facial/CameraDetector';
-import AudioRecorder from '../../Components/Audio/AudioRecorder';
-import AudioWaveform from '../../Components/Audio/AudioWaveform';
-
-import scenarioService from '../../services/scenarioService';
-import { getUserLevelQuestions } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import BackIcon from '../../../assets/icons/back.svg';
-import MicIcon from '../../../assets/icons/mic-white.svg';
-import DeleteIcon from '../../../assets/icons/delete-filled.svg';
 
-const { width, height } = Dimensions.get('window');
+// Components
+import ErrorBoundary from '../components/ErrorBoundry';
+import LevelHeader from '../components/LevelHeader';
+import AvatarSection from '../components/AvatarSection';
+import DraggableCamera from '../components/DraggableCamera';
+import AudioWaveform from '../../Components/Audio/AudioWaveform';
+import RecordingControls from '../components/RecordingControls';
+import LoadingOverlay from '../components/LoadingOverlays';
+
+// Hooks
+import { useLevel2Logic } from '../hooks/useLevel2Logic';
+import { useRecordingSession } from '../hooks/useRecordingSession';
+
+const DEFAULT_AVATAR_URL =
+  'https://tiapdsojkbqjucmjmjri.supabase.co/storage/v1/object/public/images/HitinaV2Female.png';
 
 const Level2Screen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { scenarioTitle, scenarioId } = route.params || {};
+  const { scenarioTitle, scenarioId, scenarioEmoji } = route.params || {};
   const { mongoUser } = useAuth();
 
-  const [showOverlay, setShowOverlay] = useState(false);
-
-  //Scenario States
-  const [scenarioData, setScenarioData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [userQuestions, setUserQuestions] = useState(null);
-
-  useEffect(() => {
-    const loadUserQuestions = async () => {
-      try {
-        setLoading(true);
-        if (scenarioId && mongoUser?._id) {
-          // Fetch user-specific questions (includes Supabase video URLs)
-          const questionsData = await getUserLevelQuestions(
-            mongoUser._id,
-            scenarioId,
-            'level2',
-          );
-
-          console.log(
-            '📹 Loaded user questions with video URLs:',
-            questionsData,
-          );
-          setUserQuestions(questionsData.questions || []);
-
-          // Update orb state with question count
-          const questionCount = questionsData.questions?.length || 5;
-          setOrbState(prev => ({ ...prev, totalLines: questionCount }));
-
-          // Also load scenario data for fallback
-          const scenario = await scenarioService.getScenarioById(scenarioId);
-          setScenarioData(scenario);
-        } else if (scenarioId) {
-          // Fallback: use default scenario if no user
-          const scenario = await scenarioService.getScenarioById(scenarioId);
-          setScenarioData(scenario);
-          const questionCount = scenario?.level2?.questions?.length || 5;
-          setOrbState(prev => ({ ...prev, totalLines: questionCount }));
-        }
-      } catch (error) {
-        // console.error('Failed to load questions:', error);
-        // Fallback to default scenario
-        if (scenarioId) {
-          try {
-            const scenario = await scenarioService.getScenarioById(scenarioId);
-            setScenarioData(scenario);
-            const questionCount = scenario?.level2?.questions?.length || 5;
-            setOrbState(prev => ({ ...prev, totalLines: questionCount }));
-          } catch (fallbackError) {
-            // console.error('Failed to load fallback scenario:', fallbackError);
-          }
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadUserQuestions();
-  }, [scenarioId, mongoUser?._id]);
-
-  const [isRecording, setIsRecording] = useState(false);
-  const [avatarReady, setAvatarReady] = useState(false);
-  const [transcriptionResults, setTranscriptionResults] = useState([]);
-  const [facialAnalysisResults, setFacialAnalysisResults] = useState([]);
-
-  // Flags for tracking last question results received
-  const [lastTranscriptionReceived, setLastTranscriptionReceived] =
-    useState(false);
-  const [lastFacialAnalysisReceived, setLastFacialAnalysisReceived] =
-    useState(false);
-  const waitingForFinalResult = useRef(false);
-
-  // Drag position for camera overlay
-  const [pan] = useState(new Animated.ValueXY({ x: 20, y: 20 }));
-
-  // Refs for components and result buffers
-  const avatarRef = useRef(null);
-  const cameraRef = useRef(null);
-  const audioRecorderRef = useRef(null);
-  const waveformRef = useRef(null);
-  const transcriptionResultsRef = useRef([]);
-  const facialAnalysisResultsRef = useRef([]);
-  const transcriptionPromiseRef = useRef(null);
+  // Custom hooks
+  const { scenarioData, userQuestions, loading, error } = useLevel2Logic(
+    scenarioId,
+    mongoUser?._id,
+  );
 
   const [orbState, setOrbState] = useState({
     speaking: false,
@@ -124,23 +39,52 @@ const Level2Screen = () => {
     isInitialized: false,
   });
 
-  // Pan responder to drag camera overlay
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
-      useNativeDriver: false,
-    }),
-    onPanResponderRelease: () => {
-      pan.flattenOffset();
-    },
-    onPanResponderGrant: () => {
-      pan.setOffset({
-        x: pan.x._value,
-        y: pan.y._value,
-      });
-      pan.setValue({ x: 0, y: 0 });
-    },
-  });
+  const totalQuestions =
+    userQuestions?.length || scenarioData?.level2?.questions?.length || 5;
+
+  const recordingSession = useRecordingSession(totalQuestions);
+  const {
+    isRecording,
+    setIsRecording,
+    handleTranscriptionComplete,
+    handleFacialAnalysisComplete,
+    resetSession,
+    transcriptionResultsRef,
+    facialAnalysisResultsRef,
+    transcriptionPromiseRef,
+    waitingForFinalResult,
+    lastTranscriptionReceived,
+    lastFacialAnalysisReceived,
+    setLastTranscriptionReceived,
+    setLastFacialAnalysisReceived,
+  } = recordingSession;
+
+  const [avatarReady, setAvatarReady] = useState(false);
+  const [showOverlay, setShowOverlay] = useState(false);
+
+  // Refs
+  const avatarRef = useRef(null);
+  const cameraRef = useRef(null);
+  const audioRecorderRef = useRef(null);
+  const waveformRef = useRef(null);
+
+  // Update orb state when questions load
+  useEffect(() => {
+    if (totalQuestions) {
+      setOrbState(prev => ({ ...prev, totalLines: totalQuestions }));
+    }
+  }, [totalQuestions]);
+
+  // Navigation effect when both results ready
+  useEffect(() => {
+    if (
+      waitingForFinalResult.current &&
+      lastTranscriptionReceived &&
+      lastFacialAnalysisReceived
+    ) {
+      finishAndNavigate();
+    }
+  }, [lastTranscriptionReceived, lastFacialAnalysisReceived]);
 
   const handleStateChange = useCallback(
     newState => {
@@ -156,246 +100,62 @@ const Level2Screen = () => {
     setAvatarReady(true);
   }, []);
 
-  const resetLevel = useCallback(() => {
-    console.log('🔄 Resetting level to start');
-
-    // Reset local state
-    setIsRecording(false);
-    setTranscriptionResults([]);
-    setOrbState({
-      speaking: false,
-      loading: false,
-      idx: 0,
-      totalLines: scenarioData?.level2?.questions?.length || 5,
-    });
-
-    transcriptionResultsRef.current = [];
-
-    // Reset AudioRecorder
-    if (audioRecorderRef.current?.reset) {
-      audioRecorderRef.current.reset();
-    }
-  }, [scenarioData]);
-
-  // Handle transcription result arrival
-  const handleTranscriptionComplete = useCallback(
-    report => {
-      console.log('📥 Transcription result received:', report);
-      setTranscriptionResults(prevResults => {
-        const newResults = [...prevResults, report];
-        transcriptionResultsRef.current = newResults;
-
-        // Diagnostic log for flag setting
-        console.log(
-          'Setting lastTranscriptionReceived?',
-          waitingForFinalResult.current,
-          newResults.length,
-          orbState.totalLines,
-        );
-
-        console.log('Here', waitingForFinalResult, newResults, orbState);
-
-        if (
-          waitingForFinalResult.current &&
-          newResults.length === orbState.totalLines
-        ) {
-          setLastTranscriptionReceived(true);
-        }
-        return newResults;
-      });
-
-      if (transcriptionPromiseRef.current) {
-        transcriptionPromiseRef.current.resolve(report);
-        transcriptionPromiseRef.current = null;
-      }
-    },
-    [orbState.totalLines],
-  );
-
-  // Handle facial analysis result arrival
-  const handleFacialAnalysisComplete = useCallback(
-    insights => {
-      console.log('📥 Facial analysis result received:', insights);
-      setFacialAnalysisResults(prevResults => {
-        const newResults = [...prevResults, insights];
-        facialAnalysisResultsRef.current = newResults;
-
-        // Diagnostic log for flag setting
-        console.log(
-          'Setting lastFacialAnalysisReceived?',
-          waitingForFinalResult.current,
-          newResults.length,
-          orbState.totalLines,
-        );
-
-        if (
-          waitingForFinalResult.current &&
-          newResults.length === orbState.totalLines
-        ) {
-          setLastFacialAnalysisReceived(true);
-        }
-        return newResults;
-      });
-    },
-    [orbState.totalLines],
-  );
-
-  // useEffect to watch for both flags and navigate once both are true
-  useEffect(() => {
-    console.log(
-      'useEffect fires!',
-      lastTranscriptionReceived,
-      lastFacialAnalysisReceived,
-      waitingForFinalResult.current,
-    );
-    if (
-      waitingForFinalResult.current &&
-      lastTranscriptionReceived &&
-      lastFacialAnalysisReceived
-    ) {
-      console.log('Navigation conditions met.');
-      finishAndNavigate();
-    }
-  }, [lastTranscriptionReceived, lastFacialAnalysisReceived]);
-
-  // Navigation helper - called when both results are ready
   const finishAndNavigate = useCallback(() => {
-    console.log('Executing finishAndNavigate...');
+    console.log('✅ Navigating to results...');
+
     waitingForFinalResult.current = false;
     setLastTranscriptionReceived(false);
     setLastFacialAnalysisReceived(false);
 
-    const currentState = avatarRef.current?.getState();
-    console.log('Current avatar state before navigation:', currentState);
-    const { scenarioEmoji } = route.params || {};
-
-    console.log(
-      'Here My Data',
-      transcriptionResultsRef.current,
-      facialAnalysisResultsRef.current,
-    );
-
     setTimeout(() => {
       setShowOverlay(false);
       navigation.navigate('Level2ResultScreen', {
-        totalQuestions: currentState?.totalLines || 5,
+        totalQuestions,
         transcriptionResults: transcriptionResultsRef.current,
         facialAnalysisResults: facialAnalysisResultsRef.current,
         scenarioTitle: scenarioTitle || 'Ordering Coffee',
         scenarioEmoji: scenarioEmoji || '☕',
-        scenarioId: scenarioId,
+        scenarioId,
       });
-      console.log('Navigation triggered');
     }, 5000);
-  }, [navigation, route.params]);
+  }, [navigation, totalQuestions, scenarioTitle, scenarioEmoji, scenarioId]);
 
-  // Start recording and processing
-  const handleStart = async () => {
+  const handleStart = useCallback(async () => {
     if (!avatarReady) {
-      console.warn('Avatar not ready yet.');
+      console.warn('⚠️ Avatar not ready yet');
       return;
     }
+
     console.log('🎤 Starting recording...');
     setIsRecording(true);
 
     setTimeout(async () => {
-      if (waveformRef.current) {
-        await waveformRef.current.start();
-      }
-      if (cameraRef.current) {
-        cameraRef.current.startRecording();
-      }
-      if (avatarRef.current?.start) {
-        avatarRef.current.start();
-      }
-      if (audioRecorderRef.current) {
-        audioRecorderRef.current.startRecording();
+      try {
+        if (waveformRef.current) await waveformRef.current.start();
+        if (cameraRef.current) cameraRef.current.startRecording();
+        if (avatarRef.current?.start) avatarRef.current.start();
+        if (audioRecorderRef.current) audioRecorderRef.current.startRecording();
+      } catch (err) {
+        console.error('Error starting recording:', err);
+        setIsRecording(false);
       }
     }, 200);
-  };
+  }, [avatarReady, setIsRecording]);
 
-  // Stop recording and reset state
   const handleStop = useCallback(
     async (options = {}) => {
       const { waitForTranscription = true } = options;
 
-      waitingForFinalResult.current = false;
-      setLastTranscriptionReceived(false);
-      setLastFacialAnalysisReceived(false);
+      console.log('🛑 Stopping recording...');
 
-      console.log('🛑 Stopping and resetting...');
       try {
-        if (waveformRef.current) {
-          await waveformRef.current.stop();
-        }
-      } catch (error) {
-        console.error('Waveform stop error:', error);
-      }
+        if (waveformRef.current) await waveformRef.current.stop();
+        if (cameraRef.current) cameraRef.current.stopRecording();
+        if (avatarRef.current?.stop) avatarRef.current.stop();
 
-      if (cameraRef.current) {
-        cameraRef.current.stopRecording();
-      }
-      if (avatarRef.current?.stop) {
-        avatarRef.current.stop();
-      }
-
-      let transcriptionPromise;
-
-      if (waitForTranscription) {
-        transcriptionPromise = new Promise(resolve => {
-          transcriptionPromiseRef.current = { resolve };
-          setTimeout(() => {
-            if (transcriptionPromiseRef.current) {
-              transcriptionPromiseRef.current.resolve(null);
-              transcriptionPromiseRef.current = null;
-            }
-          }, 5000);
-        });
-      } else if (transcriptionPromiseRef.current) {
-        transcriptionPromiseRef.current.resolve(null);
-        transcriptionPromiseRef.current = null;
-      }
-
-      if (audioRecorderRef.current) {
-        audioRecorderRef.current.stopRecording();
-      }
-
-      if (transcriptionPromise) {
-        await transcriptionPromise;
-      }
-
-      resetLevel();
-    },
-    [resetLevel],
-  );
-
-  // Handle "Next" button press in conversation
-  const handleNext = useCallback(() => {
-    const currentState = avatarRef.current?.getState();
-    if (!currentState) {
-      console.warn('Avatar state not available');
-      return;
-    }
-
-    if (currentState.idx === currentState.totalLines - 1) {
-      const finishAfterResults = async () => {
-        if (isRecording) {
-          try {
-            if (waveformRef.current) {
-              await waveformRef.current.stop();
-            }
-          } catch (error) {
-            console.error('Waveform stop error:', error);
-          }
-
-          if (cameraRef.current) {
-            cameraRef.current.stopRecording();
-          }
-          if (avatarRef.current?.stop) {
-            avatarRef.current.stop();
-          }
-
-          const transcriptionPromise = new Promise(resolve => {
+        let transcriptionPromise;
+        if (waitForTranscription) {
+          transcriptionPromise = new Promise(resolve => {
             transcriptionPromiseRef.current = { resolve };
             setTimeout(() => {
               if (transcriptionPromiseRef.current) {
@@ -404,33 +164,73 @@ const Level2Screen = () => {
               }
             }, 5000);
           });
-
-          if (audioRecorderRef.current) {
-            audioRecorderRef.current.stopRecording();
-          }
-
-          setShowOverlay(true);
-
-          console.log('⏳ Waiting for final transcription...');
-          await transcriptionPromise;
-          setIsRecording(false);
         }
 
-        await new Promise(resolve => setTimeout(resolve, 500));
+        if (audioRecorderRef.current) audioRecorderRef.current.stopRecording();
+        if (transcriptionPromise) await transcriptionPromise;
 
-        // Start waiting for both results
-        waitingForFinalResult.current = true;
+        resetSession();
+      } catch (err) {
+        console.error('Error stopping recording:', err);
+      }
+    },
+    [resetSession],
+  );
 
-        // Check if results already present
-        setLastTranscriptionReceived(true);
-        setLastFacialAnalysisReceived(true);
-      };
+  const handleNext = useCallback(() => {
+    const currentState = avatarRef.current?.getState();
+    if (!currentState) {
+      console.warn('⚠️ Avatar state not available');
+      return;
+    }
 
-      finishAfterResults();
+    const isLastQuestion = currentState.idx === currentState.totalLines - 1;
+
+    if (isLastQuestion) {
+      handleFinishSession();
     } else {
       avatarRef.current?.next();
     }
-  }, [isRecording]);
+  }, []);
+
+  const handleFinishSession = useCallback(async () => {
+    if (isRecording) {
+      try {
+        if (waveformRef.current) await waveformRef.current.stop();
+        if (cameraRef.current) cameraRef.current.stopRecording();
+        if (avatarRef.current?.stop) avatarRef.current.stop();
+
+        const transcriptionPromise = new Promise(resolve => {
+          transcriptionPromiseRef.current = { resolve };
+          setTimeout(() => {
+            if (transcriptionPromiseRef.current) {
+              transcriptionPromiseRef.current.resolve(null);
+              transcriptionPromiseRef.current = null;
+            }
+          }, 5000);
+        });
+
+        if (audioRecorderRef.current) audioRecorderRef.current.stopRecording();
+
+        setShowOverlay(true);
+        await transcriptionPromise;
+        setIsRecording(false);
+      } catch (err) {
+        console.error('Error finishing session:', err);
+      }
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    waitingForFinalResult.current = true;
+    setLastTranscriptionReceived(true);
+    setLastFacialAnalysisReceived(true);
+  }, [
+    isRecording,
+    setIsRecording,
+    setLastTranscriptionReceived,
+    setLastFacialAnalysisReceived,
+  ]);
 
   const handleBackPress = useCallback(async () => {
     try {
@@ -439,15 +239,24 @@ const Level2Screen = () => {
       } else if (cameraRef.current?.isRecording) {
         cameraRef.current.stopRecording();
       }
-    } catch (error) {
-      console.error('Error stopping session before navigating back:', error);
+    } catch (err) {
+      console.error('Error on back press:', err);
     } finally {
       navigation.navigate('LevelOptions', route.params);
     }
   }, [isRecording, handleStop, navigation, route.params]);
 
-  const isLastQuestion = orbState.idx === orbState.totalLines - 1;
+  // Error state
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorTitle}>Unable to Load Scenario</Text>
+        <Text style={styles.errorMessage}>{error}</Text>
+      </View>
+    );
+  }
 
+  // Loading state
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -456,121 +265,63 @@ const Level2Screen = () => {
     );
   }
 
+  const lines =
+    userQuestions?.map(q => q.text) ||
+    scenarioData?.level2?.questions?.map(q => q.text) ||
+    [];
+
+  const videoUrls =
+    userQuestions
+      ?.map(q => q.videoUrl)
+      .filter(url => url && url.startsWith('http')) || null;
+
   return (
-    <View style={styles.container}>
-      {/* Header with Progress */}
+    <ErrorBoundary onReset={resetSession}>
+      <View style={styles.container}>
+        <LoadingOverlay visible={showOverlay} />
 
-      {showOverlay && (
-        <View style={styles.overlay}>
-          <View style={styles.blurFallback} />
-          <ActivityIndicator size="large" color="#6B5B95" />
-        </View>
-      )}
-
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={handleBackPress}
-          style={styles.backButtonContainer}
-        >
-          <BackIcon width={20} height={20} style={styles.backButton} />
-        </TouchableOpacity>
-        <View style={styles.progressBarContainer}>
-          <View style={styles.progressBarTrack}>
-            <View
-              style={[
-                styles.progressBarFill,
-                {
-                  width: `${((orbState.idx + 1) / orbState.totalLines) * 100}%`,
-                },
-              ]}
-            />
-          </View>
-        </View>
-      </View>
-
-      {/* Avatar in Center */}
-      <View style={styles.middleSection}>
-        <AvatarGenerator
-          ref={avatarRef}
-          onStateChange={handleStateChange}
-          onInitialized={handleAvatarInitialized}
-          imgURL={
-            'https://tiapdsojkbqjucmjmjri.supabase.co/storage/v1/object/public/images/avatar-videos/690d2cffd0cad/6901a891dd02f9e665ba3de8/2/Hitina_Square.png'
-          }
-          lines={
-            userQuestions?.map(q => q.text) ||
-            (scenarioData?.level2?.questions || []).map(q => q.text)
-          }
-          videoUrls={
-            userQuestions
-              ?.map(q => q.videoUrl)
-              .filter(url => url && url.startsWith('http')) || null
-          }
+        <LevelHeader
+          currentIndex={orbState.idx}
+          totalQuestions={totalQuestions}
+          onBackPress={handleBackPress}
         />
 
-        {/* Draggable Camera Overlay */}
-        <Animated.View
-          style={[
-            styles.cameraComponent,
-            {
-              transform: [{ translateX: pan.x }, { translateY: pan.y }],
-            },
-          ]}
-          {...panResponder.panHandlers}
-        >
-          <CameraDetector
+        <View style={styles.middleSection}>
+          <AvatarSection
+            ref={avatarRef}
+            imgURL={DEFAULT_AVATAR_URL}
+            lines={lines}
+            videoUrls={videoUrls}
+            onStateChange={handleStateChange}
+            onInitialized={handleAvatarInitialized}
+          />
+
+          <DraggableCamera
             ref={cameraRef}
             onAnalysisComplete={handleFacialAnalysisComplete}
           />
-        </Animated.View>
-      </View>
+        </View>
 
-      {/* Waveform */}
-      <View
-        style={isRecording ? styles.waveformVisible : styles.waveformHidden}
-      >
-        <AudioWaveform ref={waveformRef} />
-      </View>
+        <View
+          style={isRecording ? styles.waveformVisible : styles.waveformHidden}
+        >
+          <AudioWaveform ref={waveformRef} />
+        </View>
 
-      {/* Bottom Controls */}
-      <View style={styles.bottomSection}>
-        <AudioRecorder
+        <RecordingControls
           ref={audioRecorderRef}
+          isRecording={isRecording}
+          avatarReady={avatarReady}
+          isLastQuestion={orbState.idx === orbState.totalLines - 1}
+          isSpeaking={orbState.speaking}
+          isLoading={orbState.loading}
+          onStart={handleStart}
+          onStop={handleStop}
+          onNext={handleNext}
           onTranscriptionComplete={handleTranscriptionComplete}
         />
-
-        {/* Microphone Button */}
-        <TouchableOpacity
-          style={isRecording ? styles.stopButton : styles.micButton}
-          onPress={isRecording ? handleStop : handleStart}
-          disabled={!avatarReady && !isRecording}
-        >
-          <Text style={styles.buttonEmoji}>
-            {isRecording ? (
-              <DeleteIcon height={24} width={24} />
-            ) : (
-              <MicIcon height={24} width={24} />
-            )}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Next/Done Button */}
-        {isRecording && (
-          <TouchableOpacity
-            onPress={handleNext}
-            disabled={orbState.speaking || orbState.loading}
-            style={[
-              styles.nextButton,
-              (orbState.speaking || orbState.loading) && styles.buttonDisabled,
-            ]}
-          >
-            <Text style={styles.nextButtonText}>
-              {isLastQuestion ? '✓' : '→'}
-            </Text>
-          </TouchableOpacity>
-        )}
       </View>
-    </View>
+    </ErrorBoundary>
   );
 };
 
@@ -579,55 +330,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  blurFallback: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-    backgroundColor: 'white',
-    gap: 15,
-  },
-  backButton: {
-    fontSize: 28,
-  },
-  progressBar: {
-    flex: 1,
-    height: 8,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#6B5B95',
-    borderRadius: 4,
-  },
   middleSection: {
     flex: 1,
     backgroundColor: '#E0E0E0',
     position: 'relative',
-  },
-  cameraComponent: {
-    position: 'absolute',
-    width: 150,
-    height: 200,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
-    overflow: 'hidden',
   },
   waveformHidden: {
     width: 0,
@@ -640,68 +346,33 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     paddingHorizontal: 15,
   },
-  bottomSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 30,
-    backgroundColor: 'white',
-    gap: 20,
-  },
-  micButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#6B5B95',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  stopButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#999',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  buttonEmoji: {
-    fontSize: 30,
-  },
-  nextButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#6B5B95',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  nextButtonText: {
-    color: 'white',
-    fontSize: 24,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  progressBarContainer: {
+  loadingContainer: {
     flex: 1,
-    marginLeft: 12,
     justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
   },
-  progressBarTrack: {
-    width: '95%',
-    height: 14,
-    borderRadius: 9,
-    backgroundColor: '#e2e2e2',
-    alignSelf: 'center',
-    overflow: 'hidden',
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
   },
-  progressBarFill: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    backgroundColor: '#463855',
-    borderRadius: 9,
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#F5F5F5',
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: '#333',
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
   },
 });
 
