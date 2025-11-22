@@ -67,6 +67,30 @@ const Level2Screen = () => {
   const cameraRef = useRef(null);
   const audioRecorderRef = useRef(null);
   const waveformRef = useRef(null);
+  const waveformRef1 = useRef(null);
+
+  const waveformRefCallback = useCallback(ref => {
+    console.log('🔗 Waveform ref callback called, ref:', ref);
+    waveformRef1.current = ref;
+
+    // Start waveform immediately when ref is set
+    if (ref) {
+      const startWaveform = async () => {
+        try {
+          console.log('🎵 Starting waveform via callback ref...');
+          await ref.start();
+          console.log('✅ Waveform started successfully via callback ref');
+        } catch (error) {
+          console.error('❌ Waveform start error:', error);
+        }
+      };
+
+      // Small delay to ensure component is fully mounted
+      setTimeout(() => {
+        startWaveform();
+      }, 200);
+    }
+  }, []);
 
   // Update orb state when questions load
   useEffect(() => {
@@ -131,7 +155,7 @@ const Level2Screen = () => {
 
     setTimeout(async () => {
       try {
-        if (waveformRef.current) await waveformRef.current.start();
+        // Waveform is already started on mount, no need to start again
         if (cameraRef.current) cameraRef.current.startRecording();
         if (avatarRef.current?.start) avatarRef.current.start();
         if (audioRecorderRef.current) audioRecorderRef.current.startRecording();
@@ -149,7 +173,7 @@ const Level2Screen = () => {
       console.log('🛑 Stopping recording...');
 
       try {
-        if (waveformRef.current) await waveformRef.current.stop();
+        if (waveformRef1.current) await waveformRef1.current.stop();
         if (cameraRef.current) cameraRef.current.stopRecording();
         if (avatarRef.current?.stop) avatarRef.current.stop();
 
@@ -196,7 +220,7 @@ const Level2Screen = () => {
   const handleFinishSession = useCallback(async () => {
     if (isRecording) {
       try {
-        if (waveformRef.current) await waveformRef.current.stop();
+        if (waveformRef1.current) await waveformRef1.current.stop();
         if (cameraRef.current) cameraRef.current.stopRecording();
         if (avatarRef.current?.stop) avatarRef.current.stop();
 
@@ -302,10 +326,8 @@ const Level2Screen = () => {
           />
         </View>
 
-        <View
-          style={isRecording ? styles.waveformVisible : styles.waveformHidden}
-        >
-          <AudioWaveform ref={waveformRef} />
+        <View style={styles.waveformVisible}>
+          <AudioWaveform ref={waveformRefCallback} />
         </View>
 
         <RecordingControls
@@ -335,17 +357,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
     position: 'relative',
   },
-  waveformHidden: {
-    width: 0,
-    height: 0,
-    overflow: 'hidden',
-    opacity: 0,
-  },
   waveformVisible: {
     height: 60,
-    backgroundColor: 'white',
+    width: '100%',
+    backgroundColor: '#F5F5F5',
     paddingHorizontal: 15,
+    justifyContent: 'center',
   },
+  // waveformHidden: {
+  //   display: 'none',
+  // },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
