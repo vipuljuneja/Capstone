@@ -18,24 +18,20 @@ const AudioWaveform = forwardRef((props, ref) => {
   const { checkHasAudioRecorderPermission, getAudioRecorderPermission } =
     useAudioPermission();
 
-  const startRecording = async () => {
+  // Start visualizing waveforms
+  const start = async () => {
     try {
-      console.log('🎤 AudioWaveform: Starting recording...');
-
-      // Check permission first
       let hasPermission = await checkHasAudioRecorderPermission();
 
-      // Request permission if not granted
       if (hasPermission === PermissionStatus.undetermined) {
         hasPermission = await getAudioRecorderPermission();
       }
 
       if (hasPermission !== PermissionStatus.granted) {
-        console.warn('⚠️ Audio permission not granted:', hasPermission);
+        console.error('Audio permission not granted');
         return false;
       }
 
-      // Start recording
       await waveformRef.current?.startRecord({
         encoder: 1,
         sampleRate: 44100,
@@ -46,40 +42,29 @@ const AudioWaveform = forwardRef((props, ref) => {
       });
 
       setIsRecording(true);
-      console.log('✅ AudioWaveform: Recording started successfully');
       return true;
     } catch (error) {
-      console.error('❌ AudioWaveform: Error starting recording:', error);
+      console.error('Error starting waveform:', error.message);
       return false;
     }
   };
 
-  const stopRecording = async () => {
-    if (!isRecording) {
-      console.log('⚠️ AudioWaveform: Not currently recording');
-      return null;
-    }
-
+  // Stop waveform and reset
+  const stop = async () => {
     try {
-      console.log('⏹️ AudioWaveform: Stopping recording...');
-      const audioPath = await waveformRef.current?.stopRecord();
-      setIsRecording(false);
-      console.log('✅ AudioWaveform: Audio saved at:', audioPath);
-      return audioPath;
+      if (isRecording && waveformRef.current) {
+        await waveformRef.current.stopRecord();
+      }
     } catch (error) {
-      console.error('❌ AudioWaveform: Error stopping recording:', error);
+      console.error('Error stopping waveform:', error.message);
+    } finally {
       setIsRecording(false);
-      return null;
     }
-  };
-
-  const handleRecorderStateChange = state => {
-    console.log('🎙️ AudioWaveform: Recorder state changed to:', state);
   };
 
   useImperativeHandle(ref, () => ({
-    start: startRecording,
-    stop: stopRecording,
+    start,
+    stop,
     isRecording,
   }));
 
@@ -93,7 +78,6 @@ const AudioWaveform = forwardRef((props, ref) => {
         candleHeightScale={3}
         waveColor="#000000"
         containerStyle={styles.waveformContainer}
-        onRecorderStateChange={handleRecorderStateChange}
         scrubColor="#000000"
       />
     </View>
