@@ -1,10 +1,13 @@
 // src/components/Level2Header.js
-import React from 'react';
+import React, { useMemo, memo } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import BackIcon from '../../../assets/icons/back.svg';
 
-const LevelHeader = ({ currentIndex, totalQuestions, onBackPress }) => {
-  const progress = ((currentIndex + 1) / totalQuestions) * 100;
+const LevelHeader = memo(({ currentIndex, totalQuestions, onBackPress }) => {
+  const progress = useMemo(
+    () => ((currentIndex + 1) / totalQuestions) * 100,
+    [currentIndex, totalQuestions],
+  );
 
   return (
     <View style={styles.header}>
@@ -24,7 +27,7 @@ const LevelHeader = ({ currentIndex, totalQuestions, onBackPress }) => {
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   header: {
