@@ -150,11 +150,22 @@ const Level2ResultScreen = () => {
   useEffect(() => {
     const finalScenarioId = scenarioId;
     const autoSaveSession = async () => {
-      if (savedSessionId) return;
-      if (!mongoUser?._id) return;
-      if (!finalScenarioId) return;
-      if (!transcriptionResults || transcriptionResults.length === 0) return;
       try {
+        if (savedSessionId) return;
+        if (!mongoUser?._id) {
+          console.warn('⚠️ No user ID, skipping session save');
+          return;
+        }
+        if (!finalScenarioId) {
+          console.warn('⚠️ No scenario ID, skipping session save');
+          return;
+        }
+        if (!transcriptionResults || transcriptionResults.length === 0) {
+          console.warn('⚠️ No transcription results, skipping session save');
+          return;
+        }
+        
+        console.log('💾 Attempting to save session...');
         await saveSession({
           userId: mongoUser._id,
           scenarioId: finalScenarioId,
@@ -175,10 +186,15 @@ const Level2ResultScreen = () => {
           );
         }
       } catch (error) {
-        // Save error handled in state
+        console.error('❌ Error in autoSaveSession:', error);
+        // Save error handled in state - don't crash
       }
     };
-    autoSaveSession();
+    
+    // Add a small delay to ensure component is fully mounted
+    setTimeout(() => {
+      autoSaveSession();
+    }, 500);
   }, []);
 
   // Enable NEXT LEVEL only when level 3 is unlocked

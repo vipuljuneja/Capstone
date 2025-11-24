@@ -60,6 +60,7 @@ const Level3Screen = () => {
 
           // Update orb state with question count
           const questionCount = questionsData.questions?.length || 5;
+          totalLinesRef.current = questionCount;
           setOrbState(prev => ({ ...prev, totalLines: questionCount }));
 
           // Also load scenario data for fallback
@@ -70,6 +71,7 @@ const Level3Screen = () => {
           const scenario = await scenarioService.getScenarioById(scenarioId);
           setScenarioData(scenario);
           const questionCount = scenario?.level3?.questions?.length || 5;
+          totalLinesRef.current = questionCount;
           setOrbState(prev => ({ ...prev, totalLines: questionCount }));
         }
       } catch (error) {
@@ -80,6 +82,7 @@ const Level3Screen = () => {
             const scenario = await scenarioService.getScenarioById(scenarioId);
             setScenarioData(scenario);
             const questionCount = scenario?.level3?.questions?.length || 5;
+            totalLinesRef.current = questionCount;
             setOrbState(prev => ({ ...prev, totalLines: questionCount }));
           } catch (fallbackError) {
             // console.error('Failed to load fallback scenario:', fallbackError);
@@ -116,6 +119,11 @@ const Level3Screen = () => {
   const transcriptionResultsRef = useRef([]);
   const facialAnalysisResultsRef = useRef([]);
   const transcriptionPromiseRef = useRef(null);
+  const totalLinesRef = useRef(5);
+  const questionTimestampsRef = useRef([]);
+  const recordingStartTimeRef = useRef(null);
+  const recordingHealthCheckRef = useRef(null);
+  const pendingRestartTimerRef = useRef(null);
 
   const [orbState, setOrbState] = useState({
     speaking: false,
@@ -145,9 +153,76 @@ const Level3Screen = () => {
 
   const handleStateChange = useCallback(
     newState => {
+      if (!newState) return;
       setOrbState(newState);
       if (newState.isInitialized && !avatarReady) {
         setAvatarReady(true);
+      }
+
+      // Track when questions start playing (for filtering or diagnostics)
+      if (newState.speaking && recordingStartTimeRef.current) {
+        const questionStartTime = Date.now() - recordingStartTimeRef.current;
+        questionTimestampsRef.current.push({
+          questionIndex: newState.idx,
+          startTime: questionStartTime / 1000,
+          endTime: null,
+        });
+        console.log(
+          `📝 Question ${newState.idx} started at ${(
+            questionStartTime / 1000
+          ).toFixed(2)}s`,
+        );
+      }
+
+      // Track when questions end and ensure recording continues
+      if (!newState.speaking && questionTimestampsRef.current.length > 0) {
+        const lastQuestion =
+          questionTimestampsRef.current[
+            questionTimestampsRef.current.length - 1
+          ];
+        if (
+          lastQuestion &&
+          lastQuestion.endTime === null &&
+          recordingStartTimeRef.current
+        ) {
+          const questionEndTime = Date.now() - recordingStartTimeRef.current;
+          lastQuestion.endTime = questionEndTime / 1000;
+          console.log(
+            `📝 Question ${lastQuestion.questionIndex} ended at ${(
+              questionEndTime / 1000
+            ).toFixed(2)}s`,
+          );
+
+          setTimeout(() => {
+            const isStillRecording = audioRecorderRef.current?.isRecording;
+            if (isRecording && !isStillRecording) {
+              console.error(
+                '❌ CRITICAL: Recording stopped when video ended! Attempting restart...',
+              );
+              audioRecorderRef.current
+                ?.startRecording()
+                .catch(err =>
+                  console.error('❌ Failed to restart recording:', err),
+                );
+            } else if (isRecording && isStillRecording) {
+              console.log('✅ Recording still active after video ended');
+            }
+          }, 300);
+
+          setTimeout(() => {
+            const isStillRecording = audioRecorderRef.current?.isRecording;
+            if (isRecording && !isStillRecording) {
+              console.error(
+                '❌ CRITICAL: Recording stopped after video ended (delayed check)! Restarting...',
+              );
+              audioRecorderRef.current
+                ?.startRecording()
+                .catch(err =>
+                  console.error('❌ Failed to restart recording (delayed):', err),
+                );
+            }
+          }, 1000);
+        }
       }
     },
     [avatarReady],
@@ -155,6 +230,9 @@ const Level3Screen = () => {
 
   const handleAvatarInitialized = useCallback(() => {
     setAvatarReady(true);
+    if (avatarRef.current?.enableVideoRendering) {
+      avatarRef.current.enableVideoRendering();
+    }
   }, []);
 
   const resetLevel = useCallback(() => {
@@ -163,16 +241,24 @@ const Level3Screen = () => {
     // Reset local state
     setIsRecording(false);
     setTranscriptionResults([]);
+    const questionCount = scenarioData?.level3?.questions?.length || 5;
+    totalLinesRef.current = questionCount;
     setOrbState({
       speaking: false,
       loading: false,
       idx: 0,
-      totalLines: scenarioData?.level3?.questions?.length || 5,
+      totalLines: questionCount,
     });
 
     transcriptionResultsRef.current = [];
+    questionTimestampsRef.current = [];
+    recordingStartTimeRef.current = null;
 
-    // Reset AudioRecorder
+    if (pendingRestartTimerRef.current) {
+      clearTimeout(pendingRestartTimerRef.current);
+      pendingRestartTimerRef.current = null;
+    }
+
     if (audioRecorderRef.current?.reset) {
       audioRecorderRef.current.reset();
     }
@@ -186,19 +272,19 @@ const Level3Screen = () => {
         const newResults = [...prevResults, report];
         transcriptionResultsRef.current = newResults;
 
-        // Diagnostic log for flag setting
+        const totalLines = totalLinesRef.current || orbState.totalLines || 0;
+
         console.log(
           'Setting lastTranscriptionReceived?',
           waitingForFinalResult.current,
           newResults.length,
-          orbState.totalLines,
+          totalLines,
         );
-
-        console.log('Here', waitingForFinalResult, newResults, orbState);
 
         if (
           waitingForFinalResult.current &&
-          newResults.length === orbState.totalLines
+          totalLines > 0 &&
+          newResults.length === totalLines
         ) {
           setLastTranscriptionReceived(true);
         }
@@ -221,17 +307,19 @@ const Level3Screen = () => {
         const newResults = [...prevResults, insights];
         facialAnalysisResultsRef.current = newResults;
 
-        // Diagnostic log for flag setting
+        const totalLines = totalLinesRef.current || orbState.totalLines || 0;
+
         console.log(
           'Setting lastFacialAnalysisReceived?',
           waitingForFinalResult.current,
           newResults.length,
-          orbState.totalLines,
+          totalLines,
         );
 
         if (
           waitingForFinalResult.current &&
-          newResults.length === orbState.totalLines
+          totalLines > 0 &&
+          newResults.length === totalLines
         ) {
           setLastFacialAnalysisReceived(true);
         }
@@ -297,21 +385,82 @@ const Level3Screen = () => {
       console.warn('Avatar not ready yet.');
       return;
     }
+
+    if (!audioRecorderRef.current) {
+      console.error('❌ AudioRecorder ref not ready');
+      return;
+    }
+
     console.log('🎤 Starting recording...');
     setIsRecording(true);
 
     setTimeout(async () => {
-      if (waveformRef.current) {
-        await waveformRef.current.start();
-      }
-      if (cameraRef.current) {
-        cameraRef.current.startRecording();
-      }
-      if (avatarRef.current?.start) {
-        avatarRef.current.start();
-      }
-      if (audioRecorderRef.current) {
-        audioRecorderRef.current.startRecording();
+      try {
+        if (audioRecorderRef.current?.startRecording) {
+          console.log('🎙️ Starting AudioRecorder first...');
+          await audioRecorderRef.current.startRecording();
+          console.log('✅ AudioRecorder started successfully');
+
+          recordingStartTimeRef.current = Date.now();
+          questionTimestampsRef.current = [];
+
+          if (recordingHealthCheckRef.current) {
+            clearInterval(recordingHealthCheckRef.current);
+          }
+          let lastProgressTime = Date.now();
+          recordingHealthCheckRef.current = setInterval(() => {
+            const isStillRecording = audioRecorderRef.current?.isRecording;
+            const currentTime = Date.now();
+
+            if (isRecording && !isStillRecording) {
+              console.error(
+                '❌ CRITICAL: Recording stopped unexpectedly! Attempting restart...',
+              );
+              audioRecorderRef.current
+                ?.startRecording()
+                .catch(err =>
+                  console.error('❌ Failed to restart recording:', err),
+                );
+            } else if (isRecording && isStillRecording) {
+              const elapsed = Math.floor((currentTime - lastProgressTime) / 1000);
+              if (elapsed >= 10) {
+                const totalElapsed = recordingStartTimeRef.current
+                  ? Math.floor(
+                      (currentTime - recordingStartTimeRef.current) / 1000,
+                    )
+                  : 0;
+                console.log(
+                  `✅ Recording health check: Still active (${totalElapsed}s total)`,
+                );
+                lastProgressTime = currentTime;
+              }
+            }
+          }, 2000);
+        } else {
+          console.error('❌ startRecording method not available');
+          setIsRecording(false);
+          return;
+        }
+
+        if (avatarRef.current?.enableVideoRendering) {
+          avatarRef.current.enableVideoRendering();
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1200));
+
+        if (avatarRef.current?.start) {
+          console.log(
+            '🎬 Starting avatar video with audio (mixWithOthers enabled)...',
+          );
+          avatarRef.current.start();
+        }
+
+        if (cameraRef.current) {
+          cameraRef.current.startRecording();
+        }
+      } catch (error) {
+        console.error('❌ Error in handleStart setTimeout:', error);
+        setIsRecording(false);
       }
     }, 200);
   };
@@ -320,6 +469,11 @@ const Level3Screen = () => {
   const handleStop = useCallback(
     async (options = {}) => {
       const { waitForTranscription = true } = options;
+
+      if (recordingHealthCheckRef.current) {
+        clearInterval(recordingHealthCheckRef.current);
+        recordingHealthCheckRef.current = null;
+      }
 
       waitingForFinalResult.current = false;
       setLastTranscriptionReceived(false);
@@ -372,15 +526,79 @@ const Level3Screen = () => {
   );
 
   // Handle "Next" button press in conversation
-  const handleNext = useCallback(() => {
+  const handleNext = useCallback(async () => {
     const currentState = avatarRef.current?.getState();
     if (!currentState) {
       console.warn('Avatar state not available');
       return;
     }
 
-    if (currentState.idx === currentState.totalLines - 1) {
+    const isLastQuestion = currentState.idx === currentState.totalLines - 1;
+    const isMovingToLastQuestion =
+      currentState.idx + 1 === currentState.totalLines - 1;
+
+    if (isRecording && audioRecorderRef.current && !isLastQuestion) {
+      console.log(
+        '🔄 Stopping recording for question transition to prevent iOS interruption...',
+      );
+
+      if (pendingRestartTimerRef.current) {
+        clearTimeout(pendingRestartTimerRef.current);
+        pendingRestartTimerRef.current = null;
+      }
+
+      const transcriptionPromise = new Promise(resolve => {
+        transcriptionPromiseRef.current = { resolve };
+        setTimeout(() => {
+          if (transcriptionPromiseRef.current) {
+            transcriptionPromiseRef.current.resolve(null);
+            transcriptionPromiseRef.current = null;
+          }
+        }, 3000);
+      });
+
+      try {
+        await audioRecorderRef.current.stopRecording();
+        console.log('⏳ Waiting for question transcription...');
+        await transcriptionPromise;
+        console.log('✅ Question transcription received');
+      } catch (error) {
+        console.error('❌ Error stopping recording for question:', error);
+      }
+
+      pendingRestartTimerRef.current = setTimeout(async () => {
+        try {
+          if (audioRecorderRef.current?.startRecording && isRecording) {
+            console.log(
+              `🔄 Restarting recording for ${
+                isMovingToLastQuestion ? 'last' : 'next'
+              } question...`,
+            );
+            await audioRecorderRef.current.startRecording();
+            console.log(
+              `✅ Recording restarted for ${
+                isMovingToLastQuestion ? 'last' : 'next'
+              } question`,
+            );
+            recordingStartTimeRef.current = Date.now();
+          }
+        } catch (error) {
+          console.error('❌ Error restarting recording:', error);
+        }
+        pendingRestartTimerRef.current = null;
+      }, 500);
+    }
+
+    if (isLastQuestion) {
       const finishAfterResults = async () => {
+        if (pendingRestartTimerRef.current) {
+          console.log(
+            '🛑 Clearing pending recording restart timer (session ending)',
+          );
+          clearTimeout(pendingRestartTimerRef.current);
+          pendingRestartTimerRef.current = null;
+        }
+
         if (isRecording) {
           try {
             if (waveformRef.current) {
@@ -408,7 +626,12 @@ const Level3Screen = () => {
           });
 
           if (audioRecorderRef.current) {
-            audioRecorderRef.current.stopRecording();
+            try {
+              await audioRecorderRef.current.stopRecording();
+              console.log('✅ Final recording stopped');
+            } catch (error) {
+              console.error('❌ Error stopping final recording:', error);
+            }
           }
 
           setShowOverlay(true);
@@ -420,27 +643,88 @@ const Level3Screen = () => {
 
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Start waiting for both results
         waitingForFinalResult.current = true;
 
-        // Check if results already present
         setLastTranscriptionReceived(true);
         setLastFacialAnalysisReceived(true);
-        // console.log(
-        //   'Hereee',
-        //   transcriptionResultsRef,
-        //   facialAnalysisResultsRef,
-        // );
-        // if (
-        //   transcriptionResultsRef.current.length === currentState.totalLines &&
-        //   facialAnalysisResultsRef.current.length === currentState.totalLines
-        // ) {
-
-        // }
       };
 
       finishAfterResults();
     } else {
+      console.log(
+        '➡️ Moving to next question - stopping current recording to prevent iOS interruption...',
+      );
+
+      if (isRecording && audioRecorderRef.current) {
+        const stopAndRestart = async () => {
+          try {
+            console.log('⏹️ Stopping recording for question transition...');
+            await audioRecorderRef.current.stopRecording();
+
+            const quickTranscriptionPromise = new Promise(resolve => {
+              const timeout = setTimeout(() => {
+                resolve(null);
+              }, 2000);
+
+              if (transcriptionPromiseRef.current) {
+                transcriptionPromiseRef.current.resolve = result => {
+                  clearTimeout(timeout);
+                  resolve(result);
+                };
+              } else {
+                transcriptionPromiseRef.current = {
+                  resolve: result => {
+                    clearTimeout(timeout);
+                    resolve(result);
+                  },
+                };
+              }
+            });
+
+            quickTranscriptionPromise.then(() => {
+              console.log('✅ Question transcription processing...');
+            });
+
+            if (pendingRestartTimerRef.current) {
+              clearTimeout(pendingRestartTimerRef.current);
+            }
+
+            pendingRestartTimerRef.current = setTimeout(async () => {
+              try {
+                const currentStateCheck = avatarRef.current?.getState();
+                const movingToLast =
+                  currentStateCheck?.idx + 1 ===
+                  currentStateCheck?.totalLines - 1;
+
+                if (audioRecorderRef.current?.startRecording && isRecording) {
+                  console.log(
+                    `🔄 Restarting recording for ${
+                      movingToLast ? 'last' : 'next'
+                    } question...`,
+                  );
+                  await audioRecorderRef.current.startRecording();
+                  console.log(
+                    `✅ Recording restarted for ${
+                      movingToLast ? 'last' : 'next'
+                    } question`,
+                  );
+                  recordingStartTimeRef.current = Date.now();
+                } else {
+                  console.log('⏸️ Skipping restart - recording stopped');
+                }
+              } catch (error) {
+                console.error('❌ Error restarting recording:', error);
+              }
+              pendingRestartTimerRef.current = null;
+            }, 500);
+          } catch (error) {
+            console.error('❌ Error in stopAndRestart:', error);
+          }
+        };
+
+        stopAndRestart();
+      }
+
       avatarRef.current?.next();
     }
   }, [isRecording]);
@@ -652,6 +936,9 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 5,
     overflow: 'hidden',
+    zIndex: 10,
+    top: 20,
+    right: 20,
   },
   waveformHidden: {
     width: 0,
