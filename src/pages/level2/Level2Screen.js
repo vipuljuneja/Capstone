@@ -43,8 +43,6 @@ const Level2Screen = () => {
   const [totalQuestions, setTotalQuestions] = useState(0);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(true);
 
-  // Memoize questionsData to prevent AvatarGenerator re-renders
-  // Only update if questions actually changed (by content, not reference)
   const memoizedQuestionsData = useMemo(() => {
     return userQuestions;
   }, [userQuestions]);
@@ -229,8 +227,6 @@ const Level2Screen = () => {
     }
   }, []);
 
-  // Handle Next button - only affects AvatarGenerator
-  // Use ref directly to avoid any re-renders
   const handleNext = useCallback(() => {
     avatarRef.current?.next();
   }, []);
@@ -273,9 +269,9 @@ const Level2Screen = () => {
         onTranscriptionComplete={handleTranscriptionComplete}
       />
 
-      <View style={styles.waveformContainer}>
+      {/* <View style={styles.waveformContainer}>
         <AudioWaveform ref={audioWaveformRef} />
-      </View>
+      </View> */}
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.button} onPress={handleStart}>

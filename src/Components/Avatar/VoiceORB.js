@@ -54,7 +54,6 @@ const VoiceOrb = forwardRef((props, ref) => {
         idx,
         totalLines: LINES.length,
       };
-      console.log('📡 VoiceOrb state changed:', state);
       onStateChange(state);
     }
   }, [speaking, loading, idx, LINES.length, onStateChange]);
