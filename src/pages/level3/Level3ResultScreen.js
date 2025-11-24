@@ -18,38 +18,34 @@ import BackIcon from '../../../assets/icons/back.svg';
 // Utility helpers for analysis and feedback
 const getPaceFeedback = avgWpm => {
   if (avgWpm < 100) {
-    return 'Your speaking pace is very calm and steady! This gives listeners time to absorb your words.';
+    return "Your speaking pace is very calm and steady! This gives listeners time to absorb your words. You're doing great!";
+  } else if (avgWpm < 150) {
+    return "Sometimes your words come out quickly, which is very common. Taking an extra breath before speaking can help your pace feel even calmer. You're leveling up bit by bit!";
+  } else {
+    return 'You speak quite quickly! Try to slow down a bit - taking pauses between sentences can help your listener follow along better.';
   }
-  if (avgWpm < 150) {
-    return 'Sometimes your words come out quickly, which is very common. Taking an extra breath before speaking can help your pace feel even calmer. You’re leveling up bit by bit!';
-  }
-  return 'You speak quite quickly! Try to slow down a bit – taking pauses can help your listener follow along better.';
-};
-
-const getToneFeedback = transcriptionResults => {
-  // Use more advanced tone analysis if available; fallback to generic
-  return "I loved how calm your voice sounded! Maybe next time, try sprinkling in a little up-and-down melody. It'll make your words sparkle even more.";
 };
 
 const getFillerFeedback = (totalFillers, usedWords) => {
   if (totalFillers === 0) {
     return "Excellent work! You didn't use any filler words. Your speech was clear and confident!";
+  } else if (totalFillers <= 3) {
+    return `You used ${totalFillers} filler word${
+      totalFillers > 1 ? 's' : ''
+    } like 'um' or 'like', and that happens to everyone. If you'd like, try a soft pause instead. Pauses can feel peaceful and give your listener a moment to lean in.`;
+  } else {
+    return `You used ${totalFillers} filler words during your practice. Try replacing them with brief pauses - it will make your speech sound more confident!`;
   }
-  if (totalFillers <= 3) {
-    return `You used some '${usedWords.join(
-      "', '",
-    )}' and that happens to everyone. If you'd like, try a soft pause instead. Pauses can feel peaceful and give your listener a moment to lean in.`;
-  }
-  return `You used several fillers such as '${usedWords.join(
-    "', '",
-  )}'. Try pausing briefly when you need to gather your thoughts.`;
 };
 
 const getPauseFeedback = totalPauses => {
   if (totalPauses === 0) {
-    return 'Try adding some natural pauses to give your listener time to process.';
+    return 'Try adding some natural pauses to give your listener time to process your words.';
+  } else if (totalPauses < 5) {
+    return 'Good use of pauses! They help make your speech more natural and easier to follow.';
+  } else {
+    return "You're using pauses well! This gives your listener moments to absorb what you're saying.";
   }
-  return 'Your flow feels warm and steady. A quick pause now and then can make your speech shine.';
 };
 
 const getEyeContactFeedback = eyeContactScore => {
@@ -57,14 +53,14 @@ const getEyeContactFeedback = eyeContactScore => {
     return 'Excellent eye contact! You maintained great focus, which shows confidence and connection.';
   }
   if (eyeContactScore >= 40) {
-    return 'You looked around a few times. Try focusing on one spot or the person you’re talking to next time. With a little practice, it’ll feel easier and more natural.';
+    return "You looked around a few times. Try focusing on one spot or the person you're talking to next time. With a little practice, it'll feel easier and more natural.";
   }
   return "Try to look at the camera more often! Eye contact helps build trust and shows you're engaged.";
 };
 
 const getExpressionFeedback = smileScore => {
   if (smileScore >= 70) {
-    return 'Your smile felt so genuine. Keeping your face relaxed helped you appear calm and approachable. You’re doing wonderfully here. Just keep letting your natural warmth come through.';
+    return "Your smile felt so genuine. Keeping your face relaxed helped you appear calm and approachable. You're doing wonderfully here. Just keep letting your natural warmth come through.";
   }
   if (smileScore >= 40) {
     return 'Nice work with your expressions! Try smiling a bit more naturally - it helps make your message more engaging.';
@@ -119,19 +115,46 @@ const Level3ResultScreen = () => {
     scenarioEmoji,
   } = route.params || {};
 
-  const finalScenarioId = scenarioId; // must be provided
+  const finalScenarioId = scenarioId;
 
-  // Calculate transcript metrics
-  const avgWpm = getAvgScore(transcriptionResults, ['wpm']);
-  const totalFillers = transcriptionResults.reduce(
-    (sum, r) => sum + (r.fillerWordCount || 0),
-    0,
-  );
+  // Calculate transcript metrics (same as Level1)
+  const calculateMetrics = () => {
+    if (transcriptionResults.length === 0) {
+      return {
+        avgWpm: 0,
+        totalFillers: 0,
+        totalPauses: 0,
+        avgDuration: 0,
+      };
+    }
+
+    const totalWpm = transcriptionResults.reduce(
+      (sum, r) => sum + (r.wpm || 0),
+      0,
+    );
+    const totalFillers = transcriptionResults.reduce(
+      (sum, r) => sum + (r.fillerWordCount || 0),
+      0,
+    );
+    const totalPauses = transcriptionResults.reduce(
+      (sum, r) => sum + (r.pauseCount || 0),
+      0,
+    );
+    const totalDuration = transcriptionResults.reduce(
+      (sum, r) => sum + parseFloat(r.duration || 0),
+      0,
+    );
+
+    return {
+      avgWpm: Math.round(totalWpm / transcriptionResults.length),
+      totalFillers,
+      totalPauses,
+      avgDuration: (totalDuration / transcriptionResults.length).toFixed(1),
+    };
+  };
+
+  const metrics = calculateMetrics();
   const usedFillerWords = getUsedFillerWords(transcriptionResults);
-  const totalPauses = transcriptionResults.reduce(
-    (sum, r) => sum + (r.pauseCount || 0),
-    0,
-  );
 
   // Calculate facial metrics
   const avgEyeContact = getAvgScore(facialAnalysisResults, [
@@ -154,7 +177,7 @@ const Level3ResultScreen = () => {
       if (!transcriptionResults || transcriptionResults.length === 0) return;
       try {
         await saveSession({
-          userId: mongoUser?._id,
+          userId: mongoUser._id,
           scenarioId: finalScenarioId,
           level: 3,
           transcriptionResults,
@@ -165,6 +188,7 @@ const Level3ResultScreen = () => {
         try {
           await unlockLevel(mongoUser?._id, finalScenarioId, 3);
           console.log('🔓 Level 3 unlocked');
+          setNextLevelUnlocked(true);
         } catch (e) {
           console.warn(
             '⚠️ Failed to unlock Level 3 (non-fatal):',
@@ -236,18 +260,18 @@ const Level3ResultScreen = () => {
   };
 
   const getResultTitle = () => {
-    // You can customize this logic based on your metrics, here is an example:
     if (
-      avgWpm >= 100 &&
-      avgWpm <= 150 &&
-      totalFillers <= 3 &&
+      metrics.avgWpm >= 100 &&
+      metrics.avgWpm <= 150 &&
+      metrics.totalFillers <= 3 &&
+      metrics.totalPauses <= 5 &&
       avgEyeContact >= 40 &&
       avgSmile >= 40 &&
       avgPosture >= 40
     ) {
-      return 'Great job! Keep up the good work!';
+      return 'Great job! You spoke very well!';
     }
-    return 'Good attempt! Some areas can be improved.';
+    return 'Good effort! Some areas can be improved.';
   };
 
   // Page logic
@@ -283,53 +307,68 @@ const Level3ResultScreen = () => {
           <Text style={styles.title}>{getResultTitle()}</Text>
         </View>
 
-        {/* Voice Feedback Card */}
-        <View style={styles.voiceCard}>
-          <Text style={styles.cardHeader}>
-            <Text style={styles.cardHeaderIcon}>🎙️</Text> Your voice
-          </Text>
-          <View style={styles.section}>
+        {/* Voice Feedback Card - Same as Level1 */}
+        <View style={styles.feedbackCard}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardHeaderIcon}>🎙️</Text>
+            <Text style={styles.cardHeaderText}>Your voice</Text>
+          </View>
+
+          {/* Pace Section */}
+          <View style={styles.feedbackSection}>
             <Text style={styles.sectionTitle}>PACE</Text>
-            <Text style={styles.sectionText}>{getPaceFeedback(avgWpm)}</Text>
-          </View>
-          {/* <View style={styles.section}>
-            <Text style={styles.sectionTitle}>TONE</Text>
-            <Text style={styles.sectionText}>
-              {getToneFeedback(transcriptionResults)}
+            <Text style={styles.sectionMetric}>
+              Average: {metrics.avgWpm} words per minute
             </Text>
-          </View> */}
-          <View style={styles.section}>
+            <Text style={styles.sectionText}>
+              {getPaceFeedback(metrics.avgWpm)}
+            </Text>
+          </View>
+
+          {/* Filler Words Section */}
+          <View style={styles.feedbackSection}>
             <Text style={styles.sectionTitle}>FILLER WORDS</Text>
+            <Text style={styles.sectionMetric}>
+              Total: {metrics.totalFillers} filler
+              {metrics.totalFillers !== 1 ? 's' : ''}
+            </Text>
             <Text style={styles.sectionText}>
-              {getFillerFeedback(totalFillers, usedFillerWords)}
+              {getFillerFeedback(metrics.totalFillers, usedFillerWords)}
             </Text>
           </View>
-          <View style={styles.section}>
+
+          {/* Pauses Section */}
+          <View style={styles.feedbackSection}>
             <Text style={styles.sectionTitle}>PAUSES</Text>
+            <Text style={styles.sectionMetric}>
+              Total: {metrics.totalPauses} pause
+              {metrics.totalPauses !== 1 ? 's' : ''} detected
+            </Text>
             <Text style={styles.sectionText}>
-              {getPauseFeedback(totalPauses)}
+              {getPauseFeedback(metrics.totalPauses)}
             </Text>
           </View>
         </View>
 
-        {/* Expressions Feedback Card */}
+        {/* Expressions Feedback Card - Keep as is */}
         <View style={styles.expressionCard}>
-          <Text style={styles.cardHeader}>
-            <Text style={styles.cardHeaderIcon}>😊</Text> Your Expressions
-          </Text>
-          <View style={styles.section}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardHeaderIcon}>😊</Text>
+            <Text style={styles.cardHeaderText}>Your Expressions</Text>
+          </View>
+          <View style={styles.feedbackSection}>
             <Text style={styles.sectionTitle}>EYE CONTACT</Text>
             <Text style={styles.sectionText}>
               {getEyeContactFeedback(avgEyeContact)}
             </Text>
           </View>
-          <View style={styles.section}>
+          <View style={styles.feedbackSection}>
             <Text style={styles.sectionTitle}>EXPRESSIONS</Text>
             <Text style={styles.sectionText}>
               {getExpressionFeedback(avgSmile)}
             </Text>
           </View>
-          <View style={styles.section}>
+          <View style={styles.feedbackSection}>
             <Text style={styles.sectionTitle}>POSTURE</Text>
             <Text style={styles.sectionText}>
               {getPostureFeedback(avgPosture)}
@@ -339,7 +378,7 @@ const Level3ResultScreen = () => {
             <Text style={styles.footerText}>
               Facial expressions vary across cultures and personalities. These
               insights are based on general patterns. Take what feels right for
-              you. If you’re neurodivergent, we recommend you seek extra
+              you. If you're neurodivergent, we recommend you seek extra
               guidance from a professional.
             </Text>
           </View>
@@ -359,7 +398,7 @@ const Level3ResultScreen = () => {
           {checkingNext ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.nextButtonText}>LEVELS</Text>
+            <Text style={styles.nextButtonText}>NEXT LEVEL</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -379,7 +418,10 @@ const styles = StyleSheet.create({
   },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 20 },
-  topSection: { alignItems: 'center', marginBottom: 20 },
+  topSection: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
   characterContainer: {
     width: 120,
     height: 120,
@@ -390,12 +432,16 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   characterEmoji: { fontSize: 80 },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#333', marginBottom: 16 },
-  voiceCard: {
-    backgroundColor: '#e9f3fe',
-    borderRadius: 18,
-    padding: 22,
-    marginBottom: 20,
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  feedbackCard: {
+    backgroundColor: '#E8F4FF',
+    borderRadius: 20,
+    padding: 25,
+    marginBottom: 15,
   },
   expressionCard: {
     backgroundColor: '#f3edf9',
@@ -404,21 +450,40 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   cardHeader: {
-    fontSize: 19,
-    fontWeight: '600',
-    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  cardHeaderIcon: {
+    fontSize: 24,
+    marginRight: 10,
+  },
+  cardHeaderText: {
+    fontSize: 20,
+    fontWeight: 'bold',
     color: '#333',
   },
-  cardHeaderIcon: { fontSize: 21, marginRight: 8 },
-  section: { marginBottom: 15 },
+  feedbackSection: {
+    marginBottom: 20,
+  },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 4,
     letterSpacing: 0.5,
   },
-  sectionText: { fontSize: 15, color: '#666', lineHeight: 22 },
+  sectionMetric: {
+    fontSize: 13,
+    color: '#6B5B95',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  sectionText: {
+    fontSize: 15,
+    color: '#666',
+    lineHeight: 22,
+  },
   footer: {
     marginTop: 6,
     borderTopWidth: 1,
