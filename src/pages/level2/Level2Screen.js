@@ -5,7 +5,13 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+  ActivityIndicator,
+} from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -20,6 +26,10 @@ import AudioRecorder from '../../Components/Audio/AudioRecorder';
 import AudioWaveform from '../../Components/Audio/AudioWaveform';
 import AvatarGenerator from '../../Components/Avatar/AvatarGenerate';
 import LoadingOverlay from '../components/LoadingOverlays';
+
+import BackIcon from '../../../assets/icons/back.svg';
+import MicIcon from '../../../assets/icons/mic-white.svg';
+import DeleteIcon from '../../../assets/icons/delete-filled.svg';
 
 const Level2Screen = () => {
   const navigation = useNavigation();
@@ -42,17 +52,45 @@ const Level2Screen = () => {
   const [userQuestions, setUserQuestions] = useState([]);
   const [totalQuestions, setTotalQuestions] = useState(0);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(true);
+  const [showOverlay, setShowOverlay] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isRecording, setIsRecording] = useState(false);
+
+  // Results tracking
+  const transcriptionResultsRef = useRef([]);
+  const facialAnalysisResultsRef = useRef([]);
+  const [lastTranscriptionReceived, setLastTranscriptionReceived] =
+    useState(false);
+  const [lastFacialAnalysisReceived, setLastFacialAnalysisReceived] =
+    useState(false);
+  const waitingForFinalResult = useRef(false);
 
   const memoizedQuestionsData = useMemo(() => {
     return userQuestions;
   }, [userQuestions]);
 
   const handleFacialAnalysisComplete = useCallback(result => {
-    console.log('📸 Facial analysis complete:', result);
+    if (result && !result.error) {
+      facialAnalysisResultsRef.current = [
+        ...facialAnalysisResultsRef.current,
+        result,
+      ];
+      if (waitingForFinalResult.current) {
+        setLastFacialAnalysisReceived(true);
+      }
+    }
   }, []);
 
   const handleTranscriptionComplete = useCallback(result => {
-    console.log('🎤 Transcription complete:', result);
+    if (result && !result.error) {
+      transcriptionResultsRef.current = [
+        ...transcriptionResultsRef.current,
+        result,
+      ];
+      if (waitingForFinalResult.current) {
+        setLastTranscriptionReceived(true);
+      }
+    }
   }, []);
 
   const resetCamera = useCallback(() => {
@@ -77,6 +115,7 @@ const Level2Screen = () => {
     if (avatarRef.current) {
       avatarRef.current.reset();
     }
+    setCurrentIndex(0);
   }, []);
 
   // Fetch user questions
@@ -121,6 +160,7 @@ const Level2Screen = () => {
     resetAudioRecorder();
     await resetAudioWaveform();
     resetAvatarGenerator();
+    setCurrentIndex(0);
     navigation.navigate('LevelOptions', routeParams);
   }, [
     navigation,
@@ -150,6 +190,8 @@ const Level2Screen = () => {
   }, []);
 
   const handleStart = useCallback(async () => {
+    setIsRecording(true);
+
     const startPromises = [];
 
     // Start AvatarGenerator (plays first video)
@@ -176,60 +218,204 @@ const Level2Screen = () => {
     await Promise.all(startPromises);
   }, []);
 
-  const handleStop = useCallback(async () => {
+  const handleDelete = useCallback(async () => {
     const stopPromises = [];
-
-    // Stop and reset AvatarGenerator (resets to first question)
-    if (avatarRef.current) {
-      avatarRef.current.stop();
-      avatarRef.current.reset();
-    }
-
-    // Stop and reset Camera
-    if (cameraRef.current) {
-      cameraRef.current.stop();
-    }
-
-    // Stop and reset AudioRecorder
-    if (audioRecorderRef.current) {
-      stopPromises.push(audioRecorderRef.current.stop());
-    }
 
     // Stop AudioWaveform
     if (audioWaveformRef.current) {
       stopPromises.push(audioWaveformRef.current.stop());
     }
 
+    // Stop and reset Camera
+    if (cameraRef.current) {
+      cameraRef.current.stop();
+      cameraRef.current.reset();
+    }
+
+    // Stop and reset AudioRecorder
+    if (audioRecorderRef.current) {
+      if (audioRecorderRef.current.isRecording) {
+        stopPromises.push(audioRecorderRef.current.stop());
+      }
+      if (audioRecorderRef.current.reset) {
+        audioRecorderRef.current.reset();
+      }
+    }
+
     await Promise.all(stopPromises);
+
+    // Stop and reset AvatarGenerator (resets to first question)
+    if (avatarRef.current) {
+      avatarRef.current.stop();
+      avatarRef.current.reset();
+    }
+    setCurrentIndex(0);
+
+    // Clear results
+    transcriptionResultsRef.current = [];
+    facialAnalysisResultsRef.current = [];
+
+    setIsRecording(false);
   }, []);
 
+  // Watch for both results and navigate when ready
+  useEffect(() => {
+    if (
+      waitingForFinalResult.current &&
+      lastTranscriptionReceived &&
+      lastFacialAnalysisReceived
+    ) {
+      const navigateToResults = () => {
+        waitingForFinalResult.current = false;
+        setLastTranscriptionReceived(false);
+        setLastFacialAnalysisReceived(false);
+
+        const avatarState = avatarRef.current?.getState();
+        const { scenarioEmoji, scenarioTitle } = routeParams;
+
+        setShowOverlay(false);
+
+        navigation.navigate('Level2ResultScreen', {
+          totalQuestions: avatarState?.totalVideos || totalQuestions,
+          transcriptionResults: transcriptionResultsRef.current,
+          facialAnalysisResults: facialAnalysisResultsRef.current,
+          scenarioTitle: scenarioTitle || 'Ordering Coffee',
+          scenarioEmoji: scenarioEmoji || '☕',
+          scenarioId: scenarioId,
+          ...routeParams,
+        });
+
+        // Reset AvatarGenerator
+        if (avatarRef.current) {
+          avatarRef.current.reset();
+        }
+        setCurrentIndex(0);
+        setIsRecording(false);
+      };
+
+      navigateToResults();
+    }
+  }, [
+    lastTranscriptionReceived,
+    lastFacialAnalysisReceived,
+    navigation,
+    routeParams,
+    scenarioId,
+    totalQuestions,
+  ]);
+
   const handleFinish = useCallback(async () => {
+    setShowOverlay(true);
+    waitingForFinalResult.current = true;
+    setLastTranscriptionReceived(false);
+    setLastFacialAnalysisReceived(false);
+
     // Stop Waveform
     if (audioWaveformRef.current) {
       await audioWaveformRef.current.stop();
     }
 
-    // Finish Camera and reset
+    // Finish Camera - this will trigger onAnalysisComplete callback
+    let facialResult = null;
     if (cameraRef.current) {
-      cameraRef.current.finish();
+      facialResult = cameraRef.current.finish();
       cameraRef.current.reset();
     }
 
-    // Finish AudioRecorder and reset
-    if (audioRecorderRef.current) {
-      await audioRecorderRef.current.finish();
-      audioRecorderRef.current.reset();
+    // Finish AudioRecorder - this will trigger onTranscriptionComplete callback
+    let transcriptionResult = null;
+    try {
+      if (audioRecorderRef.current) {
+        transcriptionResult = await audioRecorderRef.current.finish();
+        audioRecorderRef.current.reset();
+      }
+    } catch (error) {
+      console.error('Error finishing AudioRecorder:', error);
     }
 
-    // Reset AvatarGenerator
-    if (avatarRef.current) {
-      avatarRef.current.reset();
+    // Wait a bit for callbacks to fire
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Process results if callbacks didn't fire
+    if (facialResult && !facialResult.error) {
+      facialAnalysisResultsRef.current = [
+        ...facialAnalysisResultsRef.current,
+        facialResult,
+      ];
+      setLastFacialAnalysisReceived(true);
+    }
+
+    if (transcriptionResult && !transcriptionResult.error) {
+      let finalTranscriptionResults = [];
+      if (
+        Array.isArray(transcriptionResult.sessionData) &&
+        transcriptionResult.sessionData.length > 0
+      ) {
+        finalTranscriptionResults = transcriptionResult.sessionData;
+      } else {
+        const report = {
+          transcript: transcriptionResult.transcript,
+          wpm: transcriptionResult.wpm,
+          totalWords: transcriptionResult.totalWords,
+          fillerWordCount: transcriptionResult.fillerWordCount,
+          fillerWords: transcriptionResult.fillerWords,
+          pauseCount: transcriptionResult.pauseCount,
+          pauses: transcriptionResult.pauses,
+          duration: transcriptionResult.duration,
+          timestamp: transcriptionResult.timestamp,
+        };
+        finalTranscriptionResults = [report];
+      }
+      transcriptionResultsRef.current = [
+        ...transcriptionResultsRef.current,
+        ...finalTranscriptionResults,
+      ];
+      setLastTranscriptionReceived(true);
     }
   }, []);
 
   const handleNext = useCallback(() => {
-    avatarRef.current?.next();
+    const avatarState = avatarRef.current?.getState();
+
+    if (!avatarState) {
+      return;
+    }
+
+    const isLastQuestion =
+      avatarState.currentIndex === avatarState.totalVideos - 1;
+
+    if (isLastQuestion) {
+      // Last question - execute finish
+      handleFinish();
+    } else {
+      // Move to next question
+      avatarRef.current?.next();
+      // Update current index after next
+      setTimeout(() => {
+        const state = avatarRef.current?.getState();
+        if (state) {
+          setCurrentIndex(state.currentIndex);
+        }
+      }, 100);
+    }
+  }, [handleFinish]);
+
+  // Watch for avatar state changes to update progress
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const state = avatarRef.current?.getState();
+      if (state) {
+        setCurrentIndex(state.currentIndex);
+      }
+    }, 200);
+
+    return () => clearInterval(interval);
   }, []);
+
+  // Reset progress when questions change
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [userQuestions]);
 
   // Show loading overlay if questions are being generated
   if (showQuestionsLoading) {
@@ -247,8 +433,16 @@ const Level2Screen = () => {
 
   return (
     <View style={styles.container}>
+      {showOverlay && (
+        <View style={styles.overlay}>
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color="#6B5B95" />
+          </View>
+        </View>
+      )}
+
       <LevelHeader
-        currentIndex={0}
+        currentIndex={currentIndex}
         totalQuestions={totalQuestions || 1}
         onBackPress={handleBackPress}
       />
@@ -269,32 +463,27 @@ const Level2Screen = () => {
         onTranscriptionComplete={handleTranscriptionComplete}
       />
 
-      {/* <View style={styles.waveformContainer}>
-        <AudioWaveform ref={audioWaveformRef} />
-      </View> */}
+      <View style={styles.bottomSection}>
+        {isRecording ? (
+          <View style={styles.recordingControls}>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDelete}
+            >
+              <DeleteIcon height={24} width={24} style={{ color: '#FFFFFF' }} />
+            </TouchableOpacity>
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={handleStart}>
-          <Text style={styles.buttonText}>Start</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.button} onPress={handleStop}>
-          <Text style={styles.buttonText}>Stop</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.button, styles.nextButton]}
-          onPress={handleNext}
-        >
-          <Text style={styles.buttonText}>Next</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.button, styles.finishButton]}
-          onPress={handleFinish}
-        >
-          <Text style={styles.buttonText}>Finish</Text>
-        </TouchableOpacity>
+            <TouchableOpacity onPress={handleNext} style={styles.nextButton}>
+              <Text style={styles.nextButtonText}>
+                {currentIndex === totalQuestions - 1 ? '✓' : '→'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity style={styles.micButton} onPress={handleStart}>
+            <MicIcon height={24} width={24} />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -310,40 +499,64 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
     position: 'relative',
   },
-  waveformContainer: {
-    height: 60,
-    width: '100%',
-    backgroundColor: '#F5F5F5',
-    paddingHorizontal: 15,
-    justifyContent: 'center',
-  },
-  buttonContainer: {
+  bottomSection: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
     alignItems: 'center',
+    justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    backgroundColor: 'white',
   },
-  button: {
+  recordingControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    paddingHorizontal: 10,
+    gap: 12,
+  },
+  deleteButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#4A3F5B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  micButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: '#6B5B95',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    minWidth: 80,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   nextButton: {
-    backgroundColor: '#2196F3',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#4A3F5B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  finishButton: {
-    backgroundColor: '#4CAF50',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+  nextButtonText: {
+    color: 'white',
+    fontSize: 24,
   },
   loadingContainer: {
     flex: 1,
@@ -356,6 +569,18 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     marginTop: 100,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loaderContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    padding: 20,
+    borderRadius: 10,
   },
 });
 
