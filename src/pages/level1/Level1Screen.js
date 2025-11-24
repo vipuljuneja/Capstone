@@ -27,6 +27,7 @@ const Level1Screen = () => {
   const [scenarioData, setScenarioData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showOverlay, setShowOverlay] = useState(false);
+  const [hasStartedRecording, setHasStartedRecording] = useState(false);
   const [orbState, setOrbState] = useState({
     speaking: false,
     loading: false,
@@ -110,6 +111,7 @@ const Level1Screen = () => {
 
   const resetLevel = useCallback(() => {
     setIsRecording(false);
+    setHasStartedRecording(false);
     setOrbState({
       speaking: false,
       loading: false,
@@ -127,6 +129,7 @@ const Level1Screen = () => {
 
   const handleStart = async () => {
     setIsRecording(true);
+    setHasStartedRecording(true);
 
     setTimeout(async () => {
       if (waveformRef.current) {
@@ -343,11 +346,20 @@ const Level1Screen = () => {
       </View>
 
       <View style={styles.middleSection}>
-        <VoiceOrb
-          ref={voiceOrbRef}
-          onStateChange={handleStateChange}
-          lines={(scenarioData?.level1?.questions || []).map(q => q.text)}
-        />
+        <View style={styles.voiceOrbWrapper}>
+          <VoiceOrb
+            ref={voiceOrbRef}
+            onStateChange={handleStateChange}
+            lines={(scenarioData?.level1?.questions || []).map(q => q.text)}
+          />
+        </View>
+        {hasStartedRecording && isRecording && (
+          <View style={styles.tooltipContainer} pointerEvents="none">
+            <View style={styles.tooltipContent}>
+              <Text style={styles.tooltipText}>Tap on PIP to listen again</Text>
+            </View>
+          </View>
+        )}
       </View>
 
       <View style={styles.bottomSection}>
@@ -381,13 +393,22 @@ const Level1Screen = () => {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={[styles.micButton, isRecording && styles.hidden]}
-          onPress={handleStart}
-          disabled={isRecording}
-        >
-          <MicIcon height={24} width={24} />
-        </TouchableOpacity>
+        <View style={styles.micButtonContainer}>
+          <TouchableOpacity
+            style={[styles.micButton, isRecording && styles.hidden]}
+            onPress={handleStart}
+            disabled={isRecording}
+          >
+            <MicIcon height={24} width={24} />
+          </TouchableOpacity>
+        </View>
+        {!isRecording && !hasStartedRecording && (
+          <View style={styles.micTooltipContainer} pointerEvents="none">
+            <View style={styles.tooltipContent}>
+              <Text style={styles.tooltipText}>Tap here to speak</Text>
+            </View>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -444,6 +465,32 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  voiceOrbWrapper: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tooltipContainer: {
+    position: 'absolute',
+    bottom: 60,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  micButtonContainer: {
+    position: 'relative',
+  },
+  micTooltipContainer: {
+    position: 'absolute',
+    bottom: 120,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bottomSection: {
     flexDirection: 'row',
@@ -542,6 +589,28 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     padding: 20,
     borderRadius: 10,
+  },
+  tooltipContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tooltipText: {
+    color: '#333333',
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });
 
