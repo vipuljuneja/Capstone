@@ -35,7 +35,6 @@ const Level1ResultScreen = () => {
 
   console.log('📊 Results screen received:', route.params);
 
-  // Poll progress to enable Next Level only when unlocked
   useEffect(() => {
     let cancelled = false;
     const check = async () => {
@@ -298,7 +297,7 @@ const Level1ResultScreen = () => {
         </View>
 
         {/* Summary Stats */}
-        <View style={styles.statsCard}>
+        {/* <View style={styles.statsCard}>
           <Text style={styles.statsTitle}>Session Summary</Text>
           <View style={styles.statsRow}>
             <Text style={styles.statsLabel}>Questions completed:</Text>
@@ -317,7 +316,6 @@ const Level1ResultScreen = () => {
             <Text style={styles.statsValue}>{metrics.totalPauses}</Text>
           </View>
 
-          {/* Session Save Status */}
           <View style={styles.statsRow}>
             <Text style={styles.statsLabel}>Session status:</Text>
             <Text
@@ -345,7 +343,7 @@ const Level1ResultScreen = () => {
               <Text style={styles.errorText}>Save failed: {saveError}</Text>
             </View>
           )}
-        </View>
+        </View> */}
       </ScrollView>
 
       {/* Bottom Buttons */}

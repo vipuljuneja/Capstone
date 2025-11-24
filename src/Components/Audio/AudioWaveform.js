@@ -5,6 +5,7 @@ import React, {
   forwardRef,
 } from 'react';
 import { View, StyleSheet } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import {
   Waveform,
   UpdateFrequency,
@@ -70,16 +71,23 @@ const AudioWaveform = forwardRef((props, ref) => {
 
   return (
     <View style={styles.container}>
-      <Waveform
-        mode="live"
-        ref={waveformRef}
-        candleSpace={2}
-        candleWidth={4}
-        candleHeightScale={3}
-        waveColor="#000000"
-        containerStyle={styles.waveformContainer}
-        scrubColor="#000000"
-      />
+      <LinearGradient
+        colors={['#93C1FF', '#A193FC']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.gradientContainer}
+      >
+        <Waveform
+          mode="live"
+          ref={waveformRef}
+          candleSpace={2}
+          candleWidth={4}
+          candleHeightScale={3}
+          waveColor="#FFFFFF"
+          containerStyle={styles.waveformContainer}
+          scrubColor="#FFFFFF"
+        />
+      </LinearGradient>
     </View>
   );
 });
@@ -90,6 +98,14 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  gradientContainer: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 20,
+    overflow: 'hidden',
   },
   waveformContainer: {
     width: '100%',
