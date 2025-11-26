@@ -18,6 +18,7 @@ import supabase from '../../services/supabaseClient';
 import Tooltip from 'react-native-walkthrough-tooltip';
 import TourTipCard from '../../Components/Tooltip/TourTipCard';
 import { updateHasSeenTour, getReflectionsByUser } from '../../services/api.ts';
+import { startVideoPolling, stopVideoPolling } from '../../services/videoNotificationService';
 
 import NotebookIcon from '../../../assets/icons/notebook.svg';
 import MailboxIcon from '../../../assets/icons/mailbox.svg';
@@ -122,6 +123,23 @@ export default function HomeScreen() {
       setTourVisible(false);
     }
   }, [mongoUser]);
+
+  // Start global video polling when user is available
+  useEffect(() => {
+    if (mongoUser?._id) {
+      // Delay starting polling slightly to ensure everything is stable
+      const timer = setTimeout(() => {
+        startVideoPolling(mongoUser._id);
+      }, 2000); // 2-second delay
+
+      return () => {
+        clearTimeout(timer);
+        stopVideoPolling();
+      };
+    } else {
+      stopVideoPolling();
+    }
+  }, [mongoUser?._id]);
 
   useFocusEffect(
     React.useCallback(() => {

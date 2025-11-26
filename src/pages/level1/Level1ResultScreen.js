@@ -11,6 +11,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSessionSaver } from '../../services/sessionSaver';
 import { unlockLevel, getProgressForScenario } from '../../services/api';
+import { addVideoCheck } from '../../services/videoNotificationService';
 import { ActivityIndicator } from 'react-native';
 
 import BackIcon from '../../../assets/icons/back.svg';
@@ -111,6 +112,8 @@ const Level1ResultScreen = () => {
 
   // Auto-save session when component mounts
   useEffect(() => {
+    let videoCheckTimer = null;
+
     const autoSaveSession = async () => {
       // Skip if already saved or missing required data
       if (savedSessionId) {
@@ -156,12 +159,35 @@ const Level1ResultScreen = () => {
             e?.message || e,
           );
         }
+
+        // Add video check for Level 2
+        try {
+          // Delay adding to queue to prevent crashes during screen initialization
+          videoCheckTimer = setTimeout(async () => {
+            if (mongoUser?._id && finalScenarioId) {
+              await addVideoCheck(
+                String(mongoUser._id),
+                String(finalScenarioId),
+                2 // Next level is 2
+              );
+              console.log('📝 Added video check for Level 2');
+            }
+          }, 3000); // Wait 3 seconds after screen loads
+        } catch (error) {
+          console.error('❌ Failed to add video check for Level 2:', error);
+        }
       } catch (error) {
         console.error('❌ Failed to save Level 1 session:', error);
       }
     };
 
     autoSaveSession();
+
+    return () => {
+      if (videoCheckTimer) {
+        clearTimeout(videoCheckTimer);
+      }
+    };
   }, []); // Empty dependency array to run only once
 
   // Generate feedback based on actual data
