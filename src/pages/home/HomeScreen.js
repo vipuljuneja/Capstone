@@ -65,7 +65,7 @@ export default function HomeScreen() {
 
   const TOTAL_STEPS = 4;
 
-  const { user, mongoUser } = useAuth();
+  const { user, mongoUser, refreshMongoUser } = useAuth();
 
   const screenWidth = Dimensions.get('window').width;
   const screenHeight = Dimensions.get('window').height;
@@ -188,10 +188,11 @@ export default function HomeScreen() {
         throw new Error('Missing authUid; cannot persist tour status');
       }
       await updateHasSeenTour(mongoUser.authUid, true);
+      await refreshMongoUser();
     } catch (e) {
       console.log('updateHasSeenTour failed:', e);
     }
-  }, [mongoUser]);
+  }, [mongoUser, refreshMongoUser]);
 
   const nextStep = React.useCallback(() => {
     if (tourStep < TOTAL_STEPS) setTourStep(tourStep + 1);

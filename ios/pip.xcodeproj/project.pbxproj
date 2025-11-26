@@ -181,7 +181,7 @@
 /* Begin PBXShellScriptBuildPhase section */
 		00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */ = {
 			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
+			buildActionMask = 12;
 			files = (
 			);
 			inputPaths = (
@@ -290,7 +290,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.reactjs.native.pip.pip;
+				PRODUCT_BUNDLE_IDENTIFIER = org.reactjs.native.pip.pip.ptp;
 				PRODUCT_NAME = pip;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "pip-Bridging-Header.h";
@@ -322,7 +322,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.reactjs.native.pip.pip;
+				PRODUCT_BUNDLE_IDENTIFIER = org.reactjs.native.pip.pip.ptp;
 				PRODUCT_NAME = pip;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "pip-Bridging-Header.h";

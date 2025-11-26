@@ -6,101 +6,131 @@ import React, {
 } from 'react';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import { STT_API_KEY } from '@env';
+import RNFS from 'react-native-blob-util';
+
+// Constants moved outside component to avoid recreation
+const FILLER_WORDS = [
+  'uh',
+  'um',
+  'like',
+  'you know',
+  'so',
+  'basically',
+  'literally',
+  'actually',
+];
 
 const AudioRecorder = forwardRef(
   ({ onTranscriptionComplete, onSessionComplete }, ref) => {
     const [audioRecorder] = useState(() => new AudioRecorderPlayer());
     const [isRecording, setIsRecording] = useState(false);
     const [recordingPath, setRecordingPath] = useState(null);
-    const [audioResult, setAudioResult] = useState(null);
-
-    const [recordingCount, setRecordingCount] = useState(0);
     const [sessionData, setSessionData] = useState([]);
-    const [sessionActive, setSessionActive] = useState(false);
 
+    // Cleanup on unmount
     useEffect(() => {
       return () => {
         try {
           audioRecorder.stopRecorder();
           audioRecorder.removeRecordBackListener();
         } catch (e) {
-          console.log('Cleanup error:', e);
+          // Silent cleanup
         }
       };
     }, [audioRecorder]);
 
-    const startSession = () => {
-      console.log('\n╔═══════════════════════════════════════════╗');
-      console.log('║           NEW SESSION STARTED             ║');
-      console.log('╚═══════════════════════════════════════════╝\n');
-
-      setSessionActive(true);
-      setRecordingCount(0);
-      setSessionData([]);
-      setAudioResult(null);
-
-      console.log('✓ Session initialized');
-      console.log('Ready to record\n');
+    // Helper: Clean audio path
+    const cleanAudioPath = audioPath => {
+      return audioPath.replace('file://', '');
     };
 
-    const startRecording = async () => {
-      console.log(`=== START RECORDING #${recordingCount + 1} ===`);
+    // Helper: Read audio file as base64
+    const readAudioFile = async audioPath => {
+      const cleanPath = cleanAudioPath(audioPath);
+      return await RNFS.fs.readFile(cleanPath, 'base64');
+    };
 
-      try {
-        try {
-          await audioRecorder.stopRecorder();
-        } catch (e) {}
-        audioRecorder.removeRecordBackListener();
-
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        const path = await audioRecorder.startRecorder();
-        console.log('✓ Recording started:', path);
-        setRecordingPath(path);
-        setIsRecording(true);
-
-        audioRecorder.addRecordBackListener(e => {
-          // Silent listener for recording progress
-        });
-      } catch (error) {
-        console.error('!!! START ERROR:', error.message);
+    // Helper: Convert base64 to audio buffer
+    const base64ToAudioBuffer = audioBase64 => {
+      const binaryString = atob(audioBase64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
       }
+      return bytes.buffer;
     };
 
-    const stopRecording = async () => {
-      console.log('=== STOP RECORDING ===');
-      try {
-        const result = await audioRecorder.stopRecorder();
-        audioRecorder.removeRecordBackListener();
-        setIsRecording(false);
-        console.log('✓ Recording stopped:', result);
-
-        await new Promise(resolve => setTimeout(resolve, 200));
-
-        // Increment recording count
-        setRecordingCount(prev => prev + 1);
-
-        await transcribeAudio(result);
-      } catch (error) {
-        console.error('!!! STOP ERROR:', error.message);
-        setIsRecording(false);
-      }
+    // Helper: Detect filler words
+    const detectFillerWords = words => {
+      return words.filter(w => FILLER_WORDS.includes(w.word.toLowerCase()));
     };
 
-    const transcribeAudio = async audioPath => {
-      console.log('=== TRANSCRIBING ===');
-      try {
-        const cleanPath = audioPath.replace('file://', '');
-
-        const RNFS = require('react-native-blob-util').default;
-        const audioBase64 = await RNFS.fs.readFile(cleanPath, 'base64');
-
-        const binaryString = atob(audioBase64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+    // Helper: Detect pauses
+    const detectPauses = words => {
+      const pauses = [];
+      for (let i = 0; i < words.length - 1; i++) {
+        const gap = words[i + 1].start - words[i].end;
+        if (gap > 0.8) {
+          pauses.push({
+            duration: gap.toFixed(2),
+            timestamp: words[i].end.toFixed(2),
+          });
         }
-        const audioBuffer = bytes.buffer;
+      }
+      return pauses;
+    };
+
+    // Helper: Calculate WPM
+    const calculateWPM = (totalWords, fillerCount, duration) => {
+      if (duration <= 0) return 0;
+      const effectiveWords = totalWords - fillerCount;
+      return Math.round((effectiveWords / duration) * 60);
+    };
+
+    // Helper: Build transcription report
+    const buildTranscriptionReport = (
+      data,
+      words,
+      fillers,
+      pauses,
+      duration,
+    ) => {
+      const transcriptText =
+        data.results?.channels[0]?.alternatives[0]?.transcript ||
+        'No transcription';
+      const wpm = calculateWPM(words.length, fillers.length, duration);
+
+      return {
+        timestamp: new Date().toISOString(),
+        wpm,
+        totalWords: words.length,
+        fillerWordCount: fillers.length,
+        fillerWords: fillers.map(f => ({
+          word: f.word,
+          time: f.start.toFixed(2),
+        })),
+        pauseCount: pauses.length,
+        pauses,
+        duration: duration.toFixed(2),
+        transcript: transcriptText,
+      };
+    };
+
+    // Helper: Delete audio file
+    const deleteAudioFile = async audioPath => {
+      try {
+        const cleanPath = cleanAudioPath(audioPath);
+        await RNFS.fs.unlink(cleanPath);
+      } catch (e) {
+        // Silent error handling
+      }
+    };
+
+    // Transcribe audio
+    const transcribeAudio = async audioPath => {
+      try {
+        const audioBase64 = await readAudioFile(audioPath);
+        const audioBuffer = base64ToAudioBuffer(audioBase64);
 
         const response = await fetch(
           'https://api.deepgram.com/v1/listen?filler_words=true&punctuate=true&utterances=true&utt_split=0.8',
@@ -119,207 +149,151 @@ const AudioRecorder = forwardRef(
         }
 
         const data = await response.json();
-
-        const transcriptText =
-          data.results?.channels[0]?.alternatives[0]?.transcript ||
-          'No transcription';
         const words = data.results?.channels[0]?.alternatives[0]?.words || [];
-
-        const fillers = words.filter(w => {
-          const word = w.word.toLowerCase();
-          return [
-            'uh',
-            'um',
-            'like',
-            'you know',
-            'so',
-            'basically',
-            'literally',
-            'actually',
-          ].includes(word);
-        });
-
-        const totalWords = words.length - fillers.length;
         const duration = data.metadata?.duration || 0;
-        const calculatedWpm =
-          duration > 0 ? Math.round((totalWords / duration) * 60) : 0;
 
-        const detectedPauses = [];
-        for (let i = 0; i < words.length - 1; i++) {
-          const gap = words[i + 1].start - words[i].end;
-          if (gap > 0.8) {
-            detectedPauses.push({
-              duration: gap.toFixed(2),
-              timestamp: words[i].end.toFixed(2),
-            });
-          }
+        const fillers = detectFillerWords(words);
+        const pauses = detectPauses(words);
+        const report = buildTranscriptionReport(
+          data,
+          words,
+          fillers,
+          pauses,
+          duration,
+        );
+
+        await deleteAudioFile(audioPath);
+
+        return report;
+      } catch (error) {
+        console.error('Transcription error:', error.message);
+        await deleteAudioFile(audioPath);
+        throw error;
+      }
+    };
+
+    // Start recording
+    const start = async () => {
+      try {
+        try {
+          await audioRecorder.stopRecorder();
+        } catch (e) {
+          console.log('No active recording to stop.');
+        }
+        audioRecorder.removeRecordBackListener();
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const path = await audioRecorder.startRecorder();
+        setRecordingPath(path);
+        setIsRecording(true);
+
+        audioRecorder.addRecordBackListener(() => {
+          // Silent listener for recording progress
+        });
+      } catch (error) {
+        console.error('Start recording error:', error.message);
+        setIsRecording(false);
+      }
+    };
+
+    // Stop recording and reset
+    const stop = async () => {
+      try {
+        if (isRecording) {
+          await audioRecorder.stopRecorder();
+          audioRecorder.removeRecordBackListener();
+        }
+      } catch (error) {
+        console.error('Stop recording error:', error.message);
+      } finally {
+        setIsRecording(false);
+        setRecordingPath(null);
+        setSessionData([]);
+      }
+    };
+
+    // Finish recording, return result, then reset
+    const finish = async () => {
+      try {
+        if (!isRecording) {
+          const emptyResult = {
+            error: true,
+            message: 'No active recording',
+          };
+          console.log('Final transcription result:', emptyResult);
+          return emptyResult;
         }
 
-        console.log('\n╔════════════════════════════════════════╗');
-        console.log('║       SPEECH ANALYSIS RESULTS          ║');
-        console.log('╚════════════════════════════════════════╝\n');
+        const audioPath = await audioRecorder.stopRecorder();
+        audioRecorder.removeRecordBackListener();
+        setIsRecording(false);
 
-        console.log('📊 STATISTICS:');
-        console.log(`   WPM: ${calculatedWpm}`);
-        console.log(`   Total Words: ${words.length}`);
-        console.log(`   Filler Words: ${fillers.length}`);
-        console.log(`   Pauses (>0.8s): ${detectedPauses.length}`);
-        console.log(`   Duration: ${duration.toFixed(2)}s\n`);
+        await new Promise(resolve => setTimeout(resolve, 200));
 
-        console.log('💬 FILLER WORDS:');
-        if (fillers.length > 0) {
-          fillers.forEach((f, i) => {
-            console.log(`   ${i + 1}. "${f.word}" at ${f.start.toFixed(2)}s`);
-          });
-        } else {
-          console.log('   None detected');
-        }
-
-        console.log('\n⏸️  PAUSES:');
-        if (detectedPauses.length > 0) {
-          detectedPauses.forEach((p, i) => {
-            console.log(`   ${i + 1}. ${p.duration}s pause at ${p.timestamp}s`);
-          });
-        } else {
-          console.log('   None detected');
-        }
-
-        console.log('\n📝 TRANSCRIPT:');
-        console.log(`   ${transcriptText}\n`);
-
-        console.log('═══════════════════════════════════════════\n');
-
-        const report = {
-          recordingNumber: recordingCount + 1,
-          timestamp: new Date().toISOString(),
-          wpm: calculatedWpm,
-          totalWords: words.length,
-          fillerWordCount: fillers.length,
-          fillerWords: fillers.map(f => ({
-            word: f.word,
-            time: f.start.toFixed(2),
-          })),
-          pauseCount: detectedPauses.length,
-          pauses: detectedPauses,
-          duration: duration.toFixed(2),
-          transcript: transcriptText,
+        const report = await transcribeAudio(audioPath);
+        const result = {
+          ...report,
+          sessionData: [...sessionData, report],
         };
 
-        setAudioResult(report);
+        console.log('Final transcription result:', result);
 
-        // Add to session data
-        setSessionData(prev => [...prev, report]);
-
-        console.log('📋 JSON REPORT:');
-        console.log(JSON.stringify(report, null, 2));
-        console.log('\n');
-
-        // Call the callback function to pass data to parent
         if (onTranscriptionComplete) {
-          console.log(
-            'Transcription complete, passing data to parent...',
-            report,
-          );
           onTranscriptionComplete(report);
         }
 
-        await RNFS.fs.unlink(cleanPath);
-        console.log('✓ Audio file deleted\n');
-      } catch (error) {
-        console.error('!!! TRANSCRIPTION ERROR:', error.message);
-
-        // Pass error to parent if callback exists
-        if (onTranscriptionComplete) {
-          onTranscriptionComplete({
-            error: true,
-            message: error.message,
-          });
+        if (onSessionComplete) {
+          onSessionComplete(result);
         }
 
-        try {
-          const cleanPath = audioPath.replace('file://', '');
-          const RNFS = require('react-native-blob-util').default;
-          await RNFS.fs.unlink(cleanPath);
-        } catch (e) {}
+        // Reset after returning result
+        setRecordingPath(null);
+        setSessionData([]);
+
+        return result;
+      } catch (error) {
+        console.error('Finish recording error:', error.message);
+        setIsRecording(false);
+        setRecordingPath(null);
+        setSessionData([]);
+
+        const errorResult = {
+          error: true,
+          message: error.message,
+        };
+
+        if (onTranscriptionComplete) {
+          onTranscriptionComplete(errorResult);
+        }
+
+        return errorResult;
       }
     };
 
-    // End session and get all recordings data
-    const endSession = () => {
-      console.log('\n\n╔═══════════════════════════════════════════╗');
-      console.log('║        SESSION COMPLETE - ALL DATA        ║');
-      console.log('╚═══════════════════════════════════════════╝\n');
-
-      const sessionSummary = {
-        totalRecordings: sessionData.length,
-        sessionDate: new Date().toISOString(),
-        recordings: sessionData,
-        averageWpm:
-          sessionData.length > 0
-            ? Math.round(
-                sessionData.reduce((sum, r) => sum + r.wpm, 0) /
-                  sessionData.length,
-              )
-            : 0,
-        totalFillerWords: sessionData.reduce(
-          (sum, r) => sum + r.fillerWordCount,
-          0,
-        ),
-        totalPauses: sessionData.reduce((sum, r) => sum + r.pauseCount, 0),
-        totalDuration: sessionData
-          .reduce((sum, r) => sum + parseFloat(r.duration), 0)
-          .toFixed(2),
-      };
-
-      console.log('📊 COMPLETE SESSION JSON:');
-      console.log(JSON.stringify(sessionSummary, null, 2));
-      console.log('\n');
-
-      if (onSessionComplete) {
-        onSessionComplete(sessionSummary);
-      }
-
-      setSessionActive(false);
-
-      return sessionSummary;
-    };
-
-    const getSessionData = () => {
-      return {
-        recordingCount: recordingCount,
-        totalRecordings: sessionData.length,
-        data: sessionData,
-      };
-    };
-
-    // Reset the entire component state and stop any recording
+    // Reset component
     const reset = () => {
-      console.log('↩️ Resetting AudioRecorder state');
-      // Stop recording if active
-      if (isRecording) {
-        audioRecorder.stopRecorder().catch(() => {});
-        audioRecorder.removeRecordBackListener();
+      try {
+        if (isRecording) {
+          audioRecorder.stopRecorder().catch(() => {});
+          audioRecorder.removeRecordBackListener();
+        }
+      } catch (e) {
+        // Silent error handling
+      } finally {
+        setIsRecording(false);
+        setRecordingPath(null);
+        setSessionData([]);
       }
-      setIsRecording(false);
-      setRecordingPath(null);
-      setAudioResult(null);
-      setRecordingCount(0);
-      setSessionData([]);
-      setSessionActive(false);
     };
 
     useImperativeHandle(ref, () => ({
-      startSession,
-      startRecording,
-      stopRecording,
-      endSession,
-      getSessionData,
-      reset, // expose reset
+      start,
+      stop,
+      finish,
+      reset,
       isRecording,
       recordingPath,
-      audioResult,
-      sessionActive,
-      recordingCount,
       sessionData,
     }));
 

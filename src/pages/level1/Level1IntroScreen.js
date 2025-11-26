@@ -1,9 +1,9 @@
-// src/screens/levels/LevelIntroScreen.js
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { StackActions } from '@react-navigation/native';
+import LottieView from 'lottie-react-native';
 
 import CustomHeader from '../../Components/UI/CustomHeader';
 
@@ -60,11 +60,21 @@ const LevelIntroScreen = () => {
 
       {/* Middle Section - Character */}
       <View style={styles.middleSection}>
-        <Image
+        <LottieView
+          source={require('../../../assets/json/LoadingPIPO.json')}
+          autoPlay
+          loop
+          style={{
+            marginTop: 20,
+            width: '80%',
+            height: '80%',
+          }}
+        />
+        {/* <Image
           source={require('../../../assets/gifs/LoadingPIPO.gif')}
           style={styles.characterImage}
           resizeMode="contain"
-        />
+        /> */}
       </View>
 
       {/* Bottom Section - Scenario Card + Start Button */}

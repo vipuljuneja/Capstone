@@ -19,22 +19,15 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 
 const Level1Screen = () => {
   const navigation = useNavigation();
-  const [isRecording, setIsRecording] = useState(false);
-  const [transcriptionResults, setTranscriptionResults] = useState([]);
-  const [scenarioData, setScenarioData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [showOverlay, setShowOverlay] = useState(false);
-
-  const voiceOrbRef = useRef(null);
-  const audioRecorderRef = useRef(null);
-  const waveformRef = useRef(null);
-  const transcriptionResultsRef = useRef([]);
-  const transcriptionPromiseRef = useRef(null);
-
   const route = useRoute();
   const { scenarioTitle, scenarioId, scenarioEmoji, scenarioDescription } =
     route.params || {};
 
+  const [isRecording, setIsRecording] = useState(false);
+  const [scenarioData, setScenarioData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showOverlay, setShowOverlay] = useState(false);
+  const [hasStartedRecording, setHasStartedRecording] = useState(false);
   const [orbState, setOrbState] = useState({
     speaking: false,
     loading: false,
@@ -42,7 +35,11 @@ const Level1Screen = () => {
     totalLines: 5,
   });
 
-  // Load scenario data on component mount
+  const voiceOrbRef = useRef(null);
+  const audioRecorderRef = useRef(null);
+  const waveformRef = useRef(null);
+  const isFinishingRef = useRef(false);
+
   useEffect(() => {
     const loadScenarioData = async () => {
       try {
@@ -50,8 +47,6 @@ const Level1Screen = () => {
         if (scenarioId) {
           const scenario = await scenarioService.getScenarioById(scenarioId);
           setScenarioData(scenario);
-
-          // Update orb state with actual question count
           const questionCount = scenario?.level1?.questions?.length || 5;
           setOrbState(prev => ({
             ...prev,
@@ -60,7 +55,6 @@ const Level1Screen = () => {
         }
       } catch (error) {
         console.error('Failed to load scenario data:', error);
-        // Keep default state if loading fails
       } finally {
         setLoading(false);
       }
@@ -69,208 +63,239 @@ const Level1Screen = () => {
     loadScenarioData();
   }, [scenarioId]);
 
-  const handleStateChange = useCallback(newState => {
-    console.log('📥 Level1 received state:', newState);
-    setOrbState(newState);
-  }, []);
+  const stopWaveform = async () => {
+    try {
+      if (waveformRef.current) {
+        await waveformRef.current.stop();
+      }
+    } catch (error) {
+      console.error('Error stopping waveform:', error);
+    }
+  };
+
+  const resetAudioRecorder = () => {
+    try {
+      if (audioRecorderRef.current?.reset) {
+        audioRecorderRef.current.reset();
+      }
+    } catch (error) {
+      console.error('Error resetting AudioRecorder:', error);
+    }
+  };
+
+  const stopAndResetAudioRecorder = () => {
+    try {
+      if (audioRecorderRef.current) {
+        if (audioRecorderRef.current.isRecording) {
+          audioRecorderRef.current.stop().catch(() => {});
+        }
+        if (audioRecorderRef.current.reset) {
+          audioRecorderRef.current.reset();
+        }
+      }
+    } catch (error) {
+      console.error('Error stopping/resetting AudioRecorder:', error);
+    }
+  };
+
+  const stopAndResetVoiceOrb = () => {
+    if (voiceOrbRef.current) {
+      if (voiceOrbRef.current.stop) {
+        voiceOrbRef.current.stop();
+      }
+      if (voiceOrbRef.current.reset) {
+        voiceOrbRef.current.reset();
+      }
+    }
+  };
 
   const resetLevel = useCallback(() => {
-    console.log('🔄 Resetting level to start');
-
-    // Reset local state
     setIsRecording(false);
-    setTranscriptionResults([]);
+    setHasStartedRecording(false);
     setOrbState({
       speaking: false,
       loading: false,
       idx: 0,
       totalLines: scenarioData?.level1?.questions?.length || 5,
     });
-
-    transcriptionResultsRef.current = [];
-
-    // Reset VoiceOrb
-    if (voiceOrbRef.current?.reset) {
-      voiceOrbRef.current.reset();
-    }
-
-    // Reset AudioRecorder
-    if (audioRecorderRef.current?.reset) {
-      audioRecorderRef.current.reset();
-    }
+    stopWaveform();
+    stopAndResetAudioRecorder();
+    stopAndResetVoiceOrb();
   }, [scenarioData]);
 
-  const handleTranscriptionComplete = useCallback(report => {
-    console.log('📥 Transcription result:', report);
-
-    setTranscriptionResults(prevResults => {
-      const newResults = [...prevResults, report];
-      transcriptionResultsRef.current = newResults;
-      return newResults;
-    });
-
-    if (transcriptionPromiseRef.current) {
-      transcriptionPromiseRef.current.resolve(report);
-      transcriptionPromiseRef.current = null;
-    }
+  const handleStateChange = useCallback(newState => {
+    setOrbState(newState);
   }, []);
 
   const handleStart = async () => {
-    console.log('🎤 Starting recording...');
     setIsRecording(true);
+    setHasStartedRecording(true);
 
     setTimeout(async () => {
       if (waveformRef.current) {
         await waveformRef.current.start();
       }
-
       if (voiceOrbRef.current?.start) {
         voiceOrbRef.current.start();
       }
-
       if (audioRecorderRef.current) {
-        audioRecorderRef.current.startRecording();
+        audioRecorderRef.current.start();
       }
     }, 200);
   };
 
-  const handleStop = useCallback(
-    async (options = {}) => {
-      const { waitForTranscription = true } = options;
+  const handleDelete = async () => {
+    await stopWaveform();
+    stopAndResetAudioRecorder();
+    resetLevel();
+    stopAndResetVoiceOrb();
+  };
 
-      console.log('🛑 Stopping and resetting...');
-
-      try {
-        if (waveformRef.current) {
-          await waveformRef.current.stop();
-        }
-      } catch (error) {
-        console.error('Waveform stop error:', error);
-      }
-
-      if (voiceOrbRef.current?.stop) {
-        voiceOrbRef.current.stop();
-      }
-
-      let transcriptionPromise;
-
-      if (waitForTranscription) {
-        transcriptionPromise = new Promise(resolve => {
-          transcriptionPromiseRef.current = { resolve };
-
-          // Timeout after 30 seconds
-          setTimeout(() => {
-            if (transcriptionPromiseRef.current) {
-              transcriptionPromiseRef.current.resolve(null);
-              transcriptionPromiseRef.current = null;
-            }
-          }, 30000);
-        });
-      } else if (transcriptionPromiseRef.current) {
-        transcriptionPromiseRef.current.resolve(null);
-        transcriptionPromiseRef.current = null;
-      }
-
-      if (audioRecorderRef.current) {
-        audioRecorderRef.current.stopRecording();
-      }
-
-      if (transcriptionPromise) {
-        await transcriptionPromise;
-      }
-
-      // Reset after stopping
-      resetLevel();
-    },
-    [resetLevel],
-  );
+  const handleBack = async () => {
+    try {
+      await stopWaveform();
+      stopAndResetAudioRecorder();
+      stopAndResetVoiceOrb();
+    } catch (error) {
+      console.error('Error stopping components:', error);
+    } finally {
+      navigation.navigate('LevelOptions', {
+        scenarioTitle,
+        scenarioEmoji,
+        scenarioId,
+        scenarioDescription,
+      });
+    }
+  };
 
   const handleNext = useCallback(() => {
     const currentState = voiceOrbRef.current?.getState();
 
     if (!currentState) {
-      console.warn('⚠️ VoiceOrb state not available');
       return;
     }
 
-    if (currentState.idx === currentState.totalLines - 1) {
-      setShowOverlay(true);
+    const isLastQuestion = currentState.idx === currentState.totalLines - 1;
 
-      // Last question - wait for transcription then navigate
-      const navigateToResults = async () => {
-        console.log('✅ Last question completed, waiting for transcription...');
+    if (isLastQuestion) {
+      const handleLastQuestion = async () => {
+        isFinishingRef.current = true;
+        setShowOverlay(true);
 
-        if (isRecording) {
-          // Stop recording
+        try {
           try {
             if (waveformRef.current) {
               await waveformRef.current.stop();
+              await new Promise(resolve => setTimeout(resolve, 300));
             }
           } catch (error) {
-            console.error('Waveform stop error:', error);
+            console.error('Error stopping waveform:', error);
           }
 
-          if (voiceOrbRef.current?.stop) {
-            voiceOrbRef.current.stop();
+          let result = null;
+          try {
+            if (audioRecorderRef.current?.finish) {
+              result = await audioRecorderRef.current.finish();
+              console.log('Final transcript:', JSON.stringify(result, null, 2));
+            }
+          } catch (error) {
+            console.error('Error calling finish:', error);
           }
 
-          // Wait for transcription to complete
-          const transcriptionPromise = new Promise(resolve => {
-            transcriptionPromiseRef.current = { resolve };
+          await new Promise(resolve => setTimeout(resolve, 500));
 
-            // Timeout after 30 seconds
-            setTimeout(() => {
-              if (transcriptionPromiseRef.current) {
-                console.warn('⚠️ Transcription timeout, navigating anyway');
-                transcriptionPromiseRef.current.resolve(null);
-                transcriptionPromiseRef.current = null;
-              }
-            }, 30000);
-          });
-
-          if (audioRecorderRef.current) {
-            audioRecorderRef.current.stopRecording();
+          try {
+            resetAudioRecorder();
+          } catch (error) {
+            console.error('Error resetting AudioRecorder:', error);
           }
 
-          console.log('⏳ Waiting for final transcription...');
-          await transcriptionPromise;
-          console.log('✅ Transcription received!');
+          try {
+            stopAndResetVoiceOrb();
+          } catch (error) {
+            console.error('Error stopping/resetting VoiceOrb:', error);
+          }
 
-          setIsRecording(false);
+          await new Promise(resolve => setTimeout(resolve, 300));
+
+          isFinishingRef.current = false;
+
+          // Prepare transcript results for navigation
+          let finalResults = [];
+          if (result && !result.error) {
+            if (
+              Array.isArray(result.sessionData) &&
+              result.sessionData.length > 0
+            ) {
+              finalResults = result.sessionData;
+            } else {
+              // Extract report from result if sessionData is not available
+              const report = {
+                transcript: result.transcript,
+                wpm: result.wpm,
+                totalWords: result.totalWords,
+                fillerWordCount: result.fillerWordCount,
+                fillerWords: result.fillerWords,
+                pauseCount: result.pauseCount,
+                pauses: result.pauses,
+                duration: result.duration,
+                timestamp: result.timestamp,
+              };
+              finalResults = [report];
+            }
+          }
+
+          // Navigate to results screen
+          try {
+            navigation.navigate('Level1ResultScreen', {
+              totalQuestions: currentState.totalLines,
+              transcriptionResults: finalResults,
+              scenarioTitle: scenarioTitle || 'Ordering Coffee',
+              scenarioEmoji: scenarioEmoji || '☕',
+              scenarioId: scenarioId,
+              ...route.params,
+            });
+          } catch (error) {
+            console.error('Navigation error:', error);
+          }
+
+          // Hide overlay and reset state after navigation
+          setShowOverlay(false);
+          setTimeout(() => {
+            if (!isFinishingRef.current) {
+              setIsRecording(false);
+            }
+          }, 100);
+        } catch (error) {
+          console.error('Error handling last question:', error);
+          try {
+            stopAndResetAudioRecorder();
+            stopAndResetVoiceOrb();
+            isFinishingRef.current = false;
+            setShowOverlay(false);
+            requestAnimationFrame(() => {
+              setTimeout(() => {
+                setIsRecording(false);
+              }, 100);
+            });
+          } catch (resetError) {
+            console.error('Error during cleanup:', resetError);
+            isFinishingRef.current = false;
+            setShowOverlay(false);
+            requestAnimationFrame(() => {
+              setTimeout(() => {
+                setIsRecording(false);
+              }, 200);
+            });
+          }
         }
-
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        let finalResults = transcriptionResultsRef.current;
-        if (!finalResults || finalResults.length === 0) {
-          // If we timed out just before the transcript landed, give it a brief grace window
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          finalResults = transcriptionResultsRef.current;
-        }
-        console.log('📤 Navigating with results:', finalResults);
-
-        const { scenarioEmoji } = route.params || {};
-
-        setShowOverlay(false);
-
-        navigation.navigate('Level1ResultScreen', {
-          totalQuestions: currentState.totalLines,
-          transcriptionResults: finalResults,
-          scenarioTitle: scenarioTitle || 'Ordering Coffee',
-          scenarioEmoji: scenarioEmoji || '☕',
-          scenarioId: scenarioId,
-          ...route.params,
-        });
       };
 
-      navigateToResults();
+      handleLastQuestion();
     } else {
-      console.log('⏭️ Moving to next question');
       voiceOrbRef.current?.next();
     }
-  }, [navigation, isRecording]);
-
-  const isLastQuestion = orbState.idx === orbState.totalLines - 1;
+  }, [navigation, scenarioTitle, scenarioEmoji, scenarioId, route.params]);
 
   if (loading) {
     return (
@@ -287,13 +312,13 @@ const Level1Screen = () => {
     );
   }
 
+  const isLastQuestion = orbState.idx === orbState.totalLines - 1;
+
   return (
     <View style={styles.container}>
-      {/* Header with Progress */}
       {showOverlay && (
         <View style={styles.overlay}>
           <View style={styles.loaderContainer}>
-            {/* Replace with your loader component, e.g., ActivityIndicator */}
             <ActivityIndicator size="large" color="#6B5B95" />
           </View>
         </View>
@@ -301,25 +326,7 @@ const Level1Screen = () => {
 
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={async () => {
-            try {
-              if (isRecording) {
-                await handleStop({ waitForTranscription: false });
-              }
-            } catch (error) {
-              console.error(
-                'Error stopping Level 1 session before navigating back:',
-                error,
-              );
-            } finally {
-              navigation.navigate('LevelOptions', {
-                scenarioTitle,
-                scenarioEmoji,
-                scenarioId,
-                scenarioDescription,
-              });
-            }
-          }}
+          onPress={handleBack}
           style={styles.backButtonContainer}
         >
           <BackIcon width={20} height={20} style={styles.backButton} />
@@ -338,57 +345,69 @@ const Level1Screen = () => {
         </View>
       </View>
 
-      {/* Voice Orb in Center */}
       <View style={styles.middleSection}>
-        <VoiceOrb
-          ref={voiceOrbRef}
-          onStateChange={handleStateChange}
-          lines={(scenarioData?.level1?.questions || []).map(q => q.text)}
-        />
+        <View style={styles.voiceOrbWrapper}>
+          <VoiceOrb
+            ref={voiceOrbRef}
+            onStateChange={handleStateChange}
+            lines={(scenarioData?.level1?.questions || []).map(q => q.text)}
+          />
+        </View>
+        {hasStartedRecording && isRecording && (
+          <View style={styles.tooltipContainer} pointerEvents="none">
+            <View style={styles.tooltipContent}>
+              <Text style={styles.tooltipText}>Tap on PIP to listen again</Text>
+            </View>
+          </View>
+        )}
       </View>
 
-      {/* Waveform */}
-      <View
-        style={isRecording ? styles.waveformVisible : styles.waveformHidden}
-      >
-        <AudioWaveform ref={waveformRef} />
-      </View>
-
-      {/* Bottom Controls */}
       <View style={styles.bottomSection}>
-        <AudioRecorder
-          ref={audioRecorderRef}
-          onTranscriptionComplete={handleTranscriptionComplete}
-        />
+        <AudioRecorder ref={audioRecorderRef} />
 
-        {/* Microphone Button */}
-        <TouchableOpacity
-          style={isRecording ? styles.stopButton : styles.micButton}
-          onPress={isRecording ? resetLevel : handleStart}
-        >
-          <Text style={styles.buttonEmoji}>
-            {isRecording ? (
-              <DeleteIcon height={24} width={24} />
-            ) : (
-              <MicIcon height={24} width={24} />
-            )}
-          </Text>
-        </TouchableOpacity>
+        <View style={[styles.recordingControls, !isRecording && styles.hidden]}>
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleDelete}
+            disabled={!isRecording}
+          >
+            <DeleteIcon height={24} width={24} style={{ color: '#FFFFFF' }} />
+          </TouchableOpacity>
 
-        {/* Next/Done Button */}
-        {isRecording && (
+          <View style={styles.waveformContainer}>
+            <AudioWaveform ref={waveformRef} />
+          </View>
+
           <TouchableOpacity
             onPress={handleNext}
-            disabled={orbState.speaking || orbState.loading}
+            disabled={!isRecording || orbState.speaking || orbState.loading}
             style={[
               styles.nextButton,
-              (orbState.speaking || orbState.loading) && styles.buttonDisabled,
+              (orbState.speaking || orbState.loading || !isRecording) &&
+                styles.buttonDisabled,
             ]}
           >
             <Text style={styles.nextButtonText}>
               {isLastQuestion ? '✓' : '→'}
             </Text>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.micButtonContainer}>
+          <TouchableOpacity
+            style={[styles.micButton, isRecording && styles.hidden]}
+            onPress={handleStart}
+            disabled={isRecording}
+          >
+            <MicIcon height={24} width={24} />
+          </TouchableOpacity>
+        </View>
+        {!isRecording && !hasStartedRecording && (
+          <View style={styles.micTooltipContainer} pointerEvents="none">
+            <View style={styles.tooltipContent}>
+              <Text style={styles.tooltipText}>Tap here to speak</Text>
+            </View>
+          </View>
         )}
       </View>
     </View>
@@ -400,7 +419,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
-  // Header with back button and progress bar
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -442,60 +460,97 @@ const styles = StyleSheet.create({
     backgroundColor: '#463855',
     borderRadius: 9,
   },
-  // Main content
   middleSection: {
     flex: 1,
     backgroundColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // Audio waveform display
-  waveformHidden: {
-    width: 0,
-    height: 0,
-    overflow: 'hidden',
-    opacity: 0,
+  voiceOrbWrapper: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  waveformVisible: {
-    height: 60,
-    backgroundColor: 'white',
-    paddingHorizontal: 15,
+  tooltipContainer: {
+    position: 'absolute',
+    bottom: 60,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  // Controls at the bottom
+  micButtonContainer: {
+    position: 'relative',
+  },
+  micTooltipContainer: {
+    position: 'absolute',
+    bottom: 120,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   bottomSection: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 30,
+    padding: 20,
     backgroundColor: 'white',
-    gap: 20,
+  },
+  recordingControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 10,
+    gap: 12,
+  },
+  deleteButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#4A3F5B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  waveformContainer: {
+    flex: 1,
+    height: 60,
+    marginHorizontal: 8,
   },
   micButton: {
     width: 80,
     height: 80,
-    borderRadius: 35,
+    borderRadius: 40,
     backgroundColor: '#6B5B95',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  stopButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#999',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  buttonEmoji: {
-    fontSize: 30,
   },
   nextButton: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#6B5B95',
+    backgroundColor: '#4A3F5B',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
   nextButtonText: {
     color: 'white',
@@ -503,6 +558,14 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.5,
+  },
+  hidden: {
+    opacity: 0,
+    pointerEvents: 'none',
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    overflow: 'hidden',
   },
   loadingContainer: {
     flex: 1,
@@ -521,12 +584,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
-    backdropFilter: 'blur(10px)', // Note: backdropFilter is not supported in all React Native environments
   },
   loaderContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     padding: 20,
     borderRadius: 10,
+  },
+  tooltipContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tooltipText: {
+    color: '#333333',
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });
 
