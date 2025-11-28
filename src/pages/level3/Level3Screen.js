@@ -29,7 +29,7 @@ import LoadingOverlay from '../components/LoadingOverlays';
 
 import BackIcon from '../../../assets/icons/back.svg';
 import MicIcon from '../../../assets/icons/mic-white.svg';
-import DeleteIcon from '../../../assets/icons/delete-filled.svg';
+import DeleteIcon from '../../../assets/icons/delete-white.svg';
 
 const Level3Screen = () => {
   const navigation = useNavigation();

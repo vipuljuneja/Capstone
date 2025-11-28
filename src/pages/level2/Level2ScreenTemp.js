@@ -22,7 +22,7 @@ import { getUserLevelQuestions } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import BackIcon from '../../../assets/icons/back.svg';
 import MicIcon from '../../../assets/icons/mic-white.svg';
-import DeleteIcon from '../../../assets/icons/delete-filled.svg';
+import DeleteIcon from '../../../assets/icons/delete-white.svg';
 
 const { width, height } = Dimensions.get('window');
 

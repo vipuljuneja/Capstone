@@ -2,7 +2,7 @@ import React, { forwardRef } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import AudioRecorder from '../../Components/Audio/AudioRecorder';
 import MicIcon from '../../../assets/icons/mic-white.svg';
-import DeleteIcon from '../../../assets/icons/delete-filled.svg';
+import DeleteIcon from '../../../assets/icons/delete-white.svg';
 
 const RecordingControls = forwardRef(
   (
