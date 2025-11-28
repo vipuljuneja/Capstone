@@ -332,12 +332,14 @@ export default function NotebookScreen({ navigation }) {
   const fetchDotsAbortControllerRef = useRef(null);
   const isDateChangingRef = useRef(false);
   const lastProcessedDateRef = useRef(null);
+  const lastFetchedDateRef = useRef(null);
+  const lastFetchedTabRef = useRef(null);
+  const hasInitialFetchedRef = useRef(false);
+  const isFocusFetchingRef = useRef(false);
 
+  const isSelf = activeTab === 'self';
 
-
-  const isSelf = activeTab === "self";
-
-  const onEditSelf = (item) => {
+  const onEditSelf = item => {
     if (!item || !item.id) return;
 
     if (tabChangeTimeoutRef.current) {
@@ -347,14 +349,18 @@ export default function NotebookScreen({ navigation }) {
     isTabChangingRef.current = false;
     pendingTabRef.current = null;
 
-    setEditingSelf({ id: item.id, title: item.title || "", description: item.subtitle || "" });
+    setEditingSelf({
+      id: item.id,
+      title: item.title || '',
+      description: item.subtitle || '',
+    });
 
-    if (activeTab !== "self") {
-      setActiveTab("self");
-      currentFetchTabRef.current = "self";
+    if (activeTab !== 'self') {
+      setActiveTab('self');
+      currentFetchTabRef.current = 'self';
     }
 
-    writerModalTabRef.current = "self";
+    writerModalTabRef.current = 'self';
     if (writerModalTimeoutRef.current) {
       clearTimeout(writerModalTimeoutRef.current);
     }
@@ -383,7 +389,7 @@ export default function NotebookScreen({ navigation }) {
   //   }
   // };
 
-  const onDeleteSelf = (item) => {
+  const onDeleteSelf = item => {
     if (!item?.id || deletingSelf) return;
     deleteTargetRef.current = item;
     setShowConfirmSelf(true);
@@ -398,7 +404,7 @@ export default function NotebookScreen({ navigation }) {
         await Promise.all([fetchCards(), fetchDots()]);
       }
     } catch (e) {
-      console.error("Delete failed:", e);
+      console.error('Delete failed:', e);
     } finally {
       setDeletingSelf(false);
       setShowConfirmSelf(false);
@@ -406,15 +412,13 @@ export default function NotebookScreen({ navigation }) {
     }
   };
 
-
-
   const toUICard = useCallback(
     (r, i) => ({
       id: String(r?._id ?? r?.id ?? i),
-      type: r?.type ?? (isSelf ? "self" : "pipo"),
+      type: r?.type ?? (isSelf ? 'self' : 'pipo'),
       date: r?.date ?? selectedDate,
-      title: r?.title ?? "",
-      subtitle: r?.description ?? "",
+      title: r?.title ?? '',
+      subtitle: r?.description ?? '',
       sessionId: r?.linkedSessionId || null,
       scenarioId: r?.scenarioId || null,
       level: r?.level || null,
@@ -422,7 +426,7 @@ export default function NotebookScreen({ navigation }) {
       motivation: r?.motivation || null,
       readAt: r?.readAt || null,
     }),
-    [isSelf, selectedDate]
+    [isSelf, selectedDate],
   );
 
   const fetchCards = useCallback(async () => {
@@ -439,8 +443,7 @@ export default function NotebookScreen({ navigation }) {
     if (fetchCardsAbortControllerRef.current) {
       try {
         fetchCardsAbortControllerRef.current.abort();
-      } catch (e) {
-      }
+      } catch (e) {}
       fetchCardsAbortControllerRef.current = null;
     }
 
@@ -457,10 +460,14 @@ export default function NotebookScreen({ navigation }) {
         setLoading(true);
       }
 
-      const list = await getReflectionsByUser(userId, {
-        date: fetchDate,
-        type: fetchTab,
-      }, abortController.signal);
+      const list = await getReflectionsByUser(
+        userId,
+        {
+          date: fetchDate,
+          type: fetchTab,
+        },
+        abortController.signal,
+      );
 
       if (
         !abortController.signal.aborted &&
@@ -472,17 +479,27 @@ export default function NotebookScreen({ navigation }) {
         try {
           const safe = Array.isArray(list) ? list : [];
           setItems(safe.map(toUICard));
+          // Track what we've fetched
+          lastFetchedDateRef.current = fetchDate;
+          lastFetchedTabRef.current = fetchTab;
         } catch (stateError) {
           console.error('Error updating items state:', stateError);
         }
       }
     } catch (e) {
-      const isCancelled = e?.name === 'AbortError' || e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED' || e?.message?.includes('canceled');
+      const isCancelled =
+        e?.name === 'AbortError' ||
+        e?.name === 'CanceledError' ||
+        e?.code === 'ERR_CANCELED' ||
+        e?.message?.includes('canceled');
 
       if (!isCancelled) {
         if (requestId === fetchRequestIdRef.current && isMountedRef.current) {
-          console.error("Get reflections failed:", e);
-          if (currentFetchDateRef.current === fetchDate && currentFetchTabRef.current === fetchTab) {
+          console.error('Get reflections failed:', e);
+          if (
+            currentFetchDateRef.current === fetchDate &&
+            currentFetchTabRef.current === fetchTab
+          ) {
             try {
               setItems([]);
             } catch (stateError) {
@@ -494,7 +511,10 @@ export default function NotebookScreen({ navigation }) {
     } finally {
       if (requestId === fetchRequestIdRef.current && isMountedRef.current) {
         try {
-          if (currentFetchDateRef.current === fetchDate && currentFetchTabRef.current === fetchTab) {
+          if (
+            currentFetchDateRef.current === fetchDate &&
+            currentFetchTabRef.current === fetchTab
+          ) {
             setLoading(false);
           }
         } catch (stateError) {
@@ -522,15 +542,22 @@ export default function NotebookScreen({ navigation }) {
     if (fetchDotsAbortControllerRef.current) {
       try {
         fetchDotsAbortControllerRef.current.abort();
-      } catch (e) {
-      }
+      } catch (e) {}
       fetchDotsAbortControllerRef.current = null;
     }
 
     const startDate = dayjs(fetchDate).startOf('isoWeek').format('YYYY-MM-DD');
-    const endDate = dayjs(fetchDate).endOf('isoWeek').add(1, 'day').format('YYYY-MM-DD');
+    const endDate = dayjs(fetchDate)
+      .endOf('isoWeek')
+      .add(1, 'day')
+      .format('YYYY-MM-DD');
 
-    if (!startDate || !endDate || !dayjs(startDate).isValid() || !dayjs(endDate).isValid()) {
+    if (
+      !startDate ||
+      !endDate ||
+      !dayjs(startDate).isValid() ||
+      !dayjs(endDate).isValid()
+    ) {
       console.warn('Invalid date range in fetchDots:', { startDate, endDate });
       return;
     }
@@ -541,7 +568,11 @@ export default function NotebookScreen({ navigation }) {
     isFetchingDotsRef.current = true;
 
     try {
-      const dates = await getReflectionDates(userId, { startDate, endDate }, abortController.signal);
+      const dates = await getReflectionDates(
+        userId,
+        { startDate, endDate },
+        abortController.signal,
+      );
 
       if (
         !abortController.signal.aborted &&
@@ -550,7 +581,7 @@ export default function NotebookScreen({ navigation }) {
       ) {
         try {
           const next = {};
-          (Array.isArray(dates) ? dates : []).forEach((row) => {
+          (Array.isArray(dates) ? dates : []).forEach(row => {
             try {
               const ds = dayjs(row?.date).format('YYYY-MM-DD');
               const t = String(row?.type || '').toLowerCase();
@@ -563,12 +594,18 @@ export default function NotebookScreen({ navigation }) {
             }
           });
           setDotDates(next);
+          // Track what we've fetched for dots
+          lastFetchedDateRef.current = fetchDate;
         } catch (stateError) {
           console.error('Error updating dotDates state:', stateError);
         }
       }
     } catch (e) {
-      const isCancelled = e?.name === 'AbortError' || e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED' || e?.message?.includes('canceled');
+      const isCancelled =
+        e?.name === 'AbortError' ||
+        e?.name === 'CanceledError' ||
+        e?.code === 'ERR_CANCELED' ||
+        e?.message?.includes('canceled');
 
       if (!isCancelled) {
         if (currentFetchDateRef.current === fetchDate && isMountedRef.current) {
@@ -589,13 +626,24 @@ export default function NotebookScreen({ navigation }) {
     }
   }, [userId, selectedDate]);
 
-
-
   useEffect(() => {
     if (!isMountedRef.current) return;
     if (userId && selectedDate && dayjs(selectedDate).isValid()) {
+      // Skip if we've already fetched for this date, or if focus effect is fetching
+      if (
+        (lastFetchedDateRef.current === selectedDate &&
+          hasInitialFetchedRef.current) ||
+        isFocusFetchingRef.current
+      ) {
+        return;
+      }
+
       const timeoutId = setTimeout(() => {
-        if (isMountedRef.current && !isDateChangingRef.current) {
+        if (
+          isMountedRef.current &&
+          !isDateChangingRef.current &&
+          !isFocusFetchingRef.current
+        ) {
           fetchDots();
         }
       }, 150);
@@ -607,54 +655,77 @@ export default function NotebookScreen({ navigation }) {
   useEffect(() => {
     if (!isMountedRef.current) return;
     if (userId && selectedDate && dayjs(selectedDate).isValid()) {
+      // Skip if we've already fetched for this date and tab, or if focus effect is fetching
+      if (
+        (lastFetchedDateRef.current === selectedDate &&
+          lastFetchedTabRef.current === activeTab &&
+          hasInitialFetchedRef.current) ||
+        isFocusFetchingRef.current
+      ) {
+        return;
+      }
+
       const timeoutId = setTimeout(() => {
-        if (isMountedRef.current && !isDateChangingRef.current) {
+        if (
+          isMountedRef.current &&
+          !isDateChangingRef.current &&
+          !isFocusFetchingRef.current
+        ) {
           fetchCards();
         }
       }, 150);
 
       return () => clearTimeout(timeoutId);
     }
-  }, [fetchCards, userId, selectedDate]);
+  }, [fetchCards, userId, selectedDate, activeTab]);
 
-  const handleTabChange = useCallback((newTab) => {
-    if (isSavingRef.current || writerOpen) {
-      console.warn("Cannot change tabs while saving or writer modal is open");
-      return;
-    }
-    if (!newTab || newTab === activeTab || isTabChangingRef.current) return;
-
-    pendingTabRef.current = newTab;
-
-    if (tabChangeTimeoutRef.current) {
-      clearTimeout(tabChangeTimeoutRef.current);
-    }
-
-    isTabChangingRef.current = true;
-
-    tabChangeTimeoutRef.current = setTimeout(() => {
-      try {
-        const pendingTab = pendingTabRef.current;
-        if (pendingTab && (pendingTab === "pipo" || pendingTab === "self") && isMountedRef.current) {
-          setActiveTab(pendingTab);
-          pendingTabRef.current = null;
-        }
-      } catch (e) {
-        console.error('Error setting tab:', e);
-        pendingTabRef.current = null;
-      } finally {
-        if (innerTabTimeoutRef.current) {
-          clearTimeout(innerTabTimeoutRef.current);
-        }
-        innerTabTimeoutRef.current = setTimeout(() => {
-          if (isMountedRef.current) {
-            isTabChangingRef.current = false;
-          }
-          innerTabTimeoutRef.current = null;
-        }, 300);
+  const handleTabChange = useCallback(
+    newTab => {
+      if (isSavingRef.current || writerOpen) {
+        console.warn('Cannot change tabs while saving or writer modal is open');
+        return;
       }
-    }, 150);
-  }, [activeTab]);
+      if (!newTab || newTab === activeTab || isTabChangingRef.current) return;
+
+      pendingTabRef.current = newTab;
+
+      if (tabChangeTimeoutRef.current) {
+        clearTimeout(tabChangeTimeoutRef.current);
+      }
+
+      isTabChangingRef.current = true;
+
+      tabChangeTimeoutRef.current = setTimeout(() => {
+        try {
+          const pendingTab = pendingTabRef.current;
+          if (
+            pendingTab &&
+            (pendingTab === 'pipo' || pendingTab === 'self') &&
+            isMountedRef.current
+          ) {
+            setActiveTab(pendingTab);
+            // Reset fetch tracking when tab changes
+            lastFetchedTabRef.current = null;
+            pendingTabRef.current = null;
+          }
+        } catch (e) {
+          console.error('Error setting tab:', e);
+          pendingTabRef.current = null;
+        } finally {
+          if (innerTabTimeoutRef.current) {
+            clearTimeout(innerTabTimeoutRef.current);
+          }
+          innerTabTimeoutRef.current = setTimeout(() => {
+            if (isMountedRef.current) {
+              isTabChangingRef.current = false;
+            }
+            innerTabTimeoutRef.current = null;
+          }, 300);
+        }
+      }, 150);
+    },
+    [activeTab],
+  );
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -668,15 +739,13 @@ export default function NotebookScreen({ navigation }) {
       if (fetchCardsAbortControllerRef.current) {
         try {
           fetchCardsAbortControllerRef.current.abort();
-        } catch (e) {
-        }
+        } catch (e) {}
         fetchCardsAbortControllerRef.current = null;
       }
       if (fetchDotsAbortControllerRef.current) {
         try {
           fetchDotsAbortControllerRef.current.abort();
-        } catch (e) {
-        }
+        } catch (e) {}
         fetchDotsAbortControllerRef.current = null;
       }
 
@@ -713,32 +782,62 @@ export default function NotebookScreen({ navigation }) {
       if (!isMountedRef.current || !userId) return;
 
       if (selectedDate && dayjs(selectedDate).isValid()) {
+        // Only fetch on initial focus if we haven't fetched yet
+        // Subsequent date/tab changes should be handled by useEffect hooks
+        const needsFetch =
+          !hasInitialFetchedRef.current &&
+          lastFetchedDateRef.current !== selectedDate;
+
+        if (!needsFetch) {
+          return;
+        }
+
+        isFocusFetchingRef.current = true;
         const timeoutId = setTimeout(() => {
-          if (isMountedRef.current && userId && selectedDate && dayjs(selectedDate).isValid()) {
+          if (
+            isMountedRef.current &&
+            userId &&
+            selectedDate &&
+            dayjs(selectedDate).isValid()
+          ) {
             try {
-              fetchCards();
-              fetchDots();
+              // Only fetch if still needed (date/tab hasn't changed and we haven't fetched)
+              const stillNeedsFetch =
+                !hasInitialFetchedRef.current &&
+                lastFetchedDateRef.current !== selectedDate &&
+                !isDateChangingRef.current;
+
+              if (stillNeedsFetch) {
+                Promise.all([fetchCards(), fetchDots()]).finally(() => {
+                  hasInitialFetchedRef.current = true;
+                  isFocusFetchingRef.current = false;
+                });
+              } else {
+                isFocusFetchingRef.current = false;
+              }
             } catch (e) {
               console.error('Error in useFocusEffect fetch:', e);
+              isFocusFetchingRef.current = false;
             }
+          } else {
+            isFocusFetchingRef.current = false;
           }
         }, 100);
 
         return () => {
           clearTimeout(timeoutId);
+          isFocusFetchingRef.current = false;
         };
       }
-    }, [fetchCards, fetchDots, userId, selectedDate])
+    }, [fetchCards, fetchDots, userId, selectedDate]),
   );
-
-
 
   const markedDates = useMemo(() => {
     try {
       const marks = {};
 
       if (dotDates && typeof dotDates === 'object') {
-        Object.keys(dotDates).forEach((ds) => {
+        Object.keys(dotDates).forEach(ds => {
           try {
             if (!ds || typeof ds !== 'string') return;
 
@@ -750,8 +849,18 @@ export default function NotebookScreen({ navigation }) {
 
             const dots = [];
 
-            if (flags.pipo) dots.push({ key: 'pipo', color: 'rgba(23, 155, 255, 1)', selectedDotColor: 'rgba(23, 155, 255, 1)' });
-            if (flags.self) dots.push({ key: 'self', color: 'rgba(112, 73, 196, 1)', selectedDotColor: 'rgba(112, 73, 196, 1)' });
+            if (flags.pipo)
+              dots.push({
+                key: 'pipo',
+                color: 'rgba(23, 155, 255, 1)',
+                selectedDotColor: 'rgba(23, 155, 255, 1)',
+              });
+            if (flags.self)
+              dots.push({
+                key: 'self',
+                color: 'rgba(112, 73, 196, 1)',
+                selectedDotColor: 'rgba(112, 73, 196, 1)',
+              });
 
             if (dots.length) {
               marks[d] = { ...(marks[d] || {}), dots, marked: true };
@@ -790,7 +899,7 @@ export default function NotebookScreen({ navigation }) {
     if (!userId) return;
 
     if (isSavingRef.current) {
-      console.warn("Save already in progress");
+      console.warn('Save already in progress');
       return;
     }
 
@@ -798,21 +907,23 @@ export default function NotebookScreen({ navigation }) {
 
     try {
       if (!selectedDate || !dayjs(selectedDate).isValid()) {
-        console.error("Invalid selectedDate:", selectedDate);
+        console.error('Invalid selectedDate:', selectedDate);
         isSavingRef.current = false;
         return;
       }
 
       if (!title || typeof title !== 'string' || title.trim().length === 0) {
-        console.error("Invalid title provided");
+        console.error('Invalid title provided');
         isSavingRef.current = false;
         return;
       }
 
-      const selfData = Array.isArray(items) ? items.filter((it) => it.type === "self") : [];
+      const selfData = Array.isArray(items)
+        ? items.filter(it => it.type === 'self')
+        : [];
       const alreadyHasSelf = selfData.length > 0;
       if (alreadyHasSelf) {
-        console.warn("A self reflection already exists for this date.");
+        console.warn('A self reflection already exists for this date.');
         isSavingRef.current = false;
         return;
       }
@@ -820,9 +931,9 @@ export default function NotebookScreen({ navigation }) {
       const created = await createReflection({
         userId,
         title: title.trim(),
-        description: description || "",
+        description: description || '',
         date: selectedDate,
-        type: "self",
+        type: 'self',
       });
 
       if (created) {
@@ -831,46 +942,52 @@ export default function NotebookScreen({ navigation }) {
 
           const list = await getReflectionsByUser(userId, {
             date: selectedDate,
-            type: "self",
+            type: 'self',
           });
 
-          if ((currentFetchDateRef.current === fetchDate || !currentFetchDateRef.current) && isMountedRef.current) {
+          if (
+            (currentFetchDateRef.current === fetchDate ||
+              !currentFetchDateRef.current) &&
+            isMountedRef.current
+          ) {
             const safe = Array.isArray(list) ? list : [];
-            if (activeTab === "self") {
-              setItems(safe.map((r, i) => ({
-                id: String(r?._id ?? r?.id ?? i),
-                type: r?.type ?? "self",
-                date: r?.date ?? selectedDate,
-                title: r?.title ?? "",
-                subtitle: r?.description ?? "",
-                sessionId: r?.linkedSessionId || null,
-                scenarioId: r?.scenarioId || null,
-                level: r?.level || null,
-                imageName: r?.imageName || null,
-                motivation: r?.motivation || null,
-                readAt: r?.readAt || null,
-              })));
+            if (activeTab === 'self') {
+              setItems(
+                safe.map((r, i) => ({
+                  id: String(r?._id ?? r?.id ?? i),
+                  type: r?.type ?? 'self',
+                  date: r?.date ?? selectedDate,
+                  title: r?.title ?? '',
+                  subtitle: r?.description ?? '',
+                  sessionId: r?.linkedSessionId || null,
+                  scenarioId: r?.scenarioId || null,
+                  level: r?.level || null,
+                  imageName: r?.imageName || null,
+                  motivation: r?.motivation || null,
+                  readAt: r?.readAt || null,
+                })),
+              );
             }
           }
         } catch (fetchError) {
-          console.error("Failed to refresh cards after save:", fetchError);
+          console.error('Failed to refresh cards after save:', fetchError);
         }
 
         try {
-          const dateKey = dayjs(selectedDate).format("YYYY-MM-DD");
+          const dateKey = dayjs(selectedDate).format('YYYY-MM-DD');
           if (dateKey && dayjs(dateKey).isValid() && isMountedRef.current) {
-            setDotDates((prev) => {
+            setDotDates(prev => {
               const curr = prev || {};
               const existing = curr[dateKey] || {};
               return { ...curr, [dateKey]: { ...existing, self: true } };
             });
           }
         } catch (dateError) {
-          console.error("Failed to update dot dates:", dateError);
+          console.error('Failed to update dot dates:', dateError);
         }
       }
     } catch (e) {
-      console.error("Create reflection failed:", e);
+      console.error('Create reflection failed:', e);
       throw e;
     } finally {
       isSavingRef.current = false;
@@ -879,12 +996,12 @@ export default function NotebookScreen({ navigation }) {
 
   const handleUpdateReflection = async ({ title, description }) => {
     if (!editingSelf || !editingSelf.id) {
-      console.error("Cannot update: editingSelf or id is missing");
+      console.error('Cannot update: editingSelf or id is missing');
       return;
     }
 
     if (isSavingRef.current) {
-      console.warn("Save already in progress");
+      console.warn('Save already in progress');
       return;
     }
 
@@ -892,22 +1009,22 @@ export default function NotebookScreen({ navigation }) {
 
     try {
       if (!selectedDate || !dayjs(selectedDate).isValid()) {
-        console.error("Invalid selectedDate:", selectedDate);
+        console.error('Invalid selectedDate:', selectedDate);
         isSavingRef.current = false;
         return;
       }
 
       if (!title || typeof title !== 'string' || title.trim().length === 0) {
-        console.error("Invalid title provided");
+        console.error('Invalid title provided');
         isSavingRef.current = false;
         return;
       }
 
       await updateReflection(editingSelf.id, {
         title: title.trim(),
-        description: description || "",
+        description: description || '',
         date: selectedDate,
-        type: "self"
+        type: 'self',
       });
 
       if (isMountedRef.current) {
@@ -918,51 +1035,56 @@ export default function NotebookScreen({ navigation }) {
         const fetchDate = selectedDate;
         const list = await getReflectionsByUser(userId, {
           date: selectedDate,
-          type: "self",
+          type: 'self',
         });
 
-        if ((currentFetchDateRef.current === fetchDate || !currentFetchDateRef.current) && isMountedRef.current) {
+        if (
+          (currentFetchDateRef.current === fetchDate ||
+            !currentFetchDateRef.current) &&
+          isMountedRef.current
+        ) {
           const safe = Array.isArray(list) ? list : [];
-          if (activeTab === "self") {
-            setItems(safe.map((r, i) => ({
-              id: String(r?._id ?? r?.id ?? i),
-              type: r?.type ?? "self",
-              date: r?.date ?? selectedDate,
-              title: r?.title ?? "",
-              subtitle: r?.description ?? "",
-              sessionId: r?.linkedSessionId || null,
-              scenarioId: r?.scenarioId || null,
-              level: r?.level || null,
-              imageName: r?.imageName || null,
-              motivation: r?.motivation || null,
-              readAt: r?.readAt || null,
-            })));
+          if (activeTab === 'self') {
+            setItems(
+              safe.map((r, i) => ({
+                id: String(r?._id ?? r?.id ?? i),
+                type: r?.type ?? 'self',
+                date: r?.date ?? selectedDate,
+                title: r?.title ?? '',
+                subtitle: r?.description ?? '',
+                sessionId: r?.linkedSessionId || null,
+                scenarioId: r?.scenarioId || null,
+                level: r?.level || null,
+                imageName: r?.imageName || null,
+                motivation: r?.motivation || null,
+                readAt: r?.readAt || null,
+              })),
+            );
           }
         }
       } catch (fetchError) {
-        console.error("Failed to refresh cards after update:", fetchError);
+        console.error('Failed to refresh cards after update:', fetchError);
       }
 
       try {
-        const key = dayjs(selectedDate).format("YYYY-MM-DD");
+        const key = dayjs(selectedDate).format('YYYY-MM-DD');
         if (key && dayjs(key).isValid() && isMountedRef.current) {
-          setDotDates((prev) => {
+          setDotDates(prev => {
             const curr = prev || {};
             const existing = curr[key] || {};
             return { ...curr, [key]: { ...existing, self: true } };
           });
         }
       } catch (dateError) {
-        console.error("Failed to update dot dates:", dateError);
+        console.error('Failed to update dot dates:', dateError);
       }
     } catch (e) {
-      console.error("Update failed:", e);
+      console.error('Update failed:', e);
       throw e;
     } finally {
       isSavingRef.current = false;
     }
   };
-
 
   const onRefresh = async () => {
     if (!isMountedRef.current || !userId) return;
@@ -977,6 +1099,9 @@ export default function NotebookScreen({ navigation }) {
       }
 
       if (selectedDate && dayjs(selectedDate).isValid()) {
+        // Reset tracking to force fresh fetch
+        lastFetchedDateRef.current = null;
+        lastFetchedTabRef.current = null;
         await Promise.all([fetchCards(), fetchDots()]);
       }
     } catch (e) {
@@ -992,100 +1117,116 @@ export default function NotebookScreen({ navigation }) {
     }
   };
 
-  const pipoData = useMemo(() => (Array.isArray(items) ? items.filter((it) => it.type !== "self") : []), [items]);
-  const selfData = useMemo(() => (Array.isArray(items) ? items.filter((it) => it.type === "self") : []), [items]);
+  const pipoData = useMemo(
+    () => (Array.isArray(items) ? items.filter(it => it.type !== 'self') : []),
+    [items],
+  );
+  const selfData = useMemo(
+    () => (Array.isArray(items) ? items.filter(it => it.type === 'self') : []),
+    [items],
+  );
 
-  const handleDateChange = useCallback((newDate) => {
-    if (!newDate || !isMountedRef.current) return;
+  const handleDateChange = useCallback(
+    newDate => {
+      if (!newDate || !isMountedRef.current) return;
 
-    if (isDateChangingRef.current) {
-      return;
-    }
-
-    try {
-      const dateStr = typeof newDate === 'string' ? newDate : (newDate?.dateString || newDate);
-      if (!dateStr || typeof dateStr !== 'string') {
-        console.warn('Invalid date format:', newDate);
+      if (isDateChangingRef.current) {
         return;
       }
 
-      if (!dayjs(dateStr).isValid()) {
-        console.warn('Invalid date value:', dateStr);
-        return;
-      }
-
-      const normalizedDate = dayjs(dateStr).format('YYYY-MM-DD');
-      if (!normalizedDate || normalizedDate === 'Invalid Date') {
-        console.warn('Could not normalize date:', dateStr);
-        return;
-      }
-
-      if (normalizedDate === selectedDate || normalizedDate === lastProcessedDateRef.current) {
-        return;
-      }
-
-      isDateChangingRef.current = true;
-      lastProcessedDateRef.current = normalizedDate;
-
-      if (fetchCardsAbortControllerRef.current) {
-        try {
-          fetchCardsAbortControllerRef.current.abort();
-        } catch (e) {
+      try {
+        const dateStr =
+          typeof newDate === 'string'
+            ? newDate
+            : newDate?.dateString || newDate;
+        if (!dateStr || typeof dateStr !== 'string') {
+          console.warn('Invalid date format:', newDate);
+          return;
         }
-        fetchCardsAbortControllerRef.current = null;
-      }
-      if (fetchDotsAbortControllerRef.current) {
-        try {
-          fetchDotsAbortControllerRef.current.abort();
-        } catch (e) {
+
+        if (!dayjs(dateStr).isValid()) {
+          console.warn('Invalid date value:', dateStr);
+          return;
         }
-        fetchDotsAbortControllerRef.current = null;
-      }
 
-      pendingDateRef.current = normalizedDate;
+        const normalizedDate = dayjs(dateStr).format('YYYY-MM-DD');
+        if (!normalizedDate || normalizedDate === 'Invalid Date') {
+          console.warn('Could not normalize date:', dateStr);
+          return;
+        }
 
-      if (dateChangeTimeoutRef.current) {
-        clearTimeout(dateChangeTimeoutRef.current);
-        dateChangeTimeoutRef.current = null;
-      }
+        if (
+          normalizedDate === selectedDate ||
+          normalizedDate === lastProcessedDateRef.current
+        ) {
+          return;
+        }
 
-      dateChangeTimeoutRef.current = setTimeout(() => {
-        const processedDate = pendingDateRef.current || normalizedDate;
-        try {
-          const pendingDate = pendingDateRef.current;
-          if (
-            pendingDate &&
-            typeof pendingDate === 'string' &&
-            dayjs(pendingDate).isValid() &&
-            isMountedRef.current
-          ) {
-            const finalDate = dayjs(pendingDate).format('YYYY-MM-DD');
-            if (finalDate && finalDate !== 'Invalid Date') {
-              setSelectedDate(finalDate);
-            }
-            pendingDateRef.current = null;
-          }
-        } catch (e) {
-          console.error('Error setting date:', e);
-          pendingDateRef.current = null;
-        } finally {
+        isDateChangingRef.current = true;
+        lastProcessedDateRef.current = normalizedDate;
+        // Reset fetch tracking when date changes
+        lastFetchedDateRef.current = null;
+        lastFetchedTabRef.current = null;
+
+        if (fetchCardsAbortControllerRef.current) {
+          try {
+            fetchCardsAbortControllerRef.current.abort();
+          } catch (e) {}
+          fetchCardsAbortControllerRef.current = null;
+        }
+        if (fetchDotsAbortControllerRef.current) {
+          try {
+            fetchDotsAbortControllerRef.current.abort();
+          } catch (e) {}
+          fetchDotsAbortControllerRef.current = null;
+        }
+
+        pendingDateRef.current = normalizedDate;
+
+        if (dateChangeTimeoutRef.current) {
+          clearTimeout(dateChangeTimeoutRef.current);
           dateChangeTimeoutRef.current = null;
-          setTimeout(() => {
-            isDateChangingRef.current = false;
-            setTimeout(() => {
-              if (lastProcessedDateRef.current === processedDate) {
-                lastProcessedDateRef.current = null;
-              }
-            }, 100);
-          }, 100);
         }
-      }, 400);
-    } catch (e) {
-      console.error('Error in handleDateChange:', e);
-      isDateChangingRef.current = false;
-      lastProcessedDateRef.current = null;
-    }
-  }, [selectedDate]);
+
+        dateChangeTimeoutRef.current = setTimeout(() => {
+          const processedDate = pendingDateRef.current || normalizedDate;
+          try {
+            const pendingDate = pendingDateRef.current;
+            if (
+              pendingDate &&
+              typeof pendingDate === 'string' &&
+              dayjs(pendingDate).isValid() &&
+              isMountedRef.current
+            ) {
+              const finalDate = dayjs(pendingDate).format('YYYY-MM-DD');
+              if (finalDate && finalDate !== 'Invalid Date') {
+                setSelectedDate(finalDate);
+              }
+              pendingDateRef.current = null;
+            }
+          } catch (e) {
+            console.error('Error setting date:', e);
+            pendingDateRef.current = null;
+          } finally {
+            dateChangeTimeoutRef.current = null;
+            setTimeout(() => {
+              isDateChangingRef.current = false;
+              setTimeout(() => {
+                if (lastProcessedDateRef.current === processedDate) {
+                  lastProcessedDateRef.current = null;
+                }
+              }, 100);
+            }, 100);
+          }
+        }, 400);
+      } catch (e) {
+        console.error('Error in handleDateChange:', e);
+        isDateChangingRef.current = false;
+        lastProcessedDateRef.current = null;
+      }
+    },
+    [selectedDate],
+  );
 
 
   const pipoCardData = useMemo(() => {
