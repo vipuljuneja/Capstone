@@ -26,6 +26,7 @@ import AudioRecorder from '../../Components/Audio/AudioRecorder';
 import AudioWaveform from '../../Components/Audio/AudioWaveform';
 import AvatarGenerator from '../../Components/Avatar/AvatarGenerate';
 import LoadingOverlay from '../components/LoadingOverlays';
+import LevelResultsLoadingScreen from '../components/LevelResultsLoadingScreen';
 
 import BackIcon from '../../../assets/icons/back.svg';
 import MicIcon from '../../../assets/icons/mic-white.svg';
@@ -433,13 +434,7 @@ const Level2Screen = () => {
 
   return (
     <View style={styles.container}>
-      {showOverlay && (
-        <View style={styles.overlay}>
-          <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color="#6B5B95" />
-          </View>
-        </View>
-      )}
+      <LevelResultsLoadingScreen visible={showOverlay} />
 
       <LevelHeader
         currentIndex={currentIndex}
