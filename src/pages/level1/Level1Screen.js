@@ -16,6 +16,7 @@ import MicIcon from '../../../assets/icons/mic-white.svg';
 import DeleteIcon from '../../../assets/icons/delete-white.svg';
 
 import { useNavigation, useRoute } from '@react-navigation/native';
+import LevelResultsLoadingScreen from '../components/LevelResultsLoadingScreen';
 
 const Level1Screen = () => {
   const navigation = useNavigation();
@@ -316,13 +317,7 @@ const Level1Screen = () => {
 
   return (
     <View style={styles.container}>
-      {showOverlay && (
-        <View style={styles.overlay}>
-          <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color="#6B5B95" />
-          </View>
-        </View>
-      )}
+      <LevelResultsLoadingScreen visible={showOverlay} />
 
       <View style={styles.header}>
         <TouchableOpacity

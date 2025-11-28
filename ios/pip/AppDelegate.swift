@@ -40,7 +40,15 @@ class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
 
   override func bundleURL() -> URL? {
 #if DEBUG
-    RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
+    // For iOS Simulator, explicitly use localhost to avoid network issues
+    #if targetEnvironment(simulator)
+      // Use localhost for simulator
+      if let url = URL(string: "http://localhost:8081/index.bundle?platform=ios&dev=true") {
+        return url
+      }
+    #endif
+    // For physical devices or fallback, use the standard bundle URL provider
+    return RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
 #else
     Bundle.main.url(forResource: "main", withExtension: "jsbundle")
 #endif
