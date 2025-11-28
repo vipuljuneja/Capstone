@@ -201,7 +201,8 @@ const prepareSessionDataForAI = (session, scenarioTitle) => {
     };
 };
 exports.prepareSessionDataForAI = prepareSessionDataForAI;
-// Generate 3–4 next-level questions based on scenario and level (independent questions, not dependent on previous answers)
+// Generate next-level questions based on scenario and level (independent questions, not dependent on previous answers)
+// Level 2: exactly 3 questions, Level 3: exactly 2 questions
 const generateNextLevelQuestions = async (sessionData) => {
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
     if (!OPENAI_API_KEY) {
@@ -212,9 +213,10 @@ const generateNextLevelQuestions = async (sessionData) => {
     const scenarioTitle = sessionData.scenarioTitle || 'Practice';
     const level = sessionData.level;
     const nextLevel = sessionData.nextLevel;
+    const questionCount = nextLevel === 2 ? 3 : 2;
     const system = 'You design short role-play prompts. Output only valid JSON as specified.';
     const userPrompt = `
-Create ${nextLevel === 2 ? '3-4' : '3-4'} next-step questions for a user practicing "${scenarioTitle}".
+Create exactly ${questionCount} next-step questions for a user practicing "${scenarioTitle}".
 
 Context:
 - Current Level: ${level}
@@ -233,7 +235,9 @@ Guidelines:
 
 - IMPORTANT: Questions must be INDEPENDENT and GENERAL. Each question should stand alone and make sense.
 - Questions should be appropriate for the scenario 
-- Include a videoUrl placeholder like "${scenarioTitle.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_level${nextLevel}_q{n}.mp4".
+- Include a videoUrl placeholder like "${scenarioTitle
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')}_level${nextLevel}_q{n}.mp4".
 - Provide an ordered list starting at 1.
 
 Return JSON only:
@@ -243,28 +247,40 @@ Return JSON only:
   ]
 }`.trim();
     try {
-        console.log('🧩 Generating next-level questions...', { scenarioTitle, level, nextLevel });
-        const client = new openai_1.default({ apiKey: OPENAI_API_KEY });
-        const response = await client.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: [
-                { role: 'system', content: system },
-                { role: 'user', content: userPrompt }
-            ],
-            temperature: 0.8,
-            max_tokens: 600
-        });
-        const generatedText = response.choices[0].message?.content?.trim();
-        if (!generatedText)
-            throw new Error('Empty response from OpenAI');
-        const cleaned = generatedText.replace(/```json\s*|```/g, '').trim();
-        const match = cleaned.match(/\{[\s\S]*\}/);
-        if (!match)
-            throw new Error('Failed to extract JSON from response');
-        const parsed = JSON.parse(match[0]);
-        const questions = Array.isArray(parsed.questions) ? parsed.questions : [];
-        console.log('🧪 Next-level questions preview:', questions.slice(0, 2));
-        return questions;
+      console.log('🧩 Generating next-level questions...', {
+        scenarioTitle,
+        level,
+        nextLevel,
+      });
+      const client = new openai_1.default({ apiKey: OPENAI_API_KEY });
+      const response = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.8,
+        max_tokens: 600,
+      });
+      const generatedText = response.choices[0].message?.content?.trim();
+      if (!generatedText) throw new Error('Empty response from OpenAI');
+      const cleaned = generatedText.replace(/```json\s*|```/g, '').trim();
+      const match = cleaned.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('Failed to extract JSON from response');
+      const parsed = JSON.parse(match[0]);
+      const questions = Array.isArray(parsed.questions) ? parsed.questions : [];
+      // Ensure we return exactly the requested number of questions
+      const trimmedQuestions = questions.slice(0, questionCount);
+      if (trimmedQuestions.length !== questionCount) {
+        console.warn(
+          `⚠️ Expected ${questionCount} questions but got ${questions.length}. Returning ${trimmedQuestions.length}.`,
+        );
+      }
+      console.log(
+        '🧪 Next-level questions preview:',
+        trimmedQuestions.slice(0, 2),
+      );
+      return trimmedQuestions;
     }
     catch (error) {
         console.error('❌ OpenAI error generating next questions:', error.response?.data || error.message);

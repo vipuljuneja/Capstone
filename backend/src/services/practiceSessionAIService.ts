@@ -255,7 +255,8 @@ export const prepareSessionDataForAI = (session: any, scenarioTitle?: string): S
   };
 };
 
-// Generate 3–4 next-level questions based on scenario and level (independent questions, not dependent on previous answers)
+// Generate next-level questions based on scenario and level (independent questions, not dependent on previous answers)
+// Level 2: exactly 3 questions, Level 3: exactly 2 questions
 export const generateNextLevelQuestions = async (
   sessionData: SessionDataForAI & { nextLevel: 2 | 3; scenarioTitle?: string }
 ) => {
@@ -269,10 +270,11 @@ export const generateNextLevelQuestions = async (
   const scenarioTitle = sessionData.scenarioTitle || 'Practice';
   const level = sessionData.level;
   const nextLevel = sessionData.nextLevel;
+  const questionCount = nextLevel === 2 ? 3 : 2;
 
   const system = 'You design short role-play prompts. Output only valid JSON as specified.';
   const userPrompt = `
-Create ${nextLevel === 2 ? '3-4' : '3-4'} next-step questions for a user practicing "${scenarioTitle}".
+Create exactly ${questionCount} next-step questions for a user practicing "${scenarioTitle}".
 
 Context:
 - Current Level: ${level}
@@ -324,8 +326,15 @@ Return JSON only:
     const parsed = JSON.parse(match[0]);
     const questions = Array.isArray(parsed.questions) ? parsed.questions : [];
 
-    console.log('🧪 Next-level questions preview:', questions.slice(0, 2));
-    return questions;
+    // Ensure we return exactly the requested number of questions
+    const trimmedQuestions = questions.slice(0, questionCount);
+    
+    if (trimmedQuestions.length !== questionCount) {
+      console.warn(`⚠️ Expected ${questionCount} questions but got ${questions.length}. Returning ${trimmedQuestions.length}.`);
+    }
+
+    console.log('🧪 Next-level questions preview:', trimmedQuestions.slice(0, 2));
+    return trimmedQuestions;
   } catch (error: any) {
     console.error('❌ OpenAI error generating next questions:', error.response?.data || error.message);
     return [];

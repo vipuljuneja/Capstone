@@ -40,7 +40,7 @@ import Level3IntroScreen from '../pages/level3/Level3IntroScreen';
 import Level3Screen from '../pages/level3/Level3Screen';
 import Level3ResultScreen from '../pages/level3/Level3ResultScreen';
 
-import SpecialMissionScreen from '../pages/levels/SpecialMissionScreen';
+import SpecialMissionScreen from '../pages/Levels/SpecialMissionScreen';
 
 import SignupScreen from '../screens/auth/SignupScreen.js';
 import LoginScreen from '../screens/auth/LoginScreen.js';
