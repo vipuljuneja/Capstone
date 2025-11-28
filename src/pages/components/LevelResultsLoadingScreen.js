@@ -7,11 +7,12 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 
 // Theme constants (from src/theme/index.ts)
 const colors = {
-  backgroundDark: '#3E3153',
-  textInverse: '#FAFAFA',
+  backgroundDark: '#fffff',
+  textInverse: '#00000',
 };
 
 const typography = {
@@ -40,14 +41,14 @@ const { width, height } = Dimensions.get('window');
 const SOCIAL_ANXIETY_FACTS = [
   'Did you know? Practicing conversations regularly can help reduce social anxiety over time.',
   'Tip: Deep breathing exercises can help calm your nerves before important conversations.',
-  'Remember: Everyone feels nervous sometimes. You\'re not alone in this journey.',
-  'Fact: Social anxiety affects millions of people worldwide. You\'re taking positive steps!',
+  "Remember: Everyone feels nervous sometimes. You're not alone in this journey.",
+  "Fact: Social anxiety affects millions of people worldwide. You're taking positive steps!",
   'Did you know? Visualizing successful conversations can boost your confidence.',
   'Tip: Starting with small interactions helps build confidence for bigger conversations.',
   'Remember: Progress, not perfection. Every practice session makes you stronger.',
   'Fact: Most people are too focused on themselves to notice your nervousness.',
   'Did you know? Practicing in a safe environment like this builds real-world confidence.',
-  'Tip: Focus on the conversation, not on how you\'re being perceived.',
+  "Tip: Focus on the conversation, not on how you're being perceived.",
   'Remember: Your voice matters. Every word you speak is valuable.',
   'Fact: Social skills improve with practice, just like any other skill.',
 ];
@@ -116,7 +117,7 @@ const LevelResultsLoadingScreen = ({ visible }) => {
             useNativeDriver: true,
           }),
         ]).start();
-        
+
         // Change fact in the middle of fade
         setTimeout(() => {
           setCurrentFact(
@@ -145,50 +146,55 @@ const LevelResultsLoadingScreen = ({ visible }) => {
   });
 
   return (
-    <View style={styles.container}>
-      <Animated.View
-        style={[
-          styles.content,
-          {
-            opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }],
-          },
-        ]}>
-        {/* Pipo Character */}
+    <LinearGradient colors={['#d6dafe', '#fafaff']} style={styles.container}>
+      <View style={styles.container}>
         <Animated.View
           style={[
-            styles.pipoContainer,
+            styles.content,
             {
-              transform: [{ rotate }],
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
             },
-          ]}>
-          <Image
-            source={require('../../../assets/pipo/pipo-loading.png')}
-            style={styles.pipoImage}
-            resizeMode="contain"
-          />
+          ]}
+        >
+          {/* Pipo Character */}
+          <Animated.View
+            style={[
+              styles.pipoContainer,
+              {
+                transform: [{ rotate }],
+              },
+            ]}
+          >
+            <Image
+              source={require('../../../assets/pipo/pipo-loading.png')}
+              style={styles.pipoImage}
+              resizeMode="contain"
+            />
+          </Animated.View>
+
+          {/* Loading Text */}
+          <Text style={styles.loadingText}>LOADING...</Text>
+
+          {/* Random Fact */}
+          <Animated.View
+            style={[
+              styles.factContainer,
+              {
+                opacity: factFadeAnim,
+              },
+            ]}
+          >
+            <Text style={styles.factText}>{currentFact}</Text>
+          </Animated.View>
+
+          {/* Mission Statement */}
+          <View style={styles.missionContainer}>
+            <Text style={styles.missionText}>{MISSION_STATEMENT}</Text>
+          </View>
         </Animated.View>
-
-        {/* Loading Text */}
-        <Text style={styles.loadingText}>LOADING...</Text>
-
-        {/* Random Fact */}
-        <Animated.View
-          style={[
-            styles.factContainer,
-            {
-              opacity: factFadeAnim,
-            },
-          ]}>
-          <Text style={styles.factText}>{currentFact}</Text>
-        </Animated.View>
-
-        {/* Mission Statement */}
-        <View style={styles.missionContainer}>
-          <Text style={styles.missionText}>{MISSION_STATEMENT}</Text>
-        </View>
-      </Animated.View>
-    </View>
+      </View>
+    </LinearGradient>
   );
 };
 
