@@ -13,7 +13,7 @@ import scenarioService from '../../services/scenarioService';
 
 import BackIcon from '../../../assets/icons/back.svg';
 import MicIcon from '../../../assets/icons/mic-white.svg';
-import DeleteIcon from '../../../assets/icons/delete-filled.svg';
+import DeleteIcon from '../../../assets/icons/delete-white.svg';
 
 import { useNavigation, useRoute } from '@react-navigation/native';
 
@@ -526,7 +526,6 @@ const styles = StyleSheet.create({
   waveformContainer: {
     flex: 1,
     height: 60,
-    marginHorizontal: 8,
   },
   micButton: {
     width: 80,
