@@ -14,6 +14,8 @@ import { useSessionSaver } from '../../services/sessionSaver';
 import { unlockLevel, getProgressForScenario } from '../../services/api';
 
 import BackIcon from '../../../assets/icons/back.svg';
+import Facial from '../../../assets/icons/facialExpression.svg';
+import Voice from '../../../assets/icons/voice.svg';
 
 // Utility helpers for analysis and feedback
 const getPaceFeedback = avgWpm => {
@@ -310,7 +312,7 @@ const Level2ResultScreen = () => {
         {/* Voice Feedback Card - Same as Level1 */}
         <View style={styles.feedbackCard}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardHeaderIcon}>🎙️</Text>
+            <Voice width={24} height={24} style={styles.backButton} />
             <Text style={styles.cardHeaderText}>Your voice</Text>
           </View>
 
@@ -320,7 +322,9 @@ const Level2ResultScreen = () => {
             <Text style={styles.sectionMetric}>
               Average: {metrics.avgWpm} words per minute
             </Text>
-            <Text style={styles.sectionText}>{getPaceFeedback(metrics.avgWpm)}</Text>
+            <Text style={styles.sectionText}>
+              {getPaceFeedback(metrics.avgWpm)}
+            </Text>
           </View>
 
           {/* Filler Words Section */}
@@ -330,7 +334,9 @@ const Level2ResultScreen = () => {
               Total: {metrics.totalFillers} filler
               {metrics.totalFillers !== 1 ? 's' : ''}
             </Text>
-            <Text style={styles.sectionText}>{getFillerFeedback(metrics.totalFillers, usedFillerWords)}</Text>
+            <Text style={styles.sectionText}>
+              {getFillerFeedback(metrics.totalFillers, usedFillerWords)}
+            </Text>
           </View>
 
           {/* Pauses Section */}
@@ -349,7 +355,7 @@ const Level2ResultScreen = () => {
         {/* Expressions Feedback Card - Keep as is */}
         <View style={styles.expressionCard}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardHeaderIcon}>😊</Text>
+            <Facial width={24} height={24} style={styles.backButton} />
             <Text style={styles.cardHeaderText}>Your Expressions</Text>
           </View>
           <View style={styles.feedbackSection}>
@@ -431,6 +437,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
+    textAlign: 'center',
     color: '#333',
   },
   feedbackCard: {
@@ -449,6 +456,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 20,
+    gap: 10,
   },
   cardHeaderIcon: {
     fontSize: 24,

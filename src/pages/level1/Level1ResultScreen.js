@@ -14,6 +14,8 @@ import { unlockLevel, getProgressForScenario } from '../../services/api';
 import { ActivityIndicator } from 'react-native';
 
 import BackIcon from '../../../assets/icons/back.svg';
+import Facial from '../../../assets/icons/facialExpression.svg';
+import Voice from '../../../assets/icons/voice.svg';
 
 const Level1ResultScreen = () => {
   const navigation = useNavigation();
@@ -250,7 +252,9 @@ const Level1ResultScreen = () => {
         {/* Feedback Card */}
         <View style={styles.feedbackCard}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardHeaderIcon}>🎙️</Text>
+            <Text style={styles.cardHeaderIcon}>
+              <Voice width={24} height={24} style={styles.backButton} />
+            </Text>
             <Text style={styles.cardHeaderText}>Your voice</Text>
           </View>
 
